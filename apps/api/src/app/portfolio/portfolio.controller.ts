@@ -70,7 +70,8 @@ export class PortfolioController {
     @Query('accounts') filterByAccounts?: string,
     @Query('assetClasses') filterByAssetClasses?: string,
     @Query('range') dateRange: DateRange = 'max',
-    @Query('tags') filterByTags?: string
+    @Query('tags') filterByTags?: string,
+    @Query('summary') calculateSummary: boolean = true
   ): Promise<PortfolioDetails & { hasError: boolean }> {
     let hasDetails = true;
     let hasError = false;
@@ -98,7 +99,8 @@ export class PortfolioController {
       dateRange,
       filters,
       impersonationId,
-      userId: this.request.user.id
+      userId: this.request.user.id,
+      needsSummary: calculateSummary
     });
 
     if (hasErrors || hasNotDefinedValuesInObject(holdings)) {

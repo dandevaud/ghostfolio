@@ -149,7 +149,8 @@ export class AllocationsPageComponent implements OnDestroy, OnInit {
           this.initialize();
 
           return this.dataService.fetchPortfolioDetails({
-            filters: this.activeFilters
+            filters: this.activeFilters,
+            summary: false
           });
         }),
         takeUntil(this.unsubscribeSubject)

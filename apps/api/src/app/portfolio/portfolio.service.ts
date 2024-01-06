@@ -384,13 +384,15 @@ export class PortfolioService {
     filters,
     impersonationId,
     userId,
-    withExcludedAccounts = false
+    withExcludedAccounts = false,
+    needsSummary = false
   }: {
     dateRange?: DateRange;
     filters?: Filter[];
     impersonationId: string;
     userId: string;
     withExcludedAccounts?: boolean;
+    needsSummary?: boolean;
   }): Promise<PortfolioDetails & { hasErrors: boolean }> {
     userId = await this.getUserId(impersonationId, userId);
     const user = await this.userService.user({ id: userId });
@@ -512,16 +514,14 @@ export class PortfolioService {
       holdings
     );
 
-    const summary = await this.getSummary({
+    let { summary, netWorth } = await this.getSummaryIfRequestedAndNetWorth(
+      needsSummary,
       impersonationId,
       userCurrency,
       userId,
-      balanceInBaseCurrency: cashDetails.balanceInBaseCurrency,
-      emergencyFundPositionsValueInBaseCurrency:
-        this.getEmergencyFundPositionsValueInBaseCurrency({
-          holdings
-        })
-    });
+      cashDetails,
+      holdings
+    );
 
     return {
       accounts,
@@ -529,11 +529,11 @@ export class PortfolioService {
       platforms,
       summary,
       filteredValueInBaseCurrency: filteredValueInBaseCurrency.toNumber(),
-      filteredValueInPercentage: summary.netWorth
-        ? filteredValueInBaseCurrency.div(summary.netWorth).toNumber()
+      filteredValueInPercentage: netWorth
+        ? filteredValueInBaseCurrency.div(netWorth).toNumber()
         : 0,
       hasErrors: currentPositions.hasErrors,
-      totalValueInBaseCurrency: summary.netWorth
+      totalValueInBaseCurrency: netWorth
     };
   }
 
@@ -1778,6 +1778,21 @@ export class PortfolioService {
     return { currentStreak, longestStreak };
   }
 
+  private async getNetWorth({
+    impersonationId,
+    userId
+  }: {
+    impersonationId: string;
+    userId: string;
+  }): Promise<number> {
+    const performanceInformation = await this.getPerformance({
+      impersonationId,
+      userId
+    });
+
+    return performanceInformation?.performance?.currentNetWorth ?? 0;
+  }
+
   private async getSummary({
     balanceInBaseCurrency,
     emergencyFundPositionsValueInBaseCurrency,
@@ -2049,6 +2064,35 @@ export class PortfolioService {
       orders: activities,
       transactionPoints: portfolioCalculator.getTransactionPoints()
     };
+  }
+
+  private async getSummaryIfRequestedAndNetWorth(
+    needsSummary: boolean,
+    impersonationId: string,
+    userCurrency: string,
+    userId: string,
+    cashDetails: CashDetails,
+    holdings: { [symbol: string]: PortfolioPosition }
+  ): Promise<{ summary: PortfolioSummary; netWorth: number }> {
+    let summary: PortfolioSummary;
+    let netWorth: number;
+
+    if (needsSummary) {
+      summary = await this.getSummary({
+        impersonationId,
+        userCurrency,
+        userId,
+        balanceInBaseCurrency: cashDetails.balanceInBaseCurrency,
+        emergencyFundPositionsValueInBaseCurrency:
+          this.getEmergencyFundPositionsValueInBaseCurrency({
+            holdings
+          })
+      });
+      netWorth = summary.netWorth;
+    } else {
+      netWorth = await this.getNetWorth({ impersonationId, userId });
+    }
+    return { summary, netWorth };
   }
 
   private getUserCurrency(aUser: UserWithSettings) {
