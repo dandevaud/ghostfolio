@@ -612,9 +612,15 @@ export class ImportService {
             );
           }
 
-          if (assetProfile.currency !== currency) {
+          if (
+            assetProfile.currency !== currency &&
+            !this.exchangeRateDataService.hasCurrencyPair(
+              currency,
+              assetProfile.currency
+            )
+          ) {
             throw new Error(
-              `activities.${index}.currency ("${currency}") does not match with currency of ${assetProfile.symbol} ("${assetProfile.currency}")`
+              `activities.${index}.currency ("${currency}") does not match with "${assetProfile.currency}" and no exchange rate is available from "${currency}" to "${assetProfile.currency}"`
             );
           }
         }
