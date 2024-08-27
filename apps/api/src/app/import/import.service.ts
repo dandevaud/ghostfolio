@@ -611,18 +611,6 @@ export class ImportService {
               `activities.${index}.symbol ("${symbol}") is not valid for the specified data source ("${dataSource}")`
             );
           }
-
-          if (
-            assetProfile.currency !== currency &&
-            !this.exchangeRateDataService.hasCurrencyPair(
-              currency,
-              assetProfile.currency
-            )
-          ) {
-            throw new Error(
-              `activities.${index}.currency ("${currency}") does not match with "${assetProfile.currency}" and no exchange rate is available from "${currency}" to "${assetProfile.currency}"`
-            );
-          }
         }
 
         assetProfiles[getAssetProfileIdentifier({ dataSource, symbol })] =
