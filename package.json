@@ -111,7 +111,7 @@
     "countup.js": "2.8.0",
     "date-fns": "3.6.0",
     "envalid": "7.3.1",
-    "google-spreadsheet": "3.2.0",
+    "google-spreadsheet": "4.1.2",
     "got": "11.8.6",
     "helmet": "7.0.0",
     "http-status-codes": "2.3.0",
