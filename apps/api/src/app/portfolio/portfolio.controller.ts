@@ -1,3 +1,4 @@
+import { LogPerformance } from '@ghostfolio/api/aop/logging.interceptor';
 import { AccessService } from '@ghostfolio/api/app/access/access.service';
 import { OrderService } from '@ghostfolio/api/app/order/order.service';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
@@ -80,6 +81,7 @@ export class PortfolioController {
     @Query('assetClasses') filterByAssetClasses?: string,
     @Query('range') dateRange: DateRange = 'max',
     @Query('tags') filterByTags?: string,
+    @Query('isAllocation') isAllocation: boolean = false,
     @Query('withMarkets') withMarketsParam = 'false'
   ): Promise<PortfolioDetails & { hasError: boolean }> {
     const withMarkets = withMarketsParam === 'true';
@@ -145,6 +147,24 @@ export class PortfolioController {
           portfolioPosition.investment / totalInvestment;
         portfolioPosition.valueInPercentage =
           portfolioPosition.valueInBaseCurrency / totalValue;
+        (portfolioPosition.assetClass = hasDetails
+          ? portfolioPosition.assetClass
+          : undefined),
+          (portfolioPosition.assetSubClass = hasDetails
+            ? portfolioPosition.assetSubClass
+            : undefined),
+          (portfolioPosition.countries = hasDetails
+            ? portfolioPosition.countries
+            : []),
+          (portfolioPosition.currency = hasDetails
+            ? portfolioPosition.currency
+            : undefined),
+          (portfolioPosition.markets = hasDetails
+            ? portfolioPosition.markets
+            : undefined),
+          (portfolioPosition.sectors = hasDetails
+            ? portfolioPosition.sectors
+            : []);
       }
 
       for (const [name, { valueInBaseCurrency }] of Object.entries(accounts)) {
@@ -386,16 +406,17 @@ export class PortfolioController {
   @UseInterceptors(PerformanceLoggingInterceptor)
   @UseInterceptors(TransformDataSourceInResponseInterceptor)
   @Version('2')
+  @LogPerformance
   public async getPerformanceV2(
     @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string,
     @Query('accounts') filterByAccounts?: string,
     @Query('assetClasses') filterByAssetClasses?: string,
     @Query('range') dateRange: DateRange = 'max',
     @Query('tags') filterByTags?: string,
-    @Query('withExcludedAccounts') withExcludedAccountsParam = 'false'
+    @Query('withExcludedAccounts') withExcludedAccounts = false,
+    @Query('timeWeightedPerformance') calculateTimeWeightedPerformance = false,
+    @Query('withItems') withItems = false
   ): Promise<PortfolioPerformanceResponse> {
-    const withExcludedAccounts = withExcludedAccountsParam === 'true';
-
     const filters = this.apiService.buildFiltersFromQueryParams({
       filterByAccounts,
       filterByAssetClasses,
@@ -407,7 +428,8 @@ export class PortfolioController {
       filters,
       impersonationId,
       withExcludedAccounts,
-      userId: this.request.user.id
+      userId: this.request.user.id,
+      calculateTimeWeightedPerformance
     });
 
     if (

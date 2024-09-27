@@ -10,6 +10,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { json } from 'body-parser';
 import helmet from 'helmet';
 
+import { LoggingInterceptor } from './aop/logging.interceptor';
 import { AppModule } from './app/app.module';
 import { environment } from './environments/environment';
 import { HtmlTemplateMiddleware } from './middlewares/html-template.middleware';
@@ -39,6 +40,7 @@ async function bootstrap() {
     type: VersioningType.URI
   });
   app.setGlobalPrefix('api', { exclude: ['sitemap.xml'] });
+  app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,

@@ -1,3 +1,4 @@
+import { LogPerformance } from '@ghostfolio/api/aop/logging.interceptor';
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { PortfolioOrder } from '@ghostfolio/api/app/portfolio/interfaces/portfolio-order.interface';
@@ -57,12 +58,12 @@ export abstract class PortfolioCalculator {
   protected accountBalanceItems: HistoricalDataItem[];
   protected activities: PortfolioOrder[];
 
-  private configurationService: ConfigurationService;
-  private currency: string;
-  private currentRateService: CurrentRateService;
+  protected configurationService: ConfigurationService;
+  protected currency: string;
+  protected currentRateService: CurrentRateService;
   private dataProviderInfos: DataProviderInfo[];
   private endDate: Date;
-  private exchangeRateDataService: ExchangeRateDataService;
+  protected exchangeRateDataService: ExchangeRateDataService;
   private filters: Filter[];
   private portfolioSnapshotService: PortfolioSnapshotService;
   private redisCacheService: RedisCacheService;
@@ -70,7 +71,8 @@ export abstract class PortfolioCalculator {
   private snapshotPromise: Promise<void>;
   private startDate: Date;
   private transactionPoints: TransactionPoint[];
-  private userId: string;
+  protected userId: string;
+  protected marketMap: { [date: string]: { [symbol: string]: Big } } = {};
 
   public constructor({
     accountBalanceItems,
@@ -620,10 +622,12 @@ export abstract class PortfolioCalculator {
     };
   }
 
+  @LogPerformance
   public getDataProviderInfos() {
     return this.dataProviderInfos;
   }
 
+  @LogPerformance
   public async getDividendInBaseCurrency() {
     await this.snapshotPromise;
 
@@ -634,18 +638,21 @@ export abstract class PortfolioCalculator {
     );
   }
 
+  @LogPerformance
   public async getFeesInBaseCurrency() {
     await this.snapshotPromise;
 
     return this.snapshot.totalFeesWithCurrencyEffect;
   }
 
+  @LogPerformance
   public async getInterestInBaseCurrency() {
     await this.snapshotPromise;
 
     return this.snapshot.totalInterestWithCurrencyEffect;
   }
 
+  @LogPerformance
   public getInvestments(): { date: string; investment: Big }[] {
     if (this.transactionPoints.length === 0) {
       return [];
@@ -663,6 +670,7 @@ export abstract class PortfolioCalculator {
     });
   }
 
+  @LogPerformance
   public getInvestmentsByGroup({
     data,
     groupBy
@@ -686,12 +694,14 @@ export abstract class PortfolioCalculator {
     }));
   }
 
+  @LogPerformance
   public async getLiabilitiesInBaseCurrency() {
     await this.snapshotPromise;
 
     return this.snapshot.totalLiabilitiesWithCurrencyEffect;
   }
 
+  @LogPerformance
   public async getPerformance({ end, start }) {
     await this.snapshotPromise;
 
@@ -760,6 +770,7 @@ export abstract class PortfolioCalculator {
     return { chart };
   }
 
+  @LogPerformance
   public async getSnapshot() {
     await this.snapshotPromise;
 
@@ -815,6 +826,7 @@ export abstract class PortfolioCalculator {
     return this.transactionPoints;
   }
 
+  @LogPerformance
   public async getValuablesInBaseCurrency() {
     await this.snapshotPromise;
 
@@ -890,7 +902,7 @@ export abstract class PortfolioCalculator {
   }
 
   @LogPerformance
-  private computeTransactionPoints() {
+  protected computeTransactionPoints() {
     this.transactionPoints = [];
     const symbols: { [symbol: string]: TransactionPointSymbol } = {};
 
@@ -1029,7 +1041,7 @@ export abstract class PortfolioCalculator {
   }
 
   @LogPerformance
-  private async initialize() {
+  protected async initialize() {
     const startTimeTotal = performance.now();
 
     let cachedPortfolioSnapshot: PortfolioSnapshot;
