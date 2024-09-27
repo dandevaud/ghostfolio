@@ -73,7 +73,7 @@ import {
   parseISO,
   set
 } from 'date-fns';
-import { isEmpty, last, uniq, uniqBy } from 'lodash';
+import { isEmpty, last, uniq } from 'lodash';
 
 import { PortfolioCalculator } from './calculator/portfolio-calculator';
 import {
@@ -115,12 +115,33 @@ export class PortfolioService {
   }): Promise<AccountWithValue[]> {
     const where: Prisma.AccountWhereInput = { userId };
 
-    const accountFilter = filters?.find(({ type }) => {
+    const filterByAccount = filters?.find(({ type }) => {
       return type === 'ACCOUNT';
-    });
+    })?.id;
 
-    if (accountFilter) {
-      where.id = accountFilter.id;
+    const filterByDataSource = filters?.find(({ type }) => {
+      return type === 'DATA_SOURCE';
+    })?.id;
+
+    const filterBySymbol = filters?.find(({ type }) => {
+      return type === 'SYMBOL';
+    })?.id;
+
+    if (filterByAccount) {
+      where.id = filterByAccount;
+    }
+
+    if (filterByDataSource && filterBySymbol) {
+      where.Order = {
+        some: {
+          SymbolProfile: {
+            AND: [
+              { dataSource: <DataSource>filterByDataSource },
+              { symbol: filterBySymbol }
+            ]
+          }
+        }
+      };
     }
 
     const [accounts, details] = await Promise.all([
@@ -604,7 +625,6 @@ export class PortfolioService {
 
     if (activities.length === 0) {
       return {
-        accounts: [],
         averagePrice: undefined,
         dataProviderInfo: undefined,
         dividendInBaseCurrency: undefined,
@@ -676,15 +696,6 @@ export class PortfolioService {
           SymbolProfile.dataSource === dataSource &&
           SymbolProfile.symbol === symbol
         );
-      });
-
-      const accounts: PortfolioHoldingDetail['accounts'] = uniqBy(
-        activitiesOfPosition.filter(({ Account }) => {
-          return Account;
-        }),
-        'Account.id'
-      ).map(({ Account }) => {
-        return Account;
       });
 
       const dividendYieldPercent = getAnnualizedPerformancePercent({
@@ -767,7 +778,6 @@ export class PortfolioService {
       }
 
       return {
-        accounts,
         firstBuyDate,
         marketPrice,
         maxPrice,
@@ -862,7 +872,6 @@ export class PortfolioService {
         maxPrice,
         minPrice,
         SymbolProfile,
-        accounts: [],
         averagePrice: 0,
         dataProviderInfo: undefined,
         dividendInBaseCurrency: 0,
@@ -1049,35 +1058,12 @@ export class PortfolioService {
     const user = await this.userService.user({ id: userId });
     const userCurrency = this.getUserCurrency(user);
 
-    const accountBalances = await this.accountBalanceService.getAccountBalances(
-      { filters, user, withExcludedAccounts }
-    );
-
-    let accountBalanceItems: HistoricalDataItem[] = Object.values(
-      // Reduce the array to a map with unique dates as keys
-      accountBalances.balances.reduce(
-        (
-          map: { [date: string]: HistoricalDataItem },
-          { date, valueInBaseCurrency }
-        ) => {
-          const formattedDate = format(date, DATE_FORMAT);
-
-          if (map[formattedDate]) {
-            // If the value exists, add the current value to the existing one
-            map[formattedDate].value += valueInBaseCurrency;
-          } else {
-            // Otherwise, initialize the value for that date
-            map[formattedDate] = {
-              date: formattedDate,
-              value: valueInBaseCurrency
-            };
-          }
-
-          return map;
-        },
-        {}
-      )
-    );
+    const accountBalanceItems =
+      await this.accountBalanceService.getAccountBalanceItems({
+        filters,
+        userId,
+        userCurrency
+      });
 
     const { activities } =
       await this.orderService.getOrdersForPortfolioCalculator({
