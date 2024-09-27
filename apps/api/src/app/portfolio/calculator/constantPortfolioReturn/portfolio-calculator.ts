@@ -1,15 +1,13 @@
-import { LogPerformance } from '@ghostfolio/api/aop/logging.interceptor';
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
-import { OrderService } from '@ghostfolio/api/app/order/order.service';
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { getFactor } from '@ghostfolio/api/helper/portfolio.helper';
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { IDataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
-import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
+import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { DATE_FORMAT, parseDate, resetHours } from '@ghostfolio/common/helper';
 import { Filter, HistoricalDataItem } from '@ghostfolio/common/interfaces';
-import { DateRange } from '@ghostfolio/common/types';
 
 import { Inject, Logger } from '@nestjs/common';
 import { Big } from 'big.js';
@@ -33,31 +31,29 @@ export class CPRPortfolioCalculator extends TWRPortfolioCalculator {
   private holdings: { [date: string]: { [symbol: string]: Big } } = {};
   private holdingCurrencies: { [symbol: string]: string } = {};
 
-  constructor(
-    {
-      accountBalanceItems,
-      activities,
-      configurationService,
-      currency,
-      currentRateService,
-      exchangeRateDataService,
-      redisCacheService,
-      userId,
-      filters
-    }: {
-      accountBalanceItems: HistoricalDataItem[];
-      activities: Activity[];
-      configurationService: ConfigurationService;
-      currency: string;
-      currentRateService: CurrentRateService;
-      exchangeRateDataService: ExchangeRateDataService;
-      redisCacheService: RedisCacheService;
-      filters: Filter[];
-      userId: string;
-    },
-    @Inject()
-    private orderService: OrderService
-  ) {
+  constructor({
+    accountBalanceItems,
+    activities,
+    configurationService,
+    currency,
+    currentRateService,
+    exchangeRateDataService,
+    portfolioSnapshotService,
+    redisCacheService,
+    userId,
+    filters
+  }: {
+    accountBalanceItems: HistoricalDataItem[];
+    activities: Activity[];
+    configurationService: ConfigurationService;
+    currency: string;
+    currentRateService: CurrentRateService;
+    exchangeRateDataService: ExchangeRateDataService;
+    portfolioSnapshotService: PortfolioSnapshotService;
+    redisCacheService: RedisCacheService;
+    filters: Filter[];
+    userId: string;
+  }) {
     super({
       accountBalanceItems,
       activities,
@@ -66,6 +62,7 @@ export class CPRPortfolioCalculator extends TWRPortfolioCalculator {
       filters,
       currentRateService,
       exchangeRateDataService,
+      portfolioSnapshotService,
       redisCacheService,
       userId
     });
@@ -107,14 +104,11 @@ export class CPRPortfolioCalculator extends TWRPortfolioCalculator {
   }
 
   @LogPerformance
-  public async getUnfilteredNetWorth(currency: string): Promise<Big> {
-    const activities = await this.orderService.getOrders({
-      userId: this.userId,
-      userCurrency: currency,
-      types: ['BUY', 'SELL', 'STAKE'],
-      withExcludedAccounts: true
-    });
-    const orders = this.activitiesToPortfolioOrder(activities.activities);
+  public async getUnfilteredNetWorth(
+    currency: string,
+    allOrders: Activity[]
+  ): Promise<Big> {
+    const orders = this.activitiesToPortfolioOrder(allOrders);
     const start = orders.reduce(
       (date, order) =>
         parseDate(date.date).getTime() < parseDate(order.date).getTime()
