@@ -92,7 +92,7 @@
     "alphavantage": "2.2.0",
     "await-lock": "^2.2.2",
     "big.js": "6.2.1",
-    "body-parser": "1.20.2",
+    "body-parser": "1.20.3",
     "bootstrap": "4.6.0",
     "bull": "4.16.2",
     "cache-manager": "5.7.6",
