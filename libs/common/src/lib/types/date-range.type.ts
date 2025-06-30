@@ -7,7 +7,9 @@ export type DateRange =
   | '3m'
   | 'ytd'
   | '1y'
+  | '3y'
   | '5y'
+  | '10y'
   | 'max'
   | string; // '2024', '2023', '2022', etc.
 
@@ -20,6 +22,8 @@ export const DateRangeTypes: DateRange[] = [
   '3m',
   'ytd',
   '1y',
+  '3y',
   '5y',
+  '10y',
   'max'
 ];

@@ -78,8 +78,14 @@ export function getIntervalFromDateRange(
     case '1y':
       startDate = max([startDate, subYears(resetHours(new Date()), 1)]);
       break;
+    case '3y':
+      startDate = max([startDate, subYears(resetHours(new Date()), 3)]);
+      break;
     case '5y':
       startDate = max([startDate, subYears(resetHours(new Date()), 5)]);
+      break;
+    case '10y':
+      startDate = max([startDate, subYears(resetHours(new Date()), 10)]);
       break;
     case 'max':
       break;
