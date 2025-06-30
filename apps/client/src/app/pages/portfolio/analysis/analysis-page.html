@@ -241,7 +241,7 @@
         </mat-card-header>
         <mat-card-content>
           <ol class="mb-0 ml-1 pl-3">
-            @for (holding of top3; track holding) {
+            @for (holding of top5; track holding) {
               <li class="py-1">
                 <a
                   class="d-flex"
@@ -268,7 +268,7 @@
             }
           </ol>
           <div>
-            @if (!top3) {
+            @if (!top5) {
               <ngx-skeleton-loader
                 animation="pulse"
                 [theme]="{
@@ -290,7 +290,7 @@
         </mat-card-header>
         <mat-card-content>
           <ol class="mb-0 ml-1 pl-3">
-            @for (holding of bottom3; track holding) {
+            @for (holding of bottom5; track holding) {
               <li class="py-1">
                 <a
                   class="d-flex"
@@ -317,7 +317,7 @@
             }
           </ol>
           <div>
-            @if (!bottom3) {
+            @if (!bottom5) {
               <ngx-skeleton-loader
                 animation="pulse"
                 [theme]="{

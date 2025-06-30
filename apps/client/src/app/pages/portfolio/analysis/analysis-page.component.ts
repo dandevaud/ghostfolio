@@ -49,7 +49,7 @@ export class AnalysisPageComponent implements OnDestroy, OnInit {
   public benchmark: Partial<SymbolProfile>;
   public benchmarkDataItems: HistoricalDataItem[] = [];
   public benchmarks: Partial<SymbolProfile>[];
-  public bottom3: PortfolioPosition[];
+  public bottom5: PortfolioPosition[];
   public dateRangeOptions = ToggleComponent.DEFAULT_DATE_RANGE_OPTIONS;
   public timeWeightedPerformanceOptions = [
     { label: $localize`No`, value: 'N' },
@@ -85,7 +85,7 @@ export class AnalysisPageComponent implements OnDestroy, OnInit {
     [];
   public portfolioEvolutionDataLabel = $localize`Investment`;
   public streaks: PortfolioInvestments['streaks'];
-  public top3: PortfolioPosition[];
+  public top5: PortfolioPosition[];
   public unitCurrentStreak: string;
   public unitLongestStreak: string;
   public user: User;
@@ -356,12 +356,12 @@ export class AnalysisPageComponent implements OnDestroy, OnInit {
           'netPerformancePercentWithCurrencyEffect'
         ).reverse();
 
-        this.top3 = holdingsSorted.slice(0, 3);
+        this.top5 = holdingsSorted.slice(0, 5);
 
-        if (holdings?.length > 3) {
-          this.bottom3 = holdingsSorted.slice(-3).reverse();
+        if (holdings?.length > 5) {
+          this.bottom5 = holdingsSorted.slice(-5).reverse();
         } else {
-          this.bottom3 = [];
+          this.bottom5 = [];
         }
 
         this.changeDetectorRef.markForCheck();
