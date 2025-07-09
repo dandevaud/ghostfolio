@@ -1,6 +1,10 @@
 import { TokenStorageService } from '@ghostfolio/client/services/token-storage.service';
 import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
-import { getDateFormatString, getEmojiFlag } from '@ghostfolio/common/helper';
+import {
+  getDateFnsLocale,
+  getDateFormatString,
+  getEmojiFlag
+} from '@ghostfolio/common/helper';
 import { AdminUsers, InfoItem, User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 
@@ -18,6 +22,13 @@ import {
   formatDistanceToNowStrict,
   parseISO
 } from 'date-fns';
+import { addIcons } from 'ionicons';
+import {
+  contractOutline,
+  ellipsisHorizontal,
+  keyOutline,
+  trashOutline
+} from 'ionicons/icons';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -107,6 +118,8 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
           );
         }
       });
+
+    addIcons({ contractOutline, ellipsisHorizontal, keyOutline, trashOutline });
   }
 
   public ngOnInit() {
@@ -116,7 +129,8 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
   public formatDistanceToNow(aDateString: string) {
     if (aDateString) {
       const distanceString = formatDistanceToNowStrict(parseISO(aDateString), {
-        addSuffix: true
+        addSuffix: true,
+        locale: getDateFnsLocale(this.user?.settings?.language)
       });
 
       return Math.abs(differenceInSeconds(parseISO(aDateString), new Date())) <
@@ -147,7 +161,7 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
     this.notificationService.confirm({
       confirmFn: () => {
         this.dataService
-          .generateAccessToken(aUserId)
+          .updateUserAccessToken(aUserId)
           .pipe(takeUntil(this.unsubscribeSubject))
           .subscribe(({ accessToken }) => {
             this.notificationService.alert({

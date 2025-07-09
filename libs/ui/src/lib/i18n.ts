@@ -42,7 +42,7 @@ const locales = {
   STAKE: $localize`Stake`,
 
   // AssetClass (enum)
-  CASH: $localize`Cash`,
+  ALTERNATIVE_INVESTMENT: $localize`Alternative Investment`,
   COMMODITY: $localize`Commodity`,
   EQUITY: $localize`Equity`,
   FIXED_INCOME: $localize`Fixed Income`,
@@ -51,6 +51,8 @@ const locales = {
 
   // AssetSubClass (enum)
   BOND: $localize`Bond`,
+  CASH: $localize`Cash`,
+  COLLECTIBLE: $localize`Collectible`,
   CRYPTOCURRENCY: $localize`Cryptocurrency`,
   ETF: $localize`ETF`,
   MUTUALFUND: $localize`Mutual Fund`,

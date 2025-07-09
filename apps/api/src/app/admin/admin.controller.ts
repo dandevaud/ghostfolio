@@ -17,7 +17,8 @@ import {
   AdminData,
   AdminMarketData,
   AdminUsers,
-  EnhancedSymbolProfile
+  EnhancedSymbolProfile,
+  ScraperConfiguration
 } from '@ghostfolio/common/interfaces';
 import { permissions } from '@ghostfolio/common/permissions';
 import type {
@@ -254,13 +255,12 @@ export class AdminController {
   @Post('market-data/:dataSource/:symbol/test')
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   public async testMarketData(
-    @Body() data: { scraperConfiguration: string },
+    @Body() data: { scraperConfiguration: ScraperConfiguration },
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<{ price: number }> {
     try {
-      const scraperConfiguration = JSON.parse(data.scraperConfiguration);
-      const price = await this.manualService.test(scraperConfiguration);
+      const price = await this.manualService.test(data.scraperConfiguration);
 
       if (price) {
         return { price };
@@ -287,7 +287,7 @@ export class AdminController {
     return this.adminService.addAssetProfile({
       dataSource,
       symbol,
-      currency: this.request.user.Settings.settings.baseCurrency
+      currency: this.request.user.settings.settings.baseCurrency
     });
   }
 

@@ -50,8 +50,7 @@ export class SubscriptionService {
     const subscriptionOffers: {
       [offer in SubscriptionOfferKey]: SubscriptionOffer;
     } =
-      ((await this.propertyService.getByKey(PROPERTY_STRIPE_CONFIG)) as any) ??
-      {};
+      (await this.propertyService.getByKey<any>(PROPERTY_STRIPE_CONFIG)) ?? {};
 
     const subscriptionOffer = Object.values(subscriptionOffers).find(
       (subscriptionOffer) => {
@@ -61,7 +60,7 @@ export class SubscriptionService {
 
     const checkoutSessionCreateParams: Stripe.Checkout.SessionCreateParams = {
       cancel_url: `${this.configurationService.get('ROOT_URL')}/${
-        user.Settings.settings.language
+        user.settings.settings.language
       }/account`,
       client_reference_id: user.id,
       line_items: [
@@ -71,7 +70,7 @@ export class SubscriptionService {
         }
       ],
       locale:
-        (user.Settings?.settings
+        (user.settings?.settings
           ?.language as Stripe.Checkout.SessionCreateParams.Locale) ??
         DEFAULT_LANGUAGE_CODE,
       metadata: subscriptionOffer
@@ -213,8 +212,7 @@ export class SubscriptionService {
     const offers: {
       [offer in SubscriptionOfferKey]: SubscriptionOffer;
     } =
-      ((await this.propertyService.getByKey(PROPERTY_STRIPE_CONFIG)) as any) ??
-      {};
+      (await this.propertyService.getByKey<any>(PROPERTY_STRIPE_CONFIG)) ?? {};
 
     return {
       ...offers[key],

@@ -40,6 +40,7 @@ export const permissions = {
   impersonateAllUsers: 'impersonateAllUsers',
   readAiPrompt: 'readAiPrompt',
   readMarketData: 'readMarketData',
+  readMarketDataOfMarkets: 'readMarketDataOfMarkets',
   readMarketDataOfOwnAssetProfile: 'readMarketDataOfOwnAssetProfile',
   readPlatforms: 'readPlatforms',
   readTags: 'readTags',
@@ -52,6 +53,7 @@ export const permissions = {
   updateMarketData: 'updateMarketData',
   updateMarketDataOfOwnAssetProfile: 'updateMarketDataOfOwnAssetProfile',
   updateOrder: 'updateOrder',
+  updateOwnAccessToken: 'updateOwnAccessToken',
   updatePlatform: 'updatePlatform',
   updateTag: 'updateTag',
   updateUserSettings: 'updateUserSettings',
@@ -81,7 +83,6 @@ export function getPermissions(aRole: Role): string[] {
         permissions.deleteAccount,
         permissions.deleteAuthDevice,
         permissions.deleteOrder,
-        permissions.deleteOwnUser,
         permissions.deletePlatform,
         permissions.deleteTag,
         permissions.deleteUser,
@@ -127,7 +128,6 @@ export function getPermissions(aRole: Role): string[] {
         permissions.deleteAccountBalance,
         permissions.deleteAuthDevice,
         permissions.deleteOrder,
-        permissions.deleteOwnUser,
         permissions.deleteWatchlistItem,
         permissions.readAiPrompt,
         permissions.readMarketDataOfOwnAssetProfile,
@@ -185,7 +185,7 @@ export function hasReadRestrictedAccessPermission({
     return false;
   }
 
-  const access = user.Access?.find(({ id }) => {
+  const access = user.accessesGet?.find(({ id }) => {
     return id === impersonationId;
   });
 
@@ -197,5 +197,5 @@ export function hasRole(aUser: UserWithSettings, aRole: Role) {
 }
 
 export function isRestrictedView(aUser: UserWithSettings) {
-  return aUser.Settings.settings.isRestrictedView ?? false;
+  return aUser.settings.settings.isRestrictedView ?? false;
 }

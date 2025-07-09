@@ -4,8 +4,12 @@ import ms from 'ms';
 
 export const ghostfolioPrefix = 'GF';
 export const ghostfolioScraperApiSymbolPrefix = `_${ghostfolioPrefix}_`;
-export const ghostfolioFearAndGreedIndexDataSource = DataSource.RAPID_API;
+export const ghostfolioFearAndGreedIndexDataSourceCryptocurrencies =
+  DataSource.MANUAL;
+export const ghostfolioFearAndGreedIndexDataSourceStocks = DataSource.RAPID_API;
 export const ghostfolioFearAndGreedIndexSymbol = `${ghostfolioScraperApiSymbolPrefix}FEAR_AND_GREED_INDEX`;
+export const ghostfolioFearAndGreedIndexSymbolCryptocurrencies = `${ghostfolioPrefix}_FEAR_AND_GREED_INDEX_CRYPTOCURRENCIES`;
+export const ghostfolioFearAndGreedIndexSymbolStocks = `${ghostfolioPrefix}_FEAR_AND_GREED_INDEX_STOCKS`;
 
 export const locale = 'en-US';
 
@@ -124,6 +128,7 @@ export const MAX_TOP_HOLDINGS = 50;
 export const NUMERICAL_PRECISION_THRESHOLD = 100000;
 
 export const PROPERTY_API_KEY_GHOSTFOLIO = 'API_KEY_GHOSTFOLIO';
+export const PROPERTY_API_KEY_OPENROUTER = 'API_KEY_OPENROUTER';
 export const PROPERTY_BENCHMARKS = 'BENCHMARKS';
 export const PROPERTY_BETTER_UPTIME_MONITOR_ID = 'BETTER_UPTIME_MONITOR_ID';
 export const PROPERTY_COUNTRIES_OF_SUBSCRIBERS = 'COUNTRIES_OF_SUBSCRIBERS';
@@ -137,6 +142,7 @@ export const PROPERTY_DEMO_USER_ID = 'DEMO_USER_ID';
 export const PROPERTY_IS_DATA_GATHERING_ENABLED = 'IS_DATA_GATHERING_ENABLED';
 export const PROPERTY_IS_READ_ONLY_MODE = 'IS_READ_ONLY_MODE';
 export const PROPERTY_IS_USER_SIGNUP_ENABLED = 'IS_USER_SIGNUP_ENABLED';
+export const PROPERTY_OPENROUTER_MODEL = 'OPENROUTER_MODEL';
 export const PROPERTY_SLACK_COMMUNITY_USERS = 'SLACK_COMMUNITY_USERS';
 export const PROPERTY_STRIPE_CONFIG = 'STRIPE_CONFIG';
 export const PROPERTY_SYSTEM_MESSAGE = 'SYSTEM_MESSAGE';

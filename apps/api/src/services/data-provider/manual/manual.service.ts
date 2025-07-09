@@ -105,7 +105,7 @@ export class ManualService implements DataProviderInterface {
         }
 
         return historical;
-      } else if (selector === undefined || url === undefined) {
+      } else if (!selector || !url) {
         return {};
       }
 
@@ -170,7 +170,11 @@ export class ManualService implements DataProviderInterface {
 
       const symbolProfilesWithScraperConfigurationAndInstantMode =
         symbolProfiles.filter(({ scraperConfiguration }) => {
-          return scraperConfiguration?.mode === 'instant';
+          return (
+            scraperConfiguration?.mode === 'instant' &&
+            scraperConfiguration?.selector &&
+            scraperConfiguration?.url
+          );
         });
 
       const scraperResultPromises =
@@ -290,14 +294,12 @@ export class ManualService implements DataProviderInterface {
       )
     });
 
+    let value: string;
+
     if (response.headers.get('content-type')?.includes('application/json')) {
       const data = await response.json();
 
-      const value = String(
-        jsonpath.query(data, scraperConfiguration.selector)[0]
-      );
-
-      return extractNumberFromString({ locale, value });
+      value = String(jsonpath.query(data, scraperConfiguration.selector)[0]);
     } else {
       const $ = cheerio.load(await response.text());
 
@@ -307,10 +309,24 @@ export class ManualService implements DataProviderInterface {
         } catch {}
       }
 
+      value = $(scraperConfiguration.selector).first().text();
+
+      const lines = value?.split('\n') ?? [];
+
+      const lineWithDigits = lines.find((line) => {
+        return /\d/.test(line);
+      });
+
+      if (lineWithDigits) {
+        value = lineWithDigits;
+      }
+
       return extractNumberFromString({
         locale,
-        value: $(scraperConfiguration.selector).first().text()
+        value
       });
     }
+
+    return extractNumberFromString({ locale, value });
   }
 }

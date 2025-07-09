@@ -65,7 +65,7 @@ describe('PortfolioCalculator', () => {
 
   beforeAll(() => {
     activityDtos = loadActivityExportFile(
-      join(__dirname, '../../../../../../../test/import/ok-btcusd.json')
+      join(__dirname, '../../../../../../../test/import/ok/btcusd.json')
     );
   });
 
@@ -236,8 +236,7 @@ describe('PortfolioCalculator', () => {
         totalInterestWithCurrencyEffect: new Big('0'),
         totalInvestment: new Big('44558.42'),
         totalInvestmentWithCurrencyEffect: new Big('44558.42'),
-        totalLiabilitiesWithCurrencyEffect: new Big('0'),
-        totalValuablesWithCurrencyEffect: new Big('0')
+        totalLiabilitiesWithCurrencyEffect: new Big('0')
       });
 
       expect(investments).toEqual([

@@ -1,13 +1,14 @@
 import { Component, OnDestroy } from '@angular/core';
+import { MarkdownModule } from 'ngx-markdown';
 import { Subject } from 'rxjs';
 
 @Component({
+  imports: [MarkdownModule],
   selector: 'gf-terms-of-service-page',
-  standalone: false,
   styleUrls: ['./terms-of-service-page.scss'],
   templateUrl: './terms-of-service-page.html'
 })
-export class TermsOfServicePageComponent implements OnDestroy {
+export class GfTermsOfServicePageComponent implements OnDestroy {
   private unsubscribeSubject = new Subject<void>();
 
   public ngOnDestroy() {

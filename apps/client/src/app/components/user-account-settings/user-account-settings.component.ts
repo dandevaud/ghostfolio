@@ -13,29 +13,61 @@ import { downloadAsFile } from '@ghostfolio/common/helper';
 import { User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  CUSTOM_ELEMENTS_SCHEMA,
   OnDestroy,
   OnInit
 } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
-import { MatSlideToggleChange } from '@angular/material/slide-toggle';
+import {
+  FormBuilder,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import {
+  MatSlideToggleChange,
+  MatSlideToggleModule
+} from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { RouterModule } from '@angular/router';
+import { IonIcon } from '@ionic/angular/standalone';
 import { format, parseISO } from 'date-fns';
+import { addIcons } from 'ionicons';
+import { eyeOffOutline, eyeOutline } from 'ionicons/icons';
 import ms from 'ms';
 import { EMPTY, Subject, throwError } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonIcon,
+    MatButtonModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatSlideToggleModule,
+    ReactiveFormsModule,
+    RouterModule
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-user-account-settings',
   styleUrls: ['./user-account-settings.scss'],
-  templateUrl: './user-account-settings.html',
-  standalone: false
+  templateUrl: './user-account-settings.html'
 })
-export class UserAccountSettingsComponent implements OnDestroy, OnInit {
+export class GfUserAccountSettingsComponent implements OnDestroy, OnInit {
   public appearancePlaceholder = $localize`Auto`;
   public baseCurrency: string;
   public currencies: string[] = [];
@@ -112,6 +144,8 @@ export class UserAccountSettingsComponent implements OnDestroy, OnInit {
           this.changeDetectorRef.markForCheck();
         }
       });
+
+    addIcons({ eyeOffOutline, eyeOutline });
   }
 
   public ngOnInit() {

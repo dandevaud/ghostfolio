@@ -25,6 +25,8 @@ import {
   Router
 } from '@angular/router';
 import { DataSource } from '@prisma/client';
+import { addIcons } from 'ionicons';
+import { openOutline } from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -116,6 +118,8 @@ export class AppComponent implements OnDestroy, OnInit {
           });
         }
       });
+
+    addIcons({ openOutline });
   }
 
   public ngOnInit() {
@@ -316,6 +320,10 @@ export class AppComponent implements OnDestroy, OnInit {
             colorScheme: this.user?.settings?.colorScheme,
             deviceType: this.deviceType,
             hasImpersonationId: this.hasImpersonationId,
+            hasPermissionToAccessAdminControl: hasPermission(
+              this.user?.permissions,
+              permissions.accessAdminControl
+            ),
             hasPermissionToCreateOrder:
               !this.hasImpersonationId &&
               hasPermission(this.user?.permissions, permissions.createOrder) &&

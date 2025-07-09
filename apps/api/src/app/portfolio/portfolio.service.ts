@@ -174,7 +174,7 @@ export class PortfolioService {
       })
     ]);
 
-    const userCurrency = this.request.user.Settings.settings.baseCurrency;
+    const userCurrency = this.request.user.settings.settings.baseCurrency;
 
     return accounts.map((account) => {
       let transactionCount = 0;
@@ -377,7 +377,7 @@ export class PortfolioService {
     const userCurrency = this.getUserCurrency(user);
 
     const emergencyFund = new Big(
-      (user.Settings?.settings as UserSettings)?.emergencyFund ?? 0
+      (user.settings?.settings as UserSettings)?.emergencyFund ?? 0
     );
 
     const { activities } =
@@ -1246,7 +1246,7 @@ export class PortfolioService {
     impersonationId: string
   ): Promise<PortfolioReportResponse> {
     const userId = await this.getUserId(impersonationId, this.request.user.id);
-    const userSettings = this.request.user.Settings.settings as UserSettings;
+    const userSettings = this.request.user.settings.settings as UserSettings;
 
     const { accounts, holdings, markets, marketsAdvanced, summary } =
       await this.getDetails({
@@ -1295,10 +1295,14 @@ export class PortfolioService {
               [
                 new AssetClassClusterRiskEquity(
                   this.exchangeRateDataService,
+                  this.i18nService,
+                  userSettings.language,
                   Object.values(holdings)
                 ),
                 new AssetClassClusterRiskFixedIncome(
                   this.exchangeRateDataService,
+                  this.i18nService,
+                  userSettings.language,
                   Object.values(holdings)
                 )
               ],
@@ -1311,11 +1315,15 @@ export class PortfolioService {
               [
                 new CurrencyClusterRiskBaseCurrencyCurrentInvestment(
                   this.exchangeRateDataService,
-                  Object.values(holdings)
+                  this.i18nService,
+                  Object.values(holdings),
+                  userSettings.language
                 ),
                 new CurrencyClusterRiskCurrentInvestment(
                   this.exchangeRateDataService,
-                  Object.values(holdings)
+                  this.i18nService,
+                  Object.values(holdings),
+                  userSettings.language
                 )
               ],
               userSettings
@@ -1709,7 +1717,7 @@ export class PortfolioService {
     const nonExcludedActivities: Activity[] = [];
 
     for (const activity of activities) {
-      if (activity.Account?.isExcluded) {
+      if (activity.account?.isExcluded) {
         excludedActivities.push(activity);
       } else {
         nonExcludedActivities.push(activity);
@@ -1736,7 +1744,7 @@ export class PortfolioService {
 
     const totalEmergencyFund = this.getTotalEmergencyFund({
       emergencyFundHoldingsValueInBaseCurrency,
-      userSettings: user.Settings?.settings as UserSettings
+      userSettings: user.settings?.settings as UserSettings
     });
 
     const fees = await portfolioCalculator.getFeesInBaseCurrency();
@@ -1747,8 +1755,6 @@ export class PortfolioService {
 
     const liabilities =
       await portfolioCalculator.getLiabilitiesInBaseCurrency();
-
-    const valuables = await portfolioCalculator.getValuablesInBaseCurrency();
 
     const totalBuy = this.getSumOfActivityType({
       userCurrency,
@@ -1855,7 +1861,6 @@ export class PortfolioService {
         .plus(fees)
         .toNumber(),
       interest: interest.toNumber(),
-      items: valuables.toNumber(),
       liabilities: liabilities.toNumber(),
       totalInvestment: totalInvestment.toNumber(),
       totalValueInBaseCurrency: netWorth
@@ -1953,7 +1958,7 @@ export class PortfolioService {
       }
 
       for (const {
-        Account,
+        account,
         quantity,
         SymbolProfile,
         type
@@ -1964,27 +1969,27 @@ export class PortfolioService {
           (portfolioItemsNow[SymbolProfile.symbol]?.marketPriceInBaseCurrency ??
             0);
 
-        if (accounts[Account?.id || UNKNOWN_KEY]?.valueInBaseCurrency) {
-          accounts[Account?.id || UNKNOWN_KEY].valueInBaseCurrency +=
+        if (accounts[account?.id || UNKNOWN_KEY]?.valueInBaseCurrency) {
+          accounts[account?.id || UNKNOWN_KEY].valueInBaseCurrency +=
             currentValueOfSymbolInBaseCurrency;
         } else {
-          accounts[Account?.id || UNKNOWN_KEY] = {
+          accounts[account?.id || UNKNOWN_KEY] = {
             balance: 0,
-            currency: Account?.currency,
+            currency: account?.currency,
             name: account.name,
             valueInBaseCurrency: currentValueOfSymbolInBaseCurrency
           };
         }
 
         if (
-          platforms[Account?.platformId || UNKNOWN_KEY]?.valueInBaseCurrency
+          platforms[account?.platformId || UNKNOWN_KEY]?.valueInBaseCurrency
         ) {
-          platforms[Account?.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
+          platforms[account?.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
             currentValueOfSymbolInBaseCurrency;
         } else {
-          platforms[Account?.platformId || UNKNOWN_KEY] = {
+          platforms[account?.platformId || UNKNOWN_KEY] = {
             balance: 0,
-            currency: Account?.currency,
+            currency: account?.currency,
             name: account.platform?.name,
             valueInBaseCurrency: currentValueOfSymbolInBaseCurrency
           };
@@ -2223,8 +2228,8 @@ export class PortfolioService {
 
   private getUserCurrency(aUser?: UserWithSettings) {
     return (
-      aUser?.Settings?.settings.baseCurrency ??
-      this.request.user?.Settings?.settings.baseCurrency ??
+      aUser?.settings?.settings.baseCurrency ??
+      this.request.user?.settings?.settings.baseCurrency ??
       DEFAULT_CURRENCY
     );
   }
@@ -2239,6 +2244,6 @@ export class PortfolioService {
   private getUserPerformanceCalculationType(
     aUser: UserWithSettings
   ): PerformanceCalculationType {
-    return aUser?.Settings?.settings.performanceCalculationType;
+    return aUser?.settings?.settings.performanceCalculationType;
   }
 }
