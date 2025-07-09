@@ -11,6 +11,7 @@ import {
   AdminMarketDataDetails,
   AssetProfileIdentifier,
   LineChartItem,
+  ScraperConfiguration,
   User
 } from '@ghostfolio/common/interfaces';
 import { translate } from '@ghostfolio/ui/i18n';
@@ -43,11 +44,14 @@ import {
   AssetClass,
   AssetSubClass,
   MarketData,
+  Prisma,
   SymbolProfile,
   Tag
 } from '@prisma/client';
 import { format } from 'date-fns';
 import { StatusCodes } from 'http-status-codes';
+import { addIcons } from 'ionicons';
+import { createOutline, ellipsisVertical } from 'ionicons/icons';
 import ms from 'ms';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
@@ -173,7 +177,9 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
     private notificationService: NotificationService,
     private snackBar: MatSnackBar,
     private userService: UserService
-  ) {}
+  ) {
+    addIcons({ createOutline, ellipsisVertical });
+  }
 
   public get canEditAssetProfileIdentifier() {
     return (
@@ -376,7 +382,10 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
 
   public async onSubmitAssetProfileForm() {
     let countries = [];
-    let scraperConfiguration = {};
+    let scraperConfiguration: ScraperConfiguration = {
+      selector: '',
+      url: ''
+    };
     let sectors = [];
     let symbolMapping = {};
 
@@ -387,9 +396,9 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
     try {
       scraperConfiguration = {
         defaultMarketPrice:
-          this.assetProfileForm.controls['scraperConfiguration'].controls[
+          (this.assetProfileForm.controls['scraperConfiguration'].controls[
             'defaultMarketPrice'
-          ].value,
+          ].value as number) || undefined,
         headers: JSON.parse(
           this.assetProfileForm.controls['scraperConfiguration'].controls[
             'headers'
@@ -398,10 +407,10 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
         locale:
           this.assetProfileForm.controls['scraperConfiguration'].controls[
             'locale'
-          ].value,
+          ].value || undefined,
         mode: this.assetProfileForm.controls['scraperConfiguration'].controls[
           'mode'
-        ].value,
+        ].value as ScraperConfiguration['mode'],
         selector:
           this.assetProfileForm.controls['scraperConfiguration'].controls[
             'selector'
@@ -410,6 +419,10 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
           'url'
         ].value
       };
+
+      if (!scraperConfiguration.selector || !scraperConfiguration.url) {
+        scraperConfiguration = undefined;
+      }
     } catch {}
 
     try {
@@ -424,7 +437,6 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
 
     const assetProfile: UpdateAssetProfileDto = {
       countries,
-      scraperConfiguration,
       sectors,
       symbolMapping,
       assetClass: this.assetProfileForm.get('assetClass').value,
@@ -435,6 +447,8 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
       currency: this.assetProfileForm.get('currency').value,
       isActive: this.assetProfileForm.get('isActive').value,
       name: this.assetProfileForm.get('name').value,
+      scraperConfiguration:
+        scraperConfiguration as unknown as Prisma.InputJsonObject,
       url: this.assetProfileForm.get('url').value
     };
 
@@ -528,11 +542,10 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
     this.adminService
       .testMarketData({
         dataSource: this.data.dataSource,
-        scraperConfiguration: JSON.stringify({
-          defaultMarketPrice:
-            this.assetProfileForm.controls['scraperConfiguration'].controls[
-              'defaultMarketPrice'
-            ].value,
+        scraperConfiguration: {
+          defaultMarketPrice: this.assetProfileForm.controls[
+            'scraperConfiguration'
+          ].controls['defaultMarketPrice'].value as number,
           headers: JSON.parse(
             this.assetProfileForm.controls['scraperConfiguration'].controls[
               'headers'
@@ -541,7 +554,7 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
           locale:
             this.assetProfileForm.controls['scraperConfiguration'].controls[
               'locale'
-            ].value,
+            ].value || undefined,
           mode: this.assetProfileForm.controls['scraperConfiguration'].controls[
             'mode'
           ].value,
@@ -552,7 +565,7 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
           url: this.assetProfileForm.controls['scraperConfiguration'].controls[
             'url'
           ].value
-        }),
+        },
         symbol: this.data.symbol
       })
       .pipe(

@@ -1,5 +1,6 @@
 import { UpdateMarketDataDto } from '@ghostfolio/api/app/admin/update-market-data.dto';
 import { DateQuery } from '@ghostfolio/api/app/portfolio/interfaces/date-query.interface';
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { IDataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { resetHours } from '@ghostfolio/common/helper';
@@ -61,6 +62,7 @@ export class MarketDataService {
     });
   }
 
+  @LogPerformance
   public async getRange({
     assetProfileIdentifiers,
     dateQuery,
@@ -95,6 +97,7 @@ export class MarketDataService {
     });
   }
 
+  @LogPerformance
   public async getRangeCount({
     assetProfileIdentifiers,
     dateQuery

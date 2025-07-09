@@ -593,8 +593,6 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
         return 'totalDividend';
       case 'INTEREST':
         return 'totalInterest';
-      case 'ITEM':
-        return 'totalValuables';
       case 'LIABILITY':
         return 'totalLiabilities';
       default:
@@ -836,9 +834,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       totalInvestmentWithCurrencyEffect: new Big(0),
       unitPrices: {},
       totalLiabilities: new Big(0),
-      totalLiabilitiesInBaseCurrency: new Big(0),
-      totalValuables: new Big(0),
-      totalValuablesInBaseCurrency: new Big(0)
+      totalLiabilitiesInBaseCurrency: new Big(0)
     };
   }
 

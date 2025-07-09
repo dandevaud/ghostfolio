@@ -2,6 +2,14 @@ import { TabConfiguration } from '@ghostfolio/common/interfaces';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { addIcons } from 'ionicons';
+import {
+  flashOutline,
+  peopleOutline,
+  readerOutline,
+  serverOutline,
+  settingsOutline
+} from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
 
@@ -18,7 +26,15 @@ export class AdminPageComponent implements OnDestroy, OnInit {
 
   private unsubscribeSubject = new Subject<void>();
 
-  public constructor(private deviceService: DeviceDetectorService) {}
+  public constructor(private deviceService: DeviceDetectorService) {
+    addIcons({
+      flashOutline,
+      peopleOutline,
+      readerOutline,
+      serverOutline,
+      settingsOutline
+    });
+  }
 
   public ngOnInit() {
     this.deviceType = this.deviceService.getDeviceInfo().deviceType;
@@ -33,7 +49,7 @@ export class AdminPageComponent implements OnDestroy, OnInit {
         iconName: 'settings-outline',
         label:
           internalRoutes.adminControl.subRoutes.settings.title +
-          '<span class="badge badge-secondary badge-pill ml-2 text-uppercase">' +
+          '<span class="badge badge-pill badge-secondary ml-2 text-uppercase">' +
           $localize`new` +
           '</span>',
         routerLink: internalRoutes.adminControl.subRoutes.settings.routerLink

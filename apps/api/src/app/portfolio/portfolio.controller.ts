@@ -338,7 +338,7 @@ export class PortfolioController {
 
     const impersonationUserId =
       await this.impersonationService.validateImpersonationId(impersonationId);
-    const userCurrency = this.request.user.Settings.settings.baseCurrency;
+    const userCurrency = this.request.user.settings.settings.baseCurrency;
 
     const { endDate, startDate } = getIntervalFromDateRange(dateRange);
 
@@ -399,7 +399,8 @@ export class PortfolioController {
     const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
-      symbol
+      symbol,
+      this.request.user.id
     );
 
     if (!holding) {
@@ -433,7 +434,6 @@ export class PortfolioController {
       filterByAssetClasses,
       filterByDataSource,
       filterByHoldingType,
-      filterBySearchQuery,
       filterBySymbol,
       filterByTags
     });
@@ -446,14 +446,15 @@ export class PortfolioController {
       userId: this.request.user.id
     });
 
-    const { holdings } = await this.portfolioService.getDetails({
+    const holdings = await this.portfolioService.getHoldings({
       dateRange,
       filters,
       impersonationId,
+      query: filterBySearchQuery,
       userId: this.request.user.id
     });
 
-    return { holdings: Object.values(holdings), performance };
+    return { holdings, performance };
   }
 
   @Get('investments')
@@ -482,7 +483,8 @@ export class PortfolioController {
       filters,
       groupBy,
       impersonationId,
-      savingsRate: this.request.user?.Settings?.settings.savingsRate
+      savingsRate: this.request.user?.settings?.settings.savingsRate,
+      userId: this.request.user.id
     });
 
     if (
@@ -564,7 +566,7 @@ export class PortfolioController {
         user: this.request.user
       }) ||
       isRestrictedView(this.request.user) ||
-      this.request.user.Settings.settings.viewMode === 'ZEN'
+      this.request.user.settings.settings.viewMode === 'ZEN'
     ) {
       performanceInformation.chart = performanceInformation.chart.map(
         ({
@@ -573,12 +575,16 @@ export class PortfolioController {
           netPerformanceInPercentageWithCurrencyEffect,
           netWorth,
           totalInvestment,
+          timeWeightedPerformanceInPercentage,
+          timeWeightedPerformanceInPercentageWithCurrencyEffect,
           value
         }) => {
           return {
             date,
             netPerformanceInPercentage,
             netPerformanceInPercentageWithCurrencyEffect,
+            timeWeightedPerformanceInPercentage,
+            timeWeightedPerformanceInPercentageWithCurrencyEffect,
             netWorthInPercentage:
               performanceInformation.performance.currentNetWorth === 0
                 ? 0
@@ -653,7 +659,8 @@ export class PortfolioController {
     const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
-      symbol
+      symbol,
+      this.request.user.id
     );
 
     if (!holding) {
@@ -671,7 +678,10 @@ export class PortfolioController {
   public async getReport(
     @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string
   ): Promise<PortfolioReportResponse> {
-    const report = await this.portfolioService.getReport(impersonationId);
+    const report = await this.portfolioService.getReport(
+      impersonationId,
+      this.request.user.id
+    );
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
@@ -703,7 +713,8 @@ export class PortfolioController {
     const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
-      symbol
+      symbol,
+      this.request.user.id
     );
 
     if (!holding) {
@@ -738,7 +749,8 @@ export class PortfolioController {
     const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
-      symbol
+      symbol,
+      this.request.user.id
     );
 
     if (!holding) {

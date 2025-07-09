@@ -16,6 +16,7 @@ import { UpdateOrderDto } from '@ghostfolio/api/app/order/update-order.dto';
 import { SymbolItem } from '@ghostfolio/api/app/symbol/interfaces/symbol-item.interface';
 import { DeleteOwnUserDto } from '@ghostfolio/api/app/user/delete-own-user.dto';
 import { UserItem } from '@ghostfolio/api/app/user/interfaces/user-item.interface';
+import { UpdateOwnAccessTokenDto } from '@ghostfolio/api/app/user/update-own-access-token.dto';
 import { UpdateUserSettingDto } from '@ghostfolio/api/app/user/update-user-setting.dto';
 import { IDataProviderHistoricalResponse } from '@ghostfolio/api/services/interfaces/interfaces';
 import { PropertyDto } from '@ghostfolio/api/services/property/property.dto';
@@ -37,6 +38,7 @@ import {
   InfoItem,
   LookupResponse,
   MarketDataDetailsResponse,
+  MarketDataOfMarketsResponse,
   OAuthResponse,
   PortfolioDetails,
   PortfolioDividends,
@@ -482,6 +484,34 @@ export class DataService {
       );
   }
 
+  public fetchMarketDataOfMarkets({
+    includeHistoricalData
+  }: {
+    includeHistoricalData?: number;
+  }): Observable<MarketDataOfMarketsResponse> {
+    let params = new HttpParams();
+
+    if (includeHistoricalData) {
+      params = params.append('includeHistoricalData', includeHistoricalData);
+    }
+
+    return this.http.get<any>('/api/v1/market-data/markets', { params }).pipe(
+      map((data) => {
+        for (const item of data.fearAndGreedIndex.CRYPTOCURRENCIES
+          ?.historicalData ?? []) {
+          item.date = parseISO(item.date);
+        }
+
+        for (const item of data.fearAndGreedIndex.STOCKS?.historicalData ??
+          []) {
+          item.date = parseISO(item.date);
+        }
+
+        return data;
+      })
+    );
+  }
+
   public fetchSymbolItem({
     dataSource,
     includeHistoricalData,
@@ -714,13 +744,6 @@ export class DataService {
     return this.http.get<WatchlistResponse>('/api/v1/watchlist');
   }
 
-  public generateAccessToken(aUserId: string) {
-    return this.http.post<AccessTokenResponse>(
-      `/api/v1/user/${aUserId}/access-token`,
-      {}
-    );
-  }
-
   public loginAnonymous(accessToken: string) {
     return this.http.post<OAuthResponse>('/api/v1/auth/anonymous', {
       accessToken
@@ -827,6 +850,20 @@ export class DataService {
       accountIdTo,
       balance
     });
+  }
+
+  public updateOwnAccessToken(aAccessToken: UpdateOwnAccessTokenDto) {
+    return this.http.post<AccessTokenResponse>(
+      '/api/v1/user/access-token',
+      aAccessToken
+    );
+  }
+
+  public updateUserAccessToken(aUserId: string) {
+    return this.http.post<AccessTokenResponse>(
+      `/api/v1/user/${aUserId}/access-token`,
+      {}
+    );
   }
 
   public updateInfo() {

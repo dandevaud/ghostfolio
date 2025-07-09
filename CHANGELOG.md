@@ -5,6 +5,125 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.180.0 - 2025-07-08
+
+### Added
+
+- Added alternative investment as an asset class
+- Added collectible as an asset sub class
+
+### Changed
+
+- Respected the filter by account for accounts when exporting activities on the portfolio activities page
+- Improved the label for asset profiles with `MANUAL` data source in the chart of the holdings tab on the home page
+- Renamed `AccessGive` to `accessesGive` in the `User` database schema
+- Improved the language localization for Catalan (`ca`)
+- Improved the language localization for German (`de`)
+- Improved the language localization for Spanish (`es`)
+
+### Fixed
+
+- Fixed the export functionality for accounts without activities
+
+## 2.179.0 - 2025-07-07
+
+### Added
+
+- Added a _Manage Asset Profile_ button for administrators to the holding detail dialog
+
+### Changed
+
+- Improved the language localization in the users table of the admin control panel
+- Refactored the accounts pages to standalone
+- Refactored the portfolio pages to standalone
+- Refactored the user account pages to standalone
+- Renamed `Settings` to `settings` in the `User` database schema
+- Improved the language localization for Catalan (`ca`)
+- Improved the language localization for Dutch (`nl`)
+- Improved the language localization for Español (`es`)
+- Improved the language localization for German (`de`)
+- Upgraded `ionicons` from version `7.4.0` to `8.0.10`
+
+### Fixed
+
+- Fixed the allocations by asset class for unknown asset classes on the allocations page
+
+## 2.178.0 - 2025-07-05
+
+### Changed
+
+- Increased the width of the markets overview
+- Increased the width of the watchlist
+- Deprecated the `ITEM` activity type in favor of `BUY`
+- Renamed `Access` to `accessesGet` in the `User` database schema
+- Improved the language localization for Dutch (`nl`)
+- Improved the language localization for Italian (`it`)
+- Upgraded `prisma` from version `6.10.1` to `6.11.1`
+
+### Fixed
+
+- Set the name column to sticky in the table of the benchmark component
+
+## 2.177.0 - 2025-07-03
+
+### Added
+
+- Extended the _Fear & Greed Index_ (market mood) in the markets overview by cryptocurrencies (experimental)
+
+### Changed
+
+- Refactored the about pages to standalone
+- Made the `getByKey()` function generic in the property service
+- Renamed `AuthDevice` to `authDevices` in the `User` database schema
+- Improved the language localization for Catalan (`ca`)
+- Improved the language localization for German (`de`)
+- Improved the language localization for Portuguese (`pt`)
+- Upgraded `@internationalized/number` from version `3.6.0` to `3.6.3`
+- Upgraded `ngx-skeleton-loader` from version `11.0.0` to `11.2.1`
+- Upgraded `yahoo-finance2` from version `3.3.5` to `3.4.1`
+
+## 2.176.0 - 2025-06-30
+
+### Added
+
+- Added support for generating a new _Security Token_ via the user’s account access panel
+
+### Changed
+
+- Moved the main content of the holding detail dialog to a new overview tab
+- Introduced fuzzy search for the holdings of the assistant
+- Introduced fuzzy search for the quick links of the assistant
+- Improved the search results of the assistant to only display categories with content
+- Enhanced the sitemap to dynamically compose public routes
+- Renamed `Account` to `account` in the `Order` database schema
+- Improved the language localization for German (`de`)
+- Upgraded `prettier` from version `3.5.3` to `3.6.2`
+
+## 2.175.0 - 2025-06-28
+
+### Added
+
+- Set up the language localization for the static portfolio analysis rule: _Asset Class Cluster Risks_ (Equity)
+- Set up the language localization for the static portfolio analysis rule: _Asset Class Cluster Risks_ (Fixed Income)
+- Set up the language localization for the static portfolio analysis rule: _Currency Cluster Risks_ (Investment)
+- Set up the language localization for the static portfolio analysis rule: _Currency Cluster Risks_ (Investment: Base Currency)
+
+### Changed
+
+- Extended the selector handling of the scraper configuration for more use cases
+- Extended the _AI_ service by an access to _OpenRouter_ (experimental)
+- Changed `node main` to `exec node main` in the `entrypoint.sh` file to improve the container signal handling
+- Renamed `Account` to `account` in the `AccountBalance` database schema
+- Improved the language localization for Catalan (`ca`)
+- Improved the language localization for Dutch (`nl`)
+- Improved the language localization for Español (`es`)
+- Improved the language localization for German (`de`)
+- Improved the language localization for Turkish (`tr`)
+
+### Fixed
+
+- Fixed an issue with the locale in the scraper configuration
+
 ## 2.174.0 - 2025-06-24
 
 ### Added
@@ -6168,7 +6287,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changed the navigation to always show the portfolio page
 - Migrated the data type of currencies from `enum` to `string` in the database
 - Supported unlimited currencies (instead of `CHF`, `EUR`, `GBP` and `USD`)
-- Respected the accounts' currencies in the exchange rate service
+- Respected the accounts’ currencies in the exchange rate service
 
 ### Fixed
 

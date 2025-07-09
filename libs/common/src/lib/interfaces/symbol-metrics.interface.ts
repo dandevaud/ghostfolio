@@ -54,6 +54,4 @@ export interface SymbolMetrics {
   };
   totalLiabilities: Big;
   totalLiabilitiesInBaseCurrency: Big;
-  totalValuables: Big;
-  totalValuablesInBaseCurrency: Big;
 }

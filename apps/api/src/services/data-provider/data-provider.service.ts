@@ -53,9 +53,9 @@ export class DataProviderService implements OnModuleInit {
 
   public async onModuleInit() {
     this.dataProviderMapping =
-      ((await this.propertyService.getByKey(PROPERTY_DATA_SOURCE_MAPPING)) as {
+      (await this.propertyService.getByKey<{
         [dataProviderName: string]: string;
-      }) ?? {};
+      }>(PROPERTY_DATA_SOURCE_MAPPING)) ?? {};
   }
 
   public async checkQuote(dataSource: DataSource) {
@@ -184,9 +184,9 @@ export class DataProviderService implements OnModuleInit {
         return DataSource[dataSource];
       });
 
-    const ghostfolioApiKey = (await this.propertyService.getByKey(
+    const ghostfolioApiKey = await this.propertyService.getByKey<string>(
       PROPERTY_API_KEY_GHOSTFOLIO
-    )) as string;
+    );
 
     if (includeGhostfolio || ghostfolioApiKey) {
       dataSources.push('GHOSTFOLIO');
@@ -701,7 +701,7 @@ export class DataProviderService implements OnModuleInit {
 
         if (
           lookupItem.assetSubClass === 'CRYPTOCURRENCY' &&
-          user?.Settings?.settings.isExperimentalFeatures
+          user?.settings?.settings.isExperimentalFeatures
         ) {
           // Remove DEFAULT_CURRENCY at the end of cryptocurrency names
           lookupItem.name = lookupItem.name.replace(

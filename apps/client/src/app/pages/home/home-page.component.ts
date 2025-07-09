@@ -1,9 +1,18 @@
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { TabConfiguration, User } from '@ghostfolio/common/interfaces';
+import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { addIcons } from 'ionicons';
+import {
+  analyticsOutline,
+  bookmarkOutline,
+  newspaperOutline,
+  readerOutline,
+  walletOutline
+} from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -33,6 +42,8 @@ export class HomePageComponent implements OnDestroy, OnInit {
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((state) => {
         if (state?.user) {
+          this.user = state.user;
+
           this.tabs = [
             {
               iconName: 'analytics-outline',
@@ -56,16 +67,32 @@ export class HomePageComponent implements OnDestroy, OnInit {
             },
             {
               iconName: 'newspaper-outline',
-              label: internalRoutes.home.subRoutes.markets.title,
-              routerLink: internalRoutes.home.subRoutes.markets.routerLink
+              label: hasPermission(
+                this.user?.permissions,
+                permissions.readMarketDataOfMarkets
+              )
+                ? internalRoutes.home.subRoutes.marketsPremium.title
+                : internalRoutes.home.subRoutes.markets.title,
+              routerLink: hasPermission(
+                this.user?.permissions,
+                permissions.readMarketDataOfMarkets
+              )
+                ? internalRoutes.home.subRoutes.marketsPremium.routerLink
+                : internalRoutes.home.subRoutes.markets.routerLink
             }
           ];
-
-          this.user = state.user;
 
           this.changeDetectorRef.markForCheck();
         }
       });
+
+    addIcons({
+      analyticsOutline,
+      bookmarkOutline,
+      newspaperOutline,
+      readerOutline,
+      walletOutline
+    });
   }
 
   public ngOnInit() {
