@@ -575,12 +575,16 @@ export class PortfolioController {
           netPerformanceInPercentageWithCurrencyEffect,
           netWorth,
           totalInvestment,
+          timeWeightedPerformanceInPercentage,
+          timeWeightedPerformanceInPercentageWithCurrencyEffect,
           value
         }) => {
           return {
             date,
             netPerformanceInPercentage,
             netPerformanceInPercentageWithCurrencyEffect,
+            timeWeightedPerformanceInPercentage,
+            timeWeightedPerformanceInPercentageWithCurrencyEffect,
             netWorthInPercentage:
               performanceInformation.performance.currentNetWorth === 0
                 ? 0
