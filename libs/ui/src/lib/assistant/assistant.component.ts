@@ -404,11 +404,31 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
 
     if (
       this.user?.dateOfFirstActivity &&
+      differenceInYears(new Date(), this.user.dateOfFirstActivity) >= 3
+    ) {
+      this.dateRangeOptions.push({
+        label: '3 ' + $localize`years` + ' (' + $localize`3Y` + ')',
+        value: '3y'
+      });
+    }
+
+    if (
+      this.user?.dateOfFirstActivity &&
       differenceInYears(new Date(), this.user.dateOfFirstActivity) >= 5
     ) {
       this.dateRangeOptions.push({
         label: '5 ' + $localize`years` + ' (' + $localize`5Y` + ')',
         value: '5y'
+      });
+    }
+
+    if (
+      this.user?.dateOfFirstActivity &&
+      differenceInYears(new Date(), this.user.dateOfFirstActivity) >= 10
+    ) {
+      this.dateRangeOptions.push({
+        label: '10 ' + $localize`years` + ' (' + $localize`10Y` + ')',
+        value: '10y'
       });
     }
 
