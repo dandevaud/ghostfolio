@@ -138,7 +138,6 @@ docker compose -f docker/docker-compose.build.yml up -d
 #### Upgrade Version
 
 1. Update the _Ghostfolio_ Docker image
-
    - Increase the version of the `ghostfolio/ghostfolio` Docker image in `docker/docker-compose.yml`
    - Run the following command if `ghostfolio:latest` is set:
      ```bash
