@@ -53,12 +53,12 @@ export class ImportService {
   }: AssetProfileIdentifier & { userId: string }): Promise<Activity[]> {
     try {
       const { activities, firstBuyDate, historicalData } =
-        await this.portfolioService.getHolding({
+        await this.portfolioService.getHolding(
           dataSource,
+          undefined,
           symbol,
-          userId,
-          impersonationId: undefined
-        });
+          userId
+        );
 
       const [[assetProfile], dividends] = await Promise.all([
         this.symbolProfileService.getSymbolProfiles([

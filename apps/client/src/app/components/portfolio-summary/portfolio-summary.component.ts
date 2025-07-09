@@ -44,8 +44,6 @@ export class PortfolioSummaryComponent implements OnChanges {
 
   protected calculationType: { title: string; value: string };
 
-  protected calculationType: { title: string; value: string };
-
   public constructor(private notificationService: NotificationService) {
     addIcons({ ellipsisHorizontalCircleOutline, informationCircleOutline });
   }

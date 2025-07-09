@@ -396,12 +396,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<PortfolioHoldingResponse> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(
@@ -652,12 +652,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<PortfolioHoldingResponse> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(
@@ -674,10 +674,10 @@ export class PortfolioController {
   public async getReport(
     @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string
   ): Promise<PortfolioReportResponse> {
-    const report = await this.portfolioService.getReport({
+    const report = await this.portfolioService.getReport(
       impersonationId,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
@@ -706,12 +706,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<void> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(
@@ -742,12 +742,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<void> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(

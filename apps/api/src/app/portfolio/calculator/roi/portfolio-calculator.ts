@@ -74,8 +74,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       createdAt: new Date(),
       errors: [],
       historicalData: [],
-      totalLiabilitiesWithCurrencyEffect: new Big(0),
-      totalValuablesWithCurrencyEffect: new Big(0)
+      totalLiabilitiesWithCurrencyEffect: new Big(0)
     };
   }
 

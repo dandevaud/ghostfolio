@@ -1136,9 +1136,10 @@ export class PortfolioService {
 
   @LogPerformance
   public async getReport(
-    impersonationId: string
+    impersonationId: string,
+    userId: string
   ): Promise<PortfolioReportResponse> {
-    const userId = await this.getUserId(impersonationId, this.request.user.id);
+    userId = await this.getUserId(impersonationId, userId);
     const userSettings = this.request.user.settings.settings as UserSettings;
 
     const { accounts, holdings, markets, marketsAdvanced, summary } =

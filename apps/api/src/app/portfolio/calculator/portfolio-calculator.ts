@@ -551,7 +551,7 @@ export abstract class PortfolioCalculator {
       }
     }
 
-    const historicalData: HistoricalDataItem[] = this.getHistoricalDataItems(
+    const historicalData: HistoricalDataItem[] = Object.entries(
       accumulatedValuesByDate
     ).map(([date, values]) => {
       const {
@@ -1361,11 +1361,6 @@ export abstract class PortfolioCalculator {
     return this.transactionPoints;
   }
 
-  public async getValuablesInBaseCurrency() {
-    await this.snapshotPromise;
-
-    return this.snapshot.totalValuablesWithCurrencyEffect;
-  }
   private calculateTimeWeightedPerformance(
     lastTimeWeightedPerformancePercentage: number,
     historicalDataItem: HistoricalDataItem,
