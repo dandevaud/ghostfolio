@@ -146,7 +146,7 @@ export class ExchangeRateDataService {
             dataSource,
             symbol: `${DEFAULT_CURRENCY}${targetCurrency}`
           });
-acc.push({
+          acc.push({
             dataSource,
             symbol: `${DEFAULT_CURRENCY}${currency}`
           });
