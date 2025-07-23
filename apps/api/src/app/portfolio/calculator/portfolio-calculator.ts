@@ -1312,7 +1312,7 @@ export abstract class PortfolioCalculator {
     return this.transactionPoints;
   }
 
- private calculateTimeWeightedPerformance(
+  private calculateTimeWeightedPerformance(
     lastTimeWeightedPerformancePercentage: number,
     historicalDataItem: HistoricalDataItem,
     lastTimeWeightedPerformancePercentageWithCurrencyEffect: number,
