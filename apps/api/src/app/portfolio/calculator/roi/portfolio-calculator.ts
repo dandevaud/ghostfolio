@@ -77,7 +77,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       totalLiabilitiesWithCurrencyEffect: new Big(0)
     };
   }
-  
+
   @LogPerformance
   protected getSymbolMetrics({
     chartDateMap,
