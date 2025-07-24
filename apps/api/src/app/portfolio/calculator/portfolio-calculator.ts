@@ -920,12 +920,10 @@ export abstract class PortfolioCalculator {
     return this.snapshot;
   }
 
-  @LogPerformance
   protected getCurrency(symbol: string) {
     return this.getCurrencyFromActivities(this.activities, symbol);
   }
 
-  @LogPerformance
   protected getCurrencyFromActivities(
     activities: PortfolioOrder[],
     symbol: string
@@ -1350,6 +1348,7 @@ export abstract class PortfolioCalculator {
     };
   }
 
+  @LogPerformance
   private calculateHoldings(
     investmentByDate: { [date: string]: PortfolioOrder[] },
     start: Date,
@@ -1385,6 +1384,7 @@ export abstract class PortfolioCalculator {
     this.holdings = currentHoldings;
   }
 
+  @LogPerformance
   private getChartDateMap({
     endDate,
     startDate,
