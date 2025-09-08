@@ -40,11 +40,11 @@ import {
 import {
   AssetClass,
   AssetSubClass,
-  DataSource,
   Prisma,
   PrismaClient,
   Property,
-  SymbolProfile
+  SymbolProfile,
+  DataSource
 } from '@prisma/client';
 import { differenceInDays } from 'date-fns';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
@@ -304,7 +304,8 @@ export class AdminService {
             scraperConfiguration: true,
             sectors: true,
             symbol: true,
-            SymbolProfileOverrides: true
+            SymbolProfileOverrides: true,
+            tags: true
           }
         }),
         this.prismaService.symbolProfile.count({ where })
@@ -360,7 +361,8 @@ export class AdminService {
             name,
             sectors,
             symbol,
-            SymbolProfileOverrides
+            SymbolProfileOverrides,
+            tags
           }) => {
             let countriesCount = countries ? Object.keys(countries).length : 0;
 
@@ -423,7 +425,8 @@ export class AdminService {
               date: activities?.[0]?.date,
               isUsedByUsersWithSubscription:
                 await isUsedByUsersWithSubscription,
-              watchedByCount: _count.watchedBy
+              watchedByCount: _count.watchedBy,
+              tags
             };
           }
         )
@@ -532,6 +535,7 @@ export class AdminService {
       holdings,
       isActive,
       name,
+      tags,
       scraperConfiguration,
       sectors,
       symbol: newSymbol,
@@ -613,6 +617,7 @@ export class AdminService {
         sectors,
         symbol,
         symbolMapping,
+        tags,
         ...(dataSource === 'MANUAL'
           ? { assetClass, assetSubClass, name, url }
           : {
@@ -801,7 +806,8 @@ export class AdminService {
           isActive: true,
           name: symbol,
           sectorsCount: 0,
-          watchedByCount: 0
+          watchedByCount: 0,
+          tags: []
         };
       }
     );

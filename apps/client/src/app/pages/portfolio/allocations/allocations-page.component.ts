@@ -7,6 +7,7 @@ import { MAX_TOP_HOLDINGS, UNKNOWN_KEY } from '@ghostfolio/common/config';
 import { prettifySymbol } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
+  Holding,
   HoldingWithParents,
   PortfolioDetails,
   PortfolioPosition,
@@ -112,6 +113,10 @@ export class GfAllocationsPageComponent implements OnDestroy, OnInit {
   };
   public topHoldings: HoldingWithParents[];
   public topHoldingsMap: {
+    [name: string]: { name: string; value: number };
+  };
+  public tagHoldings: Holding[];
+  public tagHoldingsMap: {
     [name: string]: { name: string; value: number };
   };
   public totalValueInEtf = 0;
@@ -225,6 +230,9 @@ export class GfAllocationsPageComponent implements OnDestroy, OnInit {
   private fetchPortfolioDetails() {
     return this.dataService.fetchPortfolioDetails({
       filters: this.userService.getFilters(),
+      parameters: {
+        isAllocation: true
+      },
       withMarkets: true
     });
   }
@@ -303,6 +311,7 @@ export class GfAllocationsPageComponent implements OnDestroy, OnInit {
       }
     };
     this.topHoldingsMap = {};
+    this.tagHoldingsMap = {};
   }
 
   private initializeAllocationsData() {
@@ -350,6 +359,22 @@ export class GfAllocationsPageComponent implements OnDestroy, OnInit {
         exchange: position.exchange,
         name: position.name
       };
+
+      if (position.tags.length > 0) {
+        for (const tag of position.tags) {
+          const { name } = tag;
+
+          if (this.tagHoldingsMap[name]?.value) {
+            this.tagHoldingsMap[name].value +=
+              position.valueInBaseCurrency ?? 0;
+          } else {
+            this.tagHoldingsMap[name] = {
+              name,
+              value: position.valueInBaseCurrency ?? 0
+            };
+          }
+        }
+      }
 
       if (position.assetClass !== AssetClass.LIQUIDITY) {
         // Prepare analysis data by continents, countries, holdings and sectors except for liquidity
@@ -500,6 +525,29 @@ export class GfAllocationsPageComponent implements OnDestroy, OnInit {
         value
       };
     }
+
+    this.tagHoldings = Object.values(this.tagHoldingsMap)
+      .map(({ name, value }) => {
+        if (this.hasImpersonationId || this.user.settings.isRestrictedView) {
+          return {
+            name,
+            allocationInPercentage: value,
+            valueInBaseCurrency: null
+          };
+        }
+
+        return {
+          name,
+          allocationInPercentage:
+            this.portfolioDetails.summary.currentValueInBaseCurrency > 0
+              ? value / this.portfolioDetails.summary.currentValueInBaseCurrency
+              : 0,
+          valueInBaseCurrency: value
+        };
+      })
+      .sort((a, b) => {
+        return b.allocationInPercentage - a.allocationInPercentage;
+      });
 
     this.topHoldings = Object.values(this.topHoldingsMap)
       .map(({ name, value }) => {

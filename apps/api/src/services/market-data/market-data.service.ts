@@ -1,5 +1,6 @@
 import { UpdateMarketDataDto } from '@ghostfolio/api/app/admin/update-market-data.dto';
 import { DateQuery } from '@ghostfolio/api/app/portfolio/interfaces/date-query.interface';
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { IDataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { resetHours } from '@ghostfolio/common/helper';
@@ -12,10 +13,13 @@ import {
   MarketDataState,
   Prisma
 } from '@prisma/client';
+import AwaitLock from 'await-lock';
 
 @Injectable()
 export class MarketDataService {
   public constructor(private readonly prismaService: PrismaService) {}
+
+  lock = new AwaitLock();
 
   public async deleteMany({ dataSource, symbol }: AssetProfileIdentifier) {
     return this.prismaService.marketData.deleteMany({
@@ -58,6 +62,7 @@ export class MarketDataService {
     });
   }
 
+  @LogPerformance
   public async getRange({
     assetProfileIdentifiers,
     dateQuery,
@@ -92,6 +97,7 @@ export class MarketDataService {
     });
   }
 
+  @LogPerformance
   public async getRangeCount({
     assetProfileIdentifiers,
     dateQuery
@@ -155,7 +161,6 @@ export class MarketDataService {
     where: Prisma.MarketDataWhereUniqueInput;
   }): Promise<MarketData> {
     const { data, where } = params;
-
     return this.prismaService.marketData.upsert({
       where,
       create: {
@@ -179,7 +184,7 @@ export class MarketDataService {
     data: Prisma.MarketDataUpdateInput[];
   }): Promise<MarketData[]> {
     const upsertPromises = data.map(
-      ({ dataSource, date, marketPrice, symbol, state }) => {
+      async ({ dataSource, date, marketPrice, symbol, state }) => {
         return this.prismaService.marketData.upsert({
           create: {
             dataSource: dataSource as DataSource,
@@ -202,7 +207,6 @@ export class MarketDataService {
         });
       }
     );
-
-    return this.prismaService.$transaction(upsertPromises);
+    return await Promise.all(upsertPromises);
   }
 }

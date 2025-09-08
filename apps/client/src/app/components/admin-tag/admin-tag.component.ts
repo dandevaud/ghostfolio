@@ -52,7 +52,13 @@ export class GfAdminTagComponent implements OnInit, OnDestroy {
 
   public dataSource = new MatTableDataSource<Tag>();
   public deviceType: string;
-  public displayedColumns = ['name', 'userId', 'activities', 'actions'];
+  public displayedColumns = [
+    'name',
+    'userId',
+    'activities',
+    'holdings',
+    'actions'
+  ];
   public tags: Tag[];
 
   private unsubscribeSubject = new Subject<void>();

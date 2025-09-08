@@ -22,10 +22,9 @@ export class PrismaService
       ) as LogLevel[];
     } catch {}
 
-    const log: Prisma.LogDefinition[] =
-      customLogLevels?.includes('debug') || customLogLevels?.includes('verbose')
-        ? [{ emit: 'stdout', level: 'query' }]
-        : [];
+    const log: Prisma.LogDefinition[] = customLogLevels?.includes('verbose')
+      ? [{ emit: 'stdout', level: 'query' }]
+      : [];
 
     super({
       log,

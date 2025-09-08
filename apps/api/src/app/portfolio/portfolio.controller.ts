@@ -5,7 +5,10 @@ import {
   hasNotDefinedValuesInObject,
   nullifyValuesInObject
 } from '@ghostfolio/api/helper/object.helper';
-import { PerformanceLoggingInterceptor } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
+import {
+  LogPerformance,
+  PerformanceLoggingInterceptor
+} from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { RedactValuesInResponseInterceptor } from '@ghostfolio/api/interceptors/redact-values-in-response/redact-values-in-response.interceptor';
 import { TransformDataSourceInRequestInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-request/transform-data-source-in-request.interceptor';
 import { TransformDataSourceInResponseInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-response/transform-data-source-in-response.interceptor';
@@ -159,6 +162,23 @@ export class PortfolioController {
           portfolioPosition.investment / totalInvestment;
         portfolioPosition.valueInPercentage =
           portfolioPosition.valueInBaseCurrency / totalValue;
+        portfolioPosition.assetClass = hasDetails
+          ? portfolioPosition.assetClass
+          : undefined;
+        portfolioPosition.assetSubClass = hasDetails
+          ? portfolioPosition.assetSubClass
+          : undefined;
+        portfolioPosition.countries = hasDetails
+          ? portfolioPosition.countries
+          : [];
+        portfolioPosition.currency = hasDetails
+          ? portfolioPosition.currency
+          : undefined;
+        portfolioPosition.markets = hasDetails
+          ? portfolioPosition.markets
+          : undefined;
+        portfolioPosition.sectors = hasDetails ? portfolioPosition.sectors : [];
+        portfolioPosition.tags = hasDetails ? portfolioPosition.tags : [];
       }
 
       for (const [name, { valueInBaseCurrency }] of Object.entries(accounts)) {
@@ -225,6 +245,7 @@ export class PortfolioController {
         currency: hasDetails ? portfolioPosition.currency : undefined,
         holdings: hasDetails ? portfolioPosition.holdings : [],
         markets: hasDetails ? portfolioPosition.markets : undefined,
+        tags: hasDetails ? portfolioPosition.tags : [],
         marketsAdvanced: hasDetails
           ? portfolioPosition.marketsAdvanced
           : undefined,
@@ -375,12 +396,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<PortfolioHoldingResponse> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(
@@ -418,6 +439,14 @@ export class PortfolioController {
       filterByTags
     });
 
+    const { performance } = await this.portfolioService.getPerformance({
+      dateRange,
+      filters,
+      impersonationId,
+      withExcludedAccounts: false,
+      userId: this.request.user.id
+    });
+
     const holdings = await this.portfolioService.getHoldings({
       dateRange,
       filters,
@@ -425,7 +454,7 @@ export class PortfolioController {
       userId: this.request.user.id
     });
 
-    return { holdings };
+    return { holdings, performance };
   }
 
   @Get('investments')
@@ -504,6 +533,7 @@ export class PortfolioController {
   @UseInterceptors(TransformDataSourceInRequestInterceptor)
   @UseInterceptors(TransformDataSourceInResponseInterceptor)
   @Version('2')
+  @LogPerformance
   public async getPerformanceV2(
     @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string,
     @Query('accounts') filterByAccounts?: string,
@@ -512,10 +542,8 @@ export class PortfolioController {
     @Query('range') dateRange: DateRange = 'max',
     @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string,
-    @Query('withExcludedAccounts') withExcludedAccountsParam = 'false'
+    @Query('withExcludedAccounts') withExcludedAccounts = false
   ): Promise<PortfolioPerformanceResponse> {
-    const withExcludedAccounts = withExcludedAccountsParam === 'true';
-
     const filters = this.apiService.buildFiltersFromQueryParams({
       filterByAccounts,
       filterByAssetClasses,
@@ -547,12 +575,16 @@ export class PortfolioController {
           netPerformanceInPercentageWithCurrencyEffect,
           netWorth,
           totalInvestment,
+          timeWeightedPerformanceInPercentage,
+          timeWeightedPerformanceInPercentageWithCurrencyEffect,
           value
         }) => {
           return {
             date,
             netPerformanceInPercentage,
             netPerformanceInPercentageWithCurrencyEffect,
+            timeWeightedPerformanceInPercentage,
+            timeWeightedPerformanceInPercentageWithCurrencyEffect,
             netWorthInPercentage:
               performanceInformation.performance.currentNetWorth === 0
                 ? 0
@@ -624,12 +656,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<PortfolioHoldingResponse> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(
@@ -646,10 +678,10 @@ export class PortfolioController {
   public async getReport(
     @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string
   ): Promise<PortfolioReportResponse> {
-    const report = await this.portfolioService.getReport({
+    const report = await this.portfolioService.getReport(
       impersonationId,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
@@ -678,12 +710,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<void> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(
@@ -714,12 +746,12 @@ export class PortfolioController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<void> {
-    const holding = await this.portfolioService.getHolding({
+    const holding = await this.portfolioService.getHolding(
       dataSource,
       impersonationId,
       symbol,
-      userId: this.request.user.id
-    });
+      this.request.user.id
+    );
 
     if (!holding) {
       throw new HttpException(

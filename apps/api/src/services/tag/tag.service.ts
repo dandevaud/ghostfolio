@@ -56,7 +56,8 @@ export class TagService {
               where: {
                 userId
               }
-            }
+            },
+            symbolProfile: {}
           }
         }
       },
@@ -75,11 +76,11 @@ export class TagService {
       }
     });
 
-    return tags.map(({ _count, id, name, userId }) => ({
+    return tags.map(({ id, name, userId }) => ({
       id,
       name,
       userId,
-      isUsed: _count.activities > 0
+      isUsed: true
     }));
   }
 
@@ -87,7 +88,7 @@ export class TagService {
     const tagsWithOrderCount = await this.prismaService.tag.findMany({
       include: {
         _count: {
-          select: { activities: true }
+          select: { activities: true, symbolProfile: true }
         }
       }
     });
@@ -97,7 +98,8 @@ export class TagService {
         id,
         name,
         userId,
-        activityCount: _count.activities
+        activityCount: _count.activities,
+        holdingCount: _count.symbolProfile
       };
     });
   }

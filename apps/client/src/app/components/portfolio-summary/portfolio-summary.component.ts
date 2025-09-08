@@ -1,6 +1,7 @@
 import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { getDateFnsLocale, getLocale } from '@ghostfolio/common/helper';
 import { PortfolioSummary, User } from '@ghostfolio/common/interfaces';
+import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
@@ -45,6 +46,8 @@ export class GfPortfolioSummaryComponent implements OnChanges {
   );
   public timeInMarket: string;
 
+  protected calculationType: { title: string; value: string };
+
   public constructor(private notificationService: NotificationService) {
     addIcons({ ellipsisHorizontalCircleOutline, informationCircleOutline });
   }
@@ -61,6 +64,7 @@ export class GfPortfolioSummaryComponent implements OnChanges {
     } else {
       this.timeInMarket = undefined;
     }
+    this.calculationType = this.getCalulationType();
   }
 
   public onEditEmergencyFund() {
@@ -74,5 +78,23 @@ export class GfPortfolioSummaryComponent implements OnChanges {
       defaultValue: this.summary.emergencyFund?.total?.toString() ?? '0',
       title: $localize`Please set the amount of your emergency fund.`
     });
+  }
+
+  private getCalulationType(): { title: string; value: string } {
+    switch (this.user?.settings?.performanceCalculationType) {
+      case PerformanceCalculationType.ROAI:
+        return {
+          title: 'Return on Average Investment',
+          value: PerformanceCalculationType.ROAI
+        };
+      case PerformanceCalculationType.ROI:
+        return {
+          title: 'Return on Investment',
+          value: PerformanceCalculationType.ROI
+        };
+
+      default:
+        return undefined;
+    }
   }
 }

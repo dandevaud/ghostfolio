@@ -13,7 +13,12 @@ import {
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import type { AiPromptMode, GroupBy } from '@ghostfolio/common/types';
+import type {
+  AiPromptMode,
+  DateRange,
+  GroupBy
+} from '@ghostfolio/common/types';
+import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
 import { GfToggleComponent } from '@ghostfolio/ui/toggle';
@@ -69,7 +74,15 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public benchmark: Partial<SymbolProfile>;
   public benchmarkDataItems: HistoricalDataItem[] = [];
   public benchmarks: Partial<SymbolProfile>[];
-  public bottom3: PortfolioPosition[];
+  public bottom5: PortfolioPosition[];
+  public dateRangeOptions = ToggleComponent.DEFAULT_DATE_RANGE_OPTIONS;
+  public timeWeightedPerformanceOptions = [
+    { label: $localize`No`, value: 'N' },
+    { label: $localize`Both`, value: 'B' },
+    { label: $localize`Only`, value: 'O' }
+  ];
+  public selectedTimeWeightedPerformanceOption: string;
+  public daysInMarket: number;
   public deviceType: string;
   public dividendsByGroup: InvestmentItem[];
   public dividendTimelineDataLabel = $localize`Dividend`;
@@ -93,9 +106,11 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public performance: PortfolioPerformance;
   public performanceDataItems: HistoricalDataItem[];
   public performanceDataItemsInPercentage: HistoricalDataItem[];
+  public performanceDataItemsTimeWeightedInPercentage: HistoricalDataItem[] =
+    [];
   public portfolioEvolutionDataLabel = $localize`Investment`;
   public streaks: PortfolioInvestments['streaks'];
-  public top3: PortfolioPosition[];
+  public top5: PortfolioPosition[];
   public unitCurrentStreak: string;
   public unitLongestStreak: string;
   public user: User;
@@ -165,6 +180,24 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
       .subscribe(() => {
         this.userService
           .get(true)
+          .pipe(takeUntil(this.unsubscribeSubject))
+          .subscribe((user) => {
+            this.user = user;
+
+            this.changeDetectorRef.markForCheck();
+          });
+      });
+  }
+
+  public onChangeDateRange(dateRange: DateRange) {
+    this.dataService
+      .putUserSetting({ dateRange })
+      .pipe(takeUntil(this.unsubscribeSubject))
+      .subscribe(() => {
+        this.userService.remove();
+
+        this.userService
+          .get()
           .pipe(takeUntil(this.unsubscribeSubject))
           .subscribe((user) => {
             this.user = user;
@@ -293,12 +326,14 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
         this.performance = performance;
         this.performanceDataItems = [];
         this.performanceDataItemsInPercentage = [];
+        this.performanceDataItemsTimeWeightedInPercentage = [];
 
         for (const [
           index,
           {
             date,
             netPerformanceInPercentageWithCurrencyEffect,
+            timeWeightedPerformanceInPercentageWithCurrencyEffect,
             totalInvestmentValueWithCurrencyEffect,
             valueInPercentage,
             valueWithCurrencyEffect
@@ -319,7 +354,11 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
           }
           this.performanceDataItemsInPercentage.push({
             date,
-            value: netPerformanceInPercentageWithCurrencyEffect
+            value:
+              this.user?.settings?.performanceCalculationType ===
+              PerformanceCalculationType.ROI
+                ? timeWeightedPerformanceInPercentageWithCurrencyEffect
+                : netPerformanceInPercentageWithCurrencyEffect
           });
         }
 
@@ -344,20 +383,13 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
           'netPerformancePercentWithCurrencyEffect'
         ).reverse();
 
-        this.top3 = holdingsSorted
-          .filter(
-            ({ netPerformancePercentWithCurrencyEffect }) =>
-              netPerformancePercentWithCurrencyEffect > 0
-          )
-          .slice(0, 3);
+        this.top5 = holdingsSorted.slice(0, 5);
 
-        this.bottom3 = holdingsSorted
-          .filter(
-            ({ netPerformancePercentWithCurrencyEffect }) =>
-              netPerformancePercentWithCurrencyEffect < 0
-          )
-          .slice(-3)
-          .reverse();
+        if (holdings?.length > 5) {
+          this.bottom5 = holdingsSorted.slice(-5).reverse();
+        } else {
+          this.bottom5 = [];
+        }
 
         this.changeDetectorRef.markForCheck();
       });

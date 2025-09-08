@@ -221,7 +221,8 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
         totalInvestment: new Big(0),
         totalInvestmentWithCurrencyEffect: new Big(0),
         totalLiabilities: new Big(0),
-        totalLiabilitiesInBaseCurrency: new Big(0)
+        totalLiabilitiesInBaseCurrency: new Big(0),
+        unitPrices: {}
       };
     }
 
@@ -282,7 +283,8 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
         totalInvestment: new Big(0),
         totalInvestmentWithCurrencyEffect: new Big(0),
         totalLiabilities: new Big(0),
-        totalLiabilitiesInBaseCurrency: new Big(0)
+        totalLiabilitiesInBaseCurrency: new Big(0),
+        unitPrices: {}
       };
     }
 
@@ -821,6 +823,9 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
 
     for (const dateRange of [
       '1d',
+      '1w',
+      '1m',
+      '3m',
       '1y',
       '5y',
       'max',
@@ -979,7 +984,8 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
       timeWeightedInvestment:
         timeWeightedAverageInvestmentBetweenStartAndEndDate,
       timeWeightedInvestmentWithCurrencyEffect:
-        timeWeightedAverageInvestmentBetweenStartAndEndDateWithCurrencyEffect
+        timeWeightedAverageInvestmentBetweenStartAndEndDateWithCurrencyEffect,
+      unitPrices: marketSymbolMap[endDateString]
     };
   }
 }

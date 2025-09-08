@@ -381,8 +381,21 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         value: 'wtd'
       },
       {
+        label: '1 ' + $localize`Week` + ' (' + $localize`1W` + ')',
+        value: '1w'
+      },
+      {
         label: $localize`Month to date` + ' (' + $localize`MTD` + ')',
         value: 'mtd'
+      },
+      {
+        label: '1 ' + $localize`Month` + ' (' + $localize`1M` + ')',
+        value: '1m'
+      },
+
+      {
+        label: '3 ' + $localize`Month` + ' (' + $localize`3M` + ')',
+        value: '3m'
       },
       {
         label: $localize`Year to date` + ' (' + $localize`YTD` + ')',
@@ -417,11 +430,31 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
 
     if (
       this.user?.dateOfFirstActivity &&
+      differenceInYears(new Date(), this.user.dateOfFirstActivity) >= 3
+    ) {
+      this.dateRangeOptions.push({
+        label: '3 ' + $localize`years` + ' (' + $localize`3Y` + ')',
+        value: '3y'
+      });
+    }
+
+    if (
+      this.user?.dateOfFirstActivity &&
       differenceInYears(new Date(), this.user.dateOfFirstActivity) >= 5
     ) {
       this.dateRangeOptions.push({
         label: '5 ' + $localize`years` + ' (' + $localize`5Y` + ')',
         value: '5y'
+      });
+    }
+
+    if (
+      this.user?.dateOfFirstActivity &&
+      differenceInYears(new Date(), this.user.dateOfFirstActivity) >= 10
+    ) {
+      this.dateRangeOptions.push({
+        label: '10 ' + $localize`years` + ' (' + $localize`10Y` + ')',
+        value: '10y'
       });
     }
 
@@ -458,7 +491,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
     }
   }
 
-  public hasFilter(aFormValue: { [key: string]: string }) {
+  public hasFilter(aFormValue: { [key: string]: string[] }) {
     return Object.values(aFormValue).some((value) => {
       return !!value;
     });

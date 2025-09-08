@@ -124,6 +124,18 @@ export const INVESTMENT_ACTIVITY_TYPES = [
   Type.SELL
 ] as Type[];
 
+export const GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME =
+  'GATHER_MISSING_HISTORICAL_MARKET_DATA';
+export const GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_OPTIONS: JobOptions =
+  {
+    attempts: 12,
+    backoff: {
+      delay: ms('1 minute'),
+      type: 'exponential'
+    },
+    removeOnComplete: true
+  };
+
 export const PORTFOLIO_SNAPSHOT_PROCESS_JOB_NAME = 'PORTFOLIO';
 export const PORTFOLIO_SNAPSHOT_PROCESS_JOB_OPTIONS: JobOptions = {
   removeOnComplete: true

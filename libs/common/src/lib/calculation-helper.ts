@@ -7,6 +7,7 @@ import {
   startOfWeek,
   startOfYear,
   subDays,
+  subMonths,
   subYears
 } from 'date-fns';
 import { isNumber } from 'lodash';
@@ -59,17 +60,32 @@ export function getIntervalFromDateRange(
         subDays(startOfWeek(resetHours(new Date()), { weekStartsOn: 1 }), 1)
       ]);
       break;
+    case '1w':
+      startDate = max([startDate, subDays(resetHours(new Date()), 7)]);
+      break;
     case 'ytd':
       startDate = max([
         startDate,
         subDays(startOfYear(resetHours(new Date())), 1)
       ]);
       break;
+    case '1m':
+      startDate = max([startDate, subMonths(resetHours(new Date()), 1)]);
+      break;
+    case '3m':
+      startDate = max([startDate, subMonths(resetHours(new Date()), 3)]);
+      break;
     case '1y':
       startDate = max([startDate, subYears(resetHours(new Date()), 1)]);
       break;
+    case '3y':
+      startDate = max([startDate, subYears(resetHours(new Date()), 3)]);
+      break;
     case '5y':
       startDate = max([startDate, subYears(resetHours(new Date()), 5)]);
+      break;
+    case '10y':
+      startDate = max([startDate, subYears(resetHours(new Date()), 10)]);
       break;
     case 'max':
       break;

@@ -1,4 +1,5 @@
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { DataProviderInterface } from '@ghostfolio/api/services/data-provider/interfaces/data-provider.interface';
 import {
@@ -380,6 +381,7 @@ export class DataProviderService implements OnModuleInit {
     return result;
   }
 
+  @LogPerformance
   public async getQuotes({
     items,
     requestTimeout,
@@ -513,6 +515,8 @@ export class DataProviderService implements OnModuleInit {
               }
 
               response[symbol] = dataProviderResponse;
+              const quotesCacheTTL =
+                this.getAppropriateCacheTTL(dataProviderResponse);
 
               this.redisCacheService.set(
                 this.redisCacheService.getQuoteKey({
@@ -520,7 +524,7 @@ export class DataProviderService implements OnModuleInit {
                   dataSource: DataSource[dataSource]
                 }),
                 JSON.stringify(response[symbol]),
-                this.configurationService.get('CACHE_QUOTES_TTL')
+                quotesCacheTTL
               );
 
               for (const {
@@ -601,6 +605,25 @@ export class DataProviderService implements OnModuleInit {
     Logger.debug('========================================================');
 
     return response;
+  }
+
+  private getAppropriateCacheTTL(dataProviderResponse: IDataProviderResponse) {
+    let quotesCacheTTL = this.configurationService.get('CACHE_QUOTES_TTL');
+
+    if (dataProviderResponse.dataSource === 'MANUAL') {
+      quotesCacheTTL = 14400; // 4h Cache for Manual Service
+    } else if (dataProviderResponse.marketState === 'closed') {
+      const date = new Date();
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        quotesCacheTTL = 14400;
+      } else if (date.getHours() > 16) {
+        quotesCacheTTL = 14400;
+      } else {
+        quotesCacheTTL = 900;
+      }
+    }
+    return quotesCacheTTL;
   }
 
   public async search({
