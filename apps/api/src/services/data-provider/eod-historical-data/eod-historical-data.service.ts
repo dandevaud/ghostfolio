@@ -1,7 +1,7 @@
-import { LookupItem } from '@ghostfolio/api/app/symbol/interfaces/lookup-item.interface';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import {
   DataProviderInterface,
+  GetAssetProfileParams,
   GetDividendsParams,
   GetHistoricalParams,
   GetQuotesParams,
@@ -17,7 +17,12 @@ import {
   REPLACE_NAME_PARTS
 } from '@ghostfolio/common/config';
 import { DATE_FORMAT, isCurrency } from '@ghostfolio/common/helper';
-import { DataProviderInfo } from '@ghostfolio/common/interfaces';
+import {
+  DataProviderInfo,
+  LookupItem,
+  LookupResponse
+} from '@ghostfolio/common/interfaces';
+import { MarketState } from '@ghostfolio/common/types';
 
 import { Injectable, Logger } from '@nestjs/common';
 import {
@@ -27,7 +32,6 @@ import {
   SymbolProfile
 } from '@prisma/client';
 import { addDays, format, isSameDay, isToday } from 'date-fns';
-import got from 'got';
 import { isNumber } from 'lodash';
 
 @Injectable()
@@ -42,30 +46,37 @@ export class EodHistoricalDataService implements DataProviderInterface {
     this.apiKey = this.configurationService.get('API_KEY_EOD_HISTORICAL_DATA');
   }
 
-  public canHandle(symbol: string) {
+  public canHandle() {
     return true;
   }
 
   public async getAssetProfile({
+    requestTimeout = this.configurationService.get('REQUEST_TIMEOUT'),
     symbol
-  }: {
-    symbol: string;
-  }): Promise<Partial<SymbolProfile>> {
-    const [searchResult] = await this.getSearchResult(symbol);
+  }: GetAssetProfileParams): Promise<Partial<SymbolProfile>> {
+    const [searchResult] = await this.getSearchResult({
+      requestTimeout,
+      query: symbol
+    });
+
+    if (!searchResult) {
+      return undefined;
+    }
 
     return {
       symbol,
-      assetClass: searchResult?.assetClass,
-      assetSubClass: searchResult?.assetSubClass,
-      currency: this.convertCurrency(searchResult?.currency),
+      assetClass: searchResult.assetClass,
+      assetSubClass: searchResult.assetSubClass,
+      currency: this.convertCurrency(searchResult.currency),
       dataSource: this.getName(),
-      isin: searchResult?.isin,
-      name: searchResult?.name
+      isin: searchResult.isin,
+      name: searchResult.name
     };
   }
 
   public getDataProviderInfo(): DataProviderInfo {
     return {
+      dataSource: DataSource.EOD_HISTORICAL_DATA,
       isPremium: true,
       name: 'EOD Historical Data',
       url: 'https://eodhd.com'
@@ -87,17 +98,11 @@ export class EodHistoricalDataService implements DataProviderInterface {
     }
 
     try {
-      const abortController = new AbortController();
-
       const response: {
         [date: string]: IDataProviderHistoricalResponse;
       } = {};
 
-      setTimeout(() => {
-        abortController.abort();
-      }, requestTimeout);
-
-      const historicalResult = await got(
+      const historicalResult = await fetch(
         `${this.URL}/div/${symbol}?api_token=${
           this.apiKey
         }&fmt=json&from=${format(from, DATE_FORMAT)}&to=${format(
@@ -105,10 +110,9 @@ export class EodHistoricalDataService implements DataProviderInterface {
           DATE_FORMAT
         )}`,
         {
-          // @ts-ignore
-          signal: abortController.signal
+          signal: AbortSignal.timeout(requestTimeout)
         }
-      ).json<any>();
+      ).then((res) => res.json());
 
       for (const { date, value } of historicalResult) {
         response[date] = {
@@ -142,13 +146,7 @@ export class EodHistoricalDataService implements DataProviderInterface {
     symbol = this.convertToEodSymbol(symbol);
 
     try {
-      const abortController = new AbortController();
-
-      setTimeout(() => {
-        abortController.abort();
-      }, requestTimeout);
-
-      const response = await got(
+      const response = await fetch(
         `${this.URL}/eod/${symbol}?api_token=${
           this.apiKey
         }&fmt=json&from=${format(from, DATE_FORMAT)}&to=${format(
@@ -156,16 +154,15 @@ export class EodHistoricalDataService implements DataProviderInterface {
           DATE_FORMAT
         )}&period=${granularity}`,
         {
-          // @ts-ignore
-          signal: abortController.signal
+          signal: AbortSignal.timeout(requestTimeout)
         }
-      ).json<any>();
+      ).then((res) => res.json());
 
       return response.reduce(
-        (result, { close, date }, index, array) => {
-          if (isNumber(close)) {
+        (result, { adjusted_close, date }) => {
+          if (isNumber(adjusted_close)) {
             result[this.convertFromEodSymbol(symbol)][date] = {
-              marketPrice: close
+              marketPrice: adjusted_close
             };
           } else {
             Logger.error(
@@ -202,7 +199,7 @@ export class EodHistoricalDataService implements DataProviderInterface {
     requestTimeout = this.configurationService.get('REQUEST_TIMEOUT'),
     symbols
   }: GetQuotesParams): Promise<{ [symbol: string]: IDataProviderResponse }> {
-    let response: { [symbol: string]: IDataProviderResponse } = {};
+    const response: { [symbol: string]: IDataProviderResponse } = {};
 
     if (symbols.length <= 0) {
       return response;
@@ -213,23 +210,21 @@ export class EodHistoricalDataService implements DataProviderInterface {
     });
 
     try {
-      const abortController = new AbortController();
-
-      setTimeout(() => {
-        abortController.abort();
-      }, requestTimeout);
-
-      const realTimeResponse = await got(
+      const realTimeResponse = await fetch(
         `${this.URL}/real-time/${eodHistoricalDataSymbols[0]}?api_token=${
           this.apiKey
         }&fmt=json&s=${eodHistoricalDataSymbols.join(',')}`,
         {
-          // @ts-ignore
-          signal: abortController.signal
+          signal: AbortSignal.timeout(requestTimeout)
         }
-      ).json<any>();
+      ).then((res) => res.json());
 
-      const quotes =
+      const quotes: {
+        close: number;
+        code: string;
+        previousClose: number;
+        timestamp: number;
+      }[] =
         eodHistoricalDataSymbols.length === 1
           ? [realTimeResponse]
           : realTimeResponse;
@@ -243,7 +238,7 @@ export class EodHistoricalDataService implements DataProviderInterface {
         })
       );
 
-      for (const { close, code, timestamp } of quotes) {
+      for (const { close, code, previousClose, timestamp } of quotes) {
         let currency: string;
 
         if (this.isForex(code)) {
@@ -267,15 +262,21 @@ export class EodHistoricalDataService implements DataProviderInterface {
           }
         }
 
-        if (isNumber(close)) {
+        if (isNumber(close) || isNumber(previousClose)) {
+          const marketPrice: number = isNumber(close) ? close : previousClose;
+          let marketState: MarketState = 'closed';
+
+          if (this.isForex(code) || isToday(new Date(timestamp * 1000))) {
+            marketState = 'open';
+          } else if (!isNumber(close)) {
+            marketState = 'delayed';
+          }
+
           response[this.convertFromEodSymbol(code)] = {
             currency,
-            dataSource: this.getName(),
-            marketPrice: close,
-            marketState:
-              this.isForex(code) || isToday(new Date(timestamp * 1000))
-                ? 'open'
-                : 'closed'
+            marketPrice,
+            marketState,
+            dataSource: this.getName()
           };
         } else {
           Logger.error(
@@ -289,10 +290,12 @@ export class EodHistoricalDataService implements DataProviderInterface {
     } catch (error) {
       let message = error;
 
-      if (error?.code === 'ABORT_ERR') {
-        message = `RequestError: The operation to get the quotes was aborted because the request to the data provider took more than ${this.configurationService.get(
-          'REQUEST_TIMEOUT'
-        )}ms`;
+      if (['AbortError', 'TimeoutError'].includes(error?.name)) {
+        message = `RequestError: The operation to get the quotes for ${symbols.join(
+          ', '
+        )} was aborted because the request to the data provider took more than ${(
+          this.configurationService.get('REQUEST_TIMEOUT') / 1000
+        ).toFixed(3)} seconds`;
       }
 
       Logger.error(message, 'EodHistoricalDataService');
@@ -306,9 +309,10 @@ export class EodHistoricalDataService implements DataProviderInterface {
   }
 
   public async search({
-    query
-  }: GetSearchParams): Promise<{ items: LookupItem[] }> {
-    const searchResult = await this.getSearchResult(query);
+    query,
+    requestTimeout = this.configurationService.get('REQUEST_TIMEOUT')
+  }: GetSearchParams): Promise<LookupResponse> {
+    const searchResult = await this.getSearchResult({ query, requestTimeout });
 
     return {
       items: searchResult
@@ -397,29 +401,26 @@ export class EodHistoricalDataService implements DataProviderInterface {
     return name;
   }
 
-  private async getSearchResult(aQuery: string): Promise<
-    (LookupItem & {
+  private async getSearchResult({
+    query,
+    requestTimeout = this.configurationService.get('REQUEST_TIMEOUT')
+  }: {
+    query: string;
+    requestTimeout?: number;
+  }) {
+    let searchResult: (LookupItem & {
       assetClass: AssetClass;
       assetSubClass: AssetSubClass;
       isin: string;
-    })[]
-  > {
-    let searchResult = [];
+    })[] = [];
 
     try {
-      const abortController = new AbortController();
-
-      setTimeout(() => {
-        abortController.abort();
-      }, this.configurationService.get('REQUEST_TIMEOUT'));
-
-      const response = await got(
-        `${this.URL}/search/${aQuery}?api_token=${this.apiKey}`,
+      const response = await fetch(
+        `${this.URL}/search/${query}?api_token=${this.apiKey}`,
         {
-          // @ts-ignore
-          signal: abortController.signal
+          signal: AbortSignal.timeout(requestTimeout)
         }
-      ).json<any>();
+      ).then((res) => res.json());
 
       searchResult = response.map(
         ({ Code, Currency, Exchange, ISIN: isin, Name: name, Type }) => {
@@ -442,10 +443,10 @@ export class EodHistoricalDataService implements DataProviderInterface {
     } catch (error) {
       let message = error;
 
-      if (error?.code === 'ABORT_ERR') {
-        message = `RequestError: The operation to search for ${aQuery} was aborted because the request to the data provider took more than ${this.configurationService.get(
-          'REQUEST_TIMEOUT'
-        )}ms`;
+      if (['AbortError', 'TimeoutError'].includes(error?.name)) {
+        message = `RequestError: The operation to search for ${query} was aborted because the request to the data provider took more than ${(
+          this.configurationService.get('REQUEST_TIMEOUT') / 1000
+        ).toFixed(3)} seconds`;
       }
 
       Logger.error(message, 'EodHistoricalDataService');
@@ -487,6 +488,10 @@ export class EodHistoricalDataService implements DataProviderInterface {
       case 'etf':
         assetClass = AssetClass.EQUITY;
         assetSubClass = AssetSubClass.ETF;
+        break;
+      case 'fund':
+        assetClass = AssetClass.EQUITY;
+        assetSubClass = AssetSubClass.MUTUALFUND;
         break;
     }
 

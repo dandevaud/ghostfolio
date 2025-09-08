@@ -1,18 +1,15 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 
 @Component({
   host: { class: 'page' },
   selector: 'gf-markets-page',
   styleUrls: ['./markets-page.scss'],
-  templateUrl: './markets-page.html'
+  templateUrl: './markets-page.html',
+  standalone: false
 })
-export class MarketsPageComponent implements OnDestroy, OnInit {
+export class MarketsPageComponent implements OnDestroy {
   private unsubscribeSubject = new Subject<void>();
-
-  public constructor() {}
-
-  public ngOnInit() {}
 
   public ngOnDestroy() {
     this.unsubscribeSubject.next();

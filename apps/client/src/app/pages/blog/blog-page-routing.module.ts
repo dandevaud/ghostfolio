@@ -1,4 +1,5 @@
 import { AuthGuard } from '@ghostfolio/client/core/auth.guard';
+import { publicRoutes } from '@ghostfolio/common/routes/routes';
 
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
@@ -10,7 +11,7 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     component: BlogPageComponent,
     path: '',
-    title: $localize`Blog`
+    title: publicRoutes.blog.title
   },
   {
     canActivate: [AuthGuard],
@@ -167,6 +168,15 @@ const routes: Routes = [
   },
   {
     canActivate: [AuthGuard],
+    path: '2023/11/black-week-2023',
+    loadComponent: () =>
+      import('./2023/11/black-week-2023/black-week-2023-page.component').then(
+        (c) => c.BlackWeek2023PageComponent
+      ),
+    title: 'Black Week 2023'
+  },
+  {
+    canActivate: [AuthGuard],
     path: '2023/11/hacktoberfest-2023-debriefing',
     loadComponent: () =>
       import(
@@ -176,12 +186,21 @@ const routes: Routes = [
   },
   {
     canActivate: [AuthGuard],
-    path: '2023/11/black-week-2023',
+    path: '2024/09/hacktoberfest-2024',
     loadComponent: () =>
-      import('./2023/11/black-week-2023/black-week-2023-page.component').then(
-        (c) => c.BlackWeek2023PageComponent
+      import(
+        './2024/09/hacktoberfest-2024/hacktoberfest-2024-page.component'
+      ).then((c) => c.Hacktoberfest2024PageComponent),
+    title: 'Hacktoberfest 2024'
+  },
+  {
+    canActivate: [AuthGuard],
+    path: '2024/11/black-weeks-2024',
+    loadComponent: () =>
+      import('./2024/11/black-weeks-2024/black-weeks-2024-page.component').then(
+        (c) => c.BlackWeeks2024PageComponent
       ),
-    title: 'Black Week 2023'
+    title: 'Black Weeks 2024'
   }
 ];
 

@@ -27,12 +27,13 @@ import {
 import {
   Chart,
   Filler,
+  LinearScale,
   LineController,
   LineElement,
-  LinearScale,
   PointElement,
   TimeScale,
-  Tooltip
+  Tooltip,
+  TooltipPosition
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -41,7 +42,6 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, NgxSkeletonLoaderModule],
   selector: 'gf-line-chart',
-  standalone: true,
   styleUrls: ['./line-chart.component.scss'],
   templateUrl: './line-chart.component.html'
 })
@@ -54,13 +54,13 @@ export class GfLineChartComponent
   @Input() currency: string;
   @Input() historicalDataItems: LineChartItem[];
   @Input() isAnimated = false;
+  @Input() label: string;
   @Input() locale = getLocale();
   @Input() showGradient = false;
   @Input() showLegend = false;
   @Input() showLoader = true;
   @Input() showXAxis = false;
   @Input() showYAxis = false;
-  @Input() symbol: string;
   @Input() unit: string;
   @Input() yMax: number;
   @Input() yMaxLabel: string;
@@ -85,7 +85,7 @@ export class GfLineChartComponent
       Tooltip
     );
 
-    Tooltip.positioners['top'] = (elements, position) =>
+    Tooltip.positioners['top'] = (_elements, position: TooltipPosition) =>
       getTooltipPositionerMapTop(this.chart, position);
   }
 
@@ -162,7 +162,7 @@ export class GfLineChartComponent
           borderWidth: 2,
           data: marketPrices,
           fill: true,
-          label: this.symbol,
+          label: this.label,
           pointRadius: 0
         }
       ]
@@ -171,15 +171,14 @@ export class GfLineChartComponent
     if (this.chartCanvas) {
       if (this.chart) {
         this.chart.data = data;
-        this.chart.options.plugins.tooltip = <unknown>(
-          this.getTooltipPluginConfiguration()
-        );
+        this.chart.options.plugins.tooltip =
+          this.getTooltipPluginConfiguration() as unknown;
         this.chart.options.animation =
           this.isAnimated &&
-          <unknown>{
+          ({
             x: this.getAnimationConfigurationForAxis({ labels, axis: 'x' }),
             y: this.getAnimationConfigurationForAxis({ labels, axis: 'y' })
-          };
+          } as unknown);
         this.chart.update();
       } else {
         this.chart = new Chart(this.chartCanvas.nativeElement, {
@@ -187,10 +186,10 @@ export class GfLineChartComponent
           options: {
             animation:
               this.isAnimated &&
-              <unknown>{
+              ({
                 x: this.getAnimationConfigurationForAxis({ labels, axis: 'x' }),
                 y: this.getAnimationConfigurationForAxis({ labels, axis: 'y' })
-              },
+              } as unknown),
             aspectRatio: 16 / 9,
             elements: {
               point: {
@@ -199,7 +198,7 @@ export class GfLineChartComponent
               }
             },
             interaction: { intersect: false, mode: 'index' },
-            plugins: <unknown>{
+            plugins: {
               legend: {
                 align: 'start',
                 display: this.showLegend,
@@ -209,7 +208,7 @@ export class GfLineChartComponent
               verticalHoverLine: {
                 color: `rgba(${getTextColor(this.colorScheme)}, 0.1)`
               }
-            },
+            } as unknown,
             scales: {
               x: {
                 border: {
@@ -324,7 +323,7 @@ export class GfLineChartComponent
         unit: this.unit
       }),
       mode: 'index',
-      position: <unknown>'top',
+      position: 'top' as unknown,
       xAlign: 'center',
       yAlign: 'bottom'
     };

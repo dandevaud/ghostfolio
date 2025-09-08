@@ -1,14 +1,19 @@
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
-import { resetHours } from '@ghostfolio/common/helper';
-import { AccountBalancesResponse, Filter } from '@ghostfolio/common/interfaces';
-import { UserWithSettings } from '@ghostfolio/common/types';
+import { DATE_FORMAT, getSum, resetHours } from '@ghostfolio/common/helper';
+import {
+  AccountBalancesResponse,
+  Filter,
+  HistoricalDataItem
+} from '@ghostfolio/common/interfaces';
 
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AccountBalance, Prisma } from '@prisma/client';
-import { parseISO } from 'date-fns';
+import { Big } from 'big.js';
+import { format, parseISO } from 'date-fns';
 
 import { CreateAccountBalanceDto } from './create-account-balance.dto';
 
@@ -25,7 +30,7 @@ export class AccountBalanceService {
   ): Promise<AccountBalance | null> {
     return this.prismaService.accountBalance.findFirst({
       include: {
-        Account: true
+        account: true
       },
       where: accountBalanceWhereInput
     });
@@ -41,7 +46,7 @@ export class AccountBalanceService {
   }): Promise<AccountBalance> {
     const accountBalance = await this.prismaService.accountBalance.upsert({
       create: {
-        Account: {
+        account: {
           connect: {
             id_userId: {
               userId,
@@ -83,23 +88,62 @@ export class AccountBalanceService {
     this.eventEmitter.emit(
       PortfolioChangedEvent.getName(),
       new PortfolioChangedEvent({
-        userId: <string>where.userId
+        userId: where.userId as string
       })
     );
 
     return accountBalance;
   }
 
+  public async getAccountBalanceItems({
+    filters,
+    userCurrency,
+    userId
+  }: {
+    filters?: Filter[];
+    userCurrency: string;
+    userId: string;
+  }): Promise<HistoricalDataItem[]> {
+    const { balances } = await this.getAccountBalances({
+      filters,
+      userCurrency,
+      userId,
+      withExcludedAccounts: false // TODO
+    });
+    const accumulatedBalancesByDate: { [date: string]: HistoricalDataItem } =
+      {};
+    const lastBalancesByAccount: { [accountId: string]: Big } = {};
+
+    for (const { accountId, date, valueInBaseCurrency } of balances) {
+      const formattedDate = format(date, DATE_FORMAT);
+
+      lastBalancesByAccount[accountId] = new Big(valueInBaseCurrency);
+
+      const totalBalance = getSum(Object.values(lastBalancesByAccount));
+
+      // Add or update the accumulated balance for this date
+      accumulatedBalancesByDate[formattedDate] = {
+        date: formattedDate,
+        value: totalBalance.toNumber()
+      };
+    }
+
+    return Object.values(accumulatedBalancesByDate);
+  }
+
+  @LogPerformance
   public async getAccountBalances({
     filters,
-    user,
+    userCurrency,
+    userId,
     withExcludedAccounts
   }: {
     filters?: Filter[];
-    user: UserWithSettings;
+    userCurrency: string;
+    userId: string;
     withExcludedAccounts?: boolean;
   }): Promise<AccountBalancesResponse> {
-    const where: Prisma.AccountBalanceWhereInput = { userId: user.id };
+    const where: Prisma.AccountBalanceWhereInput = { userId };
 
     const accountFilter = filters?.find(({ type }) => {
       return type === 'ACCOUNT';
@@ -110,7 +154,7 @@ export class AccountBalanceService {
     }
 
     if (withExcludedAccounts === false) {
-      where.Account = { isExcluded: false };
+      where.account = { isExcluded: false };
     }
 
     const balances = await this.prismaService.accountBalance.findMany({
@@ -119,7 +163,7 @@ export class AccountBalanceService {
         date: 'asc'
       },
       select: {
-        Account: true,
+        account: true,
         date: true,
         id: true,
         value: true
@@ -130,10 +174,11 @@ export class AccountBalanceService {
       balances: balances.map((balance) => {
         return {
           ...balance,
+          accountId: balance.account.id,
           valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
             balance.value,
-            balance.Account.currency,
-            user.Settings.settings.baseCurrency
+            balance.account.currency,
+            userCurrency
           )
         };
       })

@@ -1,56 +1,64 @@
 import { RuleSettings } from '@ghostfolio/api/models/interfaces/rule-settings.interface';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { DEFAULT_LANGUAGE_CODE } from '@ghostfolio/common/config';
 import { groupBy } from '@ghostfolio/common/helper';
-import { UserSettings } from '@ghostfolio/common/interfaces';
-import { TimelinePosition } from '@ghostfolio/common/models';
+import {
+  PortfolioPosition,
+  PortfolioReportRule,
+  UserSettings
+} from '@ghostfolio/common/interfaces';
+
+import { Big } from 'big.js';
 
 import { EvaluationResult } from './interfaces/evaluation-result.interface';
 import { RuleInterface } from './interfaces/rule.interface';
 
 export abstract class Rule<T extends RuleSettings> implements RuleInterface<T> {
   private key: string;
-  private name: string;
+  private languageCode: string;
 
   public constructor(
     protected exchangeRateDataService: ExchangeRateDataService,
     {
       key,
-      name
+      languageCode = DEFAULT_LANGUAGE_CODE
     }: {
       key: string;
-      name: string;
+      languageCode?: string; // TODO: Make mandatory
     }
   ) {
     this.key = key;
-    this.name = name;
+    this.languageCode = languageCode;
   }
 
   public getKey() {
     return this.key;
   }
 
-  public getName() {
-    return this.name;
+  public getLanguageCode() {
+    return this.languageCode;
   }
 
-  public groupCurrentPositionsByAttribute(
-    positions: TimelinePosition[],
-    attribute: keyof TimelinePosition,
+  public groupCurrentHoldingsByAttribute(
+    holdings: PortfolioPosition[],
+    attribute: keyof PortfolioPosition,
     baseCurrency: string
   ) {
-    return Array.from(groupBy(attribute, positions).entries()).map(
+    return Array.from(groupBy(attribute, holdings).entries()).map(
       ([attributeValue, objs]) => ({
         groupKey: attributeValue,
         investment: objs.reduce(
           (previousValue, currentValue) =>
-            previousValue + currentValue.investment.toNumber(),
+            previousValue + currentValue.investment,
           0
         ),
         value: objs.reduce(
           (previousValue, currentValue) =>
             previousValue +
             this.exchangeRateDataService.toCurrency(
-              currentValue.quantity.mul(currentValue.marketPrice).toNumber(),
+              new Big(currentValue.quantity)
+                .mul(currentValue.marketPrice)
+                .toNumber(),
               currentValue.currency,
               baseCurrency
             ),
@@ -61,6 +69,14 @@ export abstract class Rule<T extends RuleSettings> implements RuleInterface<T> {
   }
 
   public abstract evaluate(aRuleSettings: T): EvaluationResult;
+
+  public abstract getCategoryName(): string;
+
+  public abstract getConfiguration(): Partial<
+    PortfolioReportRule['configuration']
+  >;
+
+  public abstract getName(): string;
 
   public abstract getSettings(aUserSettings: UserSettings): T;
 }

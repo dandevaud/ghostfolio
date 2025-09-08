@@ -3,12 +3,25 @@ import { UNKNOWN_KEY } from '@ghostfolio/common/config';
 import { prettifySymbol } from '@ghostfolio/common/helper';
 import {
   PortfolioPosition,
-  PortfolioPublicDetails
+  PublicPortfolioResponse
 } from '@ghostfolio/common/interfaces';
 import { Market } from '@ghostfolio/common/types';
+import { GfHoldingsTableComponent } from '@ghostfolio/ui/holdings-table/holdings-table.component';
+import { GfPortfolioProportionChartComponent } from '@ghostfolio/ui/portfolio-proportion-chart/portfolio-proportion-chart.component';
+import { GfValueComponent } from '@ghostfolio/ui/value';
+import { GfWorldMapChartComponent } from '@ghostfolio/ui/world-map-chart';
 
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  ChangeDetectorRef,
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  OnInit
+} from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AssetClass } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 import { isNumber } from 'lodash';
 import { DeviceDetectorService } from 'ngx-device-detector';
@@ -17,28 +30,39 @@ import { catchError, takeUntil } from 'rxjs/operators';
 
 @Component({
   host: { class: 'page' },
+  imports: [
+    CommonModule,
+    GfHoldingsTableComponent,
+    GfPortfolioProportionChartComponent,
+    GfValueComponent,
+    GfWorldMapChartComponent,
+    MatButtonModule,
+    MatCardModule
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-public-page',
   styleUrls: ['./public-page.scss'],
   templateUrl: './public-page.html'
 })
-export class PublicPageComponent implements OnInit {
+export class GfPublicPageComponent implements OnInit {
   public continents: {
     [code: string]: { name: string; value: number };
   };
   public countries: {
     [code: string]: { name: string; value: number };
   };
+  public defaultAlias = $localize`someone`;
   public deviceType: string;
-  public holdings: PortfolioPublicDetails['holdings'][string][];
+  public holdings: PublicPortfolioResponse['holdings'][string][];
   public markets: {
-    [key in Market]: { name: string; value: number };
+    [key in Market]: { id: Market; valueInPercentage: number };
   };
-  public portfolioPublicDetails: PortfolioPublicDetails;
   public positions: {
     [symbol: string]: Pick<PortfolioPosition, 'currency' | 'name'> & {
       value: number;
     };
   };
+  public publicPortfolioDetails: PublicPortfolioResponse;
   public sectors: {
     [name: string]: { name: string; value: number };
   };
@@ -47,7 +71,7 @@ export class PublicPageComponent implements OnInit {
   };
   public UNKNOWN_KEY = UNKNOWN_KEY;
 
-  private id: string;
+  private accessId: string;
   private unsubscribeSubject = new Subject<void>();
 
   public constructor(
@@ -58,7 +82,7 @@ export class PublicPageComponent implements OnInit {
     private router: Router
   ) {
     this.activatedRoute.params.subscribe((params) => {
-      this.id = params['id'];
+      this.accessId = params['id'];
     });
   }
 
@@ -66,7 +90,7 @@ export class PublicPageComponent implements OnInit {
     this.deviceType = this.deviceService.getDeviceInfo().deviceType;
 
     this.dataService
-      .fetchPortfolioPublic(this.id)
+      .fetchPublicPortfolio(this.accessId)
       .pipe(
         takeUntil(this.unsubscribeSubject),
         catchError((error) => {
@@ -79,7 +103,7 @@ export class PublicPageComponent implements OnInit {
         })
       )
       .subscribe((portfolioPublicDetails) => {
-        this.portfolioPublicDetails = portfolioPublicDetails;
+        this.publicPortfolioDetails = portfolioPublicDetails;
 
         this.initializeAnalysisData();
 
@@ -101,24 +125,7 @@ export class PublicPageComponent implements OnInit {
       }
     };
     this.holdings = [];
-    this.markets = {
-      [UNKNOWN_KEY]: {
-        name: UNKNOWN_KEY,
-        value: 0
-      },
-      developedMarkets: {
-        name: 'developedMarkets',
-        value: 0
-      },
-      emergingMarkets: {
-        name: 'emergingMarkets',
-        value: 0
-      },
-      otherMarkets: {
-        name: 'otherMarkets',
-        value: 0
-      }
-    };
+    this.markets = this.publicPortfolioDetails.markets;
     this.positions = {};
     this.sectors = {
       [UNKNOWN_KEY]: {
@@ -135,7 +142,7 @@ export class PublicPageComponent implements OnInit {
     };
 
     for (const [symbol, position] of Object.entries(
-      this.portfolioPublicDetails.holdings
+      this.publicPortfolioDetails.holdings
     )) {
       this.holdings.push(position);
 
@@ -145,69 +152,67 @@ export class PublicPageComponent implements OnInit {
         value: position.allocationInPercentage
       };
 
-      if (position.countries.length > 0) {
-        this.markets.developedMarkets.value +=
-          position.markets.developedMarkets * position.valueInBaseCurrency;
-        this.markets.emergingMarkets.value +=
-          position.markets.emergingMarkets * position.valueInBaseCurrency;
-        this.markets.otherMarkets.value +=
-          position.markets.otherMarkets * position.valueInBaseCurrency;
+      if (position.assetClass !== AssetClass.LIQUIDITY) {
+        // Prepare analysis data by continents, countries, holdings and sectors except for liquidity
 
-        for (const country of position.countries) {
-          const { code, continent, name, weight } = country;
+        if (position.countries.length > 0) {
+          for (const country of position.countries) {
+            const { code, continent, name, weight } = country;
 
-          if (this.continents[continent]?.value) {
-            this.continents[continent].value +=
-              weight * position.valueInBaseCurrency;
-          } else {
-            this.continents[continent] = {
-              name: continent,
-              value:
-                weight *
-                this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency
-            };
+            if (this.continents[continent]?.value) {
+              this.continents[continent].value +=
+                weight * position.valueInBaseCurrency;
+            } else {
+              this.continents[continent] = {
+                name: continent,
+                value:
+                  weight *
+                  this.publicPortfolioDetails.holdings[symbol]
+                    .valueInBaseCurrency
+              };
+            }
+
+            if (this.countries[code]?.value) {
+              this.countries[code].value +=
+                weight * position.valueInBaseCurrency;
+            } else {
+              this.countries[code] = {
+                name,
+                value:
+                  weight *
+                  this.publicPortfolioDetails.holdings[symbol]
+                    .valueInBaseCurrency
+              };
+            }
           }
+        } else {
+          this.continents[UNKNOWN_KEY].value +=
+            this.publicPortfolioDetails.holdings[symbol].valueInBaseCurrency;
 
-          if (this.countries[code]?.value) {
-            this.countries[code].value += weight * position.valueInBaseCurrency;
-          } else {
-            this.countries[code] = {
-              name,
-              value:
-                weight *
-                this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency
-            };
-          }
+          this.countries[UNKNOWN_KEY].value +=
+            this.publicPortfolioDetails.holdings[symbol].valueInBaseCurrency;
         }
-      } else {
-        this.continents[UNKNOWN_KEY].value +=
-          this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency;
 
-        this.countries[UNKNOWN_KEY].value +=
-          this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency;
+        if (position.sectors.length > 0) {
+          for (const sector of position.sectors) {
+            const { name, weight } = sector;
 
-        this.markets[UNKNOWN_KEY].value +=
-          this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency;
-      }
-
-      if (position.sectors.length > 0) {
-        for (const sector of position.sectors) {
-          const { name, weight } = sector;
-
-          if (this.sectors[name]?.value) {
-            this.sectors[name].value += weight * position.valueInBaseCurrency;
-          } else {
-            this.sectors[name] = {
-              name,
-              value:
-                weight *
-                this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency
-            };
+            if (this.sectors[name]?.value) {
+              this.sectors[name].value += weight * position.valueInBaseCurrency;
+            } else {
+              this.sectors[name] = {
+                name,
+                value:
+                  weight *
+                  this.publicPortfolioDetails.holdings[symbol]
+                    .valueInBaseCurrency
+              };
+            }
           }
+        } else {
+          this.sectors[UNKNOWN_KEY].value +=
+            this.publicPortfolioDetails.holdings[symbol].valueInBaseCurrency;
         }
-      } else {
-        this.sectors[UNKNOWN_KEY].value +=
-          this.portfolioPublicDetails.holdings[symbol].valueInBaseCurrency;
       }
 
       this.symbols[prettifySymbol(symbol)] = {
@@ -218,21 +223,6 @@ export class PublicPageComponent implements OnInit {
           : position.valueInPercentage
       };
     }
-
-    const marketsTotal =
-      this.markets.developedMarkets.value +
-      this.markets.emergingMarkets.value +
-      this.markets.otherMarkets.value +
-      this.markets[UNKNOWN_KEY].value;
-
-    this.markets.developedMarkets.value =
-      this.markets.developedMarkets.value / marketsTotal;
-    this.markets.emergingMarkets.value =
-      this.markets.emergingMarkets.value / marketsTotal;
-    this.markets.otherMarkets.value =
-      this.markets.otherMarkets.value / marketsTotal;
-    this.markets[UNKNOWN_KEY].value =
-      this.markets[UNKNOWN_KEY].value / marketsTotal;
   }
 
   public ngOnDestroy() {

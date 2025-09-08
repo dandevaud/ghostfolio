@@ -1,15 +1,14 @@
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
-import { GfAssetProfileIconComponent } from '@ghostfolio/client/components/asset-profile-icon/asset-profile-icon.component';
 import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
 import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { GfSymbolModule } from '@ghostfolio/client/pipes/symbol/symbol.module';
-import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
-import { getDateFormatString, getLocale } from '@ghostfolio/common/helper';
+import {
+  DEFAULT_PAGE_SIZE,
+  TAG_ID_EXCLUDE_FROM_ANALYSIS
+} from '@ghostfolio/common/config';
+import { getLocale } from '@ghostfolio/common/helper';
 import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
 import { OrderWithAccount } from '@ghostfolio/common/types';
-import { GfActivityTypeComponent } from '@ghostfolio/ui/activity-type';
-import { GfNoTransactionsInfoComponent } from '@ghostfolio/ui/no-transactions-info';
-import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
@@ -42,21 +41,41 @@ import {
 } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router, RouterModule } from '@angular/router';
+import { IonIcon } from '@ionic/angular/standalone';
 import { isUUID } from 'class-validator';
 import { endOfToday, isAfter } from 'date-fns';
+import { addIcons } from 'ionicons';
+import {
+  alertCircleOutline,
+  calendarClearOutline,
+  cloudDownloadOutline,
+  cloudUploadOutline,
+  colorWandOutline,
+  copyOutline,
+  createOutline,
+  documentTextOutline,
+  ellipsisHorizontal,
+  ellipsisVertical,
+  trashOutline
+} from 'ionicons/icons';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { Subject, Subscription, takeUntil } from 'rxjs';
+
+import { GfActivityTypeComponent } from '../activity-type/activity-type.component';
+import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
+import { GfNoTransactionsInfoComponent } from '../no-transactions-info/no-transactions-info.component';
+import { GfValueComponent } from '../value/value.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     GfActivityTypeComponent,
-    GfAssetProfileIconComponent,
+    GfEntityLogoComponent,
     GfNoTransactionsInfoComponent,
     GfSymbolModule,
     GfValueComponent,
+    IonIcon,
     MatButtonModule,
     MatCheckboxModule,
     MatMenuModule,
@@ -64,12 +83,10 @@ import { Subject, Subscription, takeUntil } from 'rxjs';
     MatSortModule,
     MatTableModule,
     MatTooltipModule,
-    NgxSkeletonLoaderModule,
-    RouterModule
+    NgxSkeletonLoaderModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-activities-table',
-  standalone: true,
   styleUrls: ['./activities-table.component.scss'],
   templateUrl: './activities-table.component.html'
 })
@@ -79,6 +96,7 @@ export class GfActivitiesTableComponent
   @Input() baseCurrency: string;
   @Input() dataSource: MatTableDataSource<Activity>;
   @Input() deviceType: string;
+  @Input() hasActivities: boolean;
   @Input() hasPermissionToCreateActivity: boolean;
   @Input() hasPermissionToDeleteActivity: boolean;
   @Input() hasPermissionToExportActivities: boolean;
@@ -95,6 +113,7 @@ export class GfActivitiesTableComponent
   @Input() totalItems = Number.MAX_SAFE_INTEGER;
 
   @Output() activitiesDeleted = new EventEmitter<void>();
+  @Output() activityClicked = new EventEmitter<AssetProfileIdentifier>();
   @Output() activityDeleted = new EventEmitter<string>();
   @Output() activityToClone = new EventEmitter<OrderWithAccount>();
   @Output() activityToUpdate = new EventEmitter<OrderWithAccount>();
@@ -109,7 +128,6 @@ export class GfActivitiesTableComponent
   @ViewChild(MatPaginator) paginator: MatPaginator;
   @ViewChild(MatSort) sort: MatSort;
 
-  public defaultDateFormat: string;
   public displayedColumns = [];
   public endOfToday = endOfToday();
   public hasDrafts = false;
@@ -122,10 +140,21 @@ export class GfActivitiesTableComponent
 
   private unsubscribeSubject = new Subject<void>();
 
-  public constructor(
-    private notificationService: NotificationService,
-    private router: Router
-  ) {}
+  public constructor(private notificationService: NotificationService) {
+    addIcons({
+      alertCircleOutline,
+      calendarClearOutline,
+      cloudDownloadOutline,
+      cloudUploadOutline,
+      colorWandOutline,
+      copyOutline,
+      createOutline,
+      documentTextOutline,
+      ellipsisHorizontal,
+      ellipsisVertical,
+      trashOutline
+    });
+  }
 
   public ngOnInit() {
     if (this.showCheckbox) {
@@ -144,15 +173,7 @@ export class GfActivitiesTableComponent
     });
   }
 
-  public areAllRowsSelected() {
-    const numSelectedRows = this.selectedRows.selected.length;
-    const numTotalRows = this.dataSource.data.length;
-    return numSelectedRows === numTotalRows;
-  }
-
   public ngOnChanges() {
-    this.defaultDateFormat = getDateFormatString(this.locale);
-
     this.displayedColumns = [
       'select',
       'importStatus',
@@ -188,6 +209,21 @@ export class GfActivitiesTableComponent
     }
   }
 
+  public areAllRowsSelected() {
+    const numSelectedRows = this.selectedRows.selected.length;
+    const numTotalRows = this.dataSource.data.length;
+    return numSelectedRows === numTotalRows;
+  }
+
+  public isExcludedFromAnalysis(activity: Activity) {
+    return (
+      activity.account?.isExcluded ||
+      activity.tags?.some(({ id }) => {
+        return id === TAG_ID_EXCLUDE_FROM_ANALYSIS;
+      })
+    );
+  }
+
   public onChangePage(page: PageEvent) {
     this.pageChanged.emit(page);
   }
@@ -199,11 +235,11 @@ export class GfActivitiesTableComponent
       }
     } else if (
       this.hasPermissionToOpenDetails &&
-      activity.Account?.isExcluded !== true &&
+      this.isExcludedFromAnalysis(activity) === false &&
       activity.isDraft === false &&
       ['BUY', 'DIVIDEND', 'SELL'].includes(activity.type)
     ) {
-      this.onOpenPositionDialog({
+      this.activityClicked.emit({
         dataSource: activity.SymbolProfile.dataSource,
         symbol: activity.SymbolProfile.symbol
       });
@@ -268,20 +304,18 @@ export class GfActivitiesTableComponent
     });
   }
 
-  public onOpenPositionDialog({ dataSource, symbol }: AssetProfileIdentifier) {
-    this.router.navigate([], {
-      queryParams: { dataSource, symbol, holdingDetailDialog: true }
-    });
-  }
-
   public onUpdateActivity(aActivity: OrderWithAccount) {
     this.activityToUpdate.emit(aActivity);
   }
 
   public toggleAllRows() {
-    this.areAllRowsSelected()
-      ? this.selectedRows.clear()
-      : this.dataSource.data.forEach((row) => this.selectedRows.select(row));
+    if (this.areAllRowsSelected()) {
+      this.selectedRows.clear();
+    } else {
+      this.dataSource.data.forEach((row) => {
+        this.selectedRows.select(row);
+      });
+    }
 
     this.selectedActivities.emit(this.selectedRows.selected);
   }

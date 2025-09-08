@@ -1,4 +1,6 @@
-import { CreateAccountDto } from '@ghostfolio/api/app/account/create-account.dto';
+import { CreateTagDto } from '@ghostfolio/api/app/endpoints/tags/create-tag.dto';
+import { CreateAccountWithBalancesDto } from '@ghostfolio/api/app/import/create-account-with-balances.dto';
+import { CreateAssetProfileWithMarketDataDto } from '@ghostfolio/api/app/import/create-asset-profile-with-market-data.dto';
 import { CreateOrderDto } from '@ghostfolio/api/app/order/create-order.dto';
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import { parseDate as parseDateHelper } from '@ghostfolio/common/helper';
@@ -73,20 +75,25 @@ export class ImportActivitiesService {
   public importJson({
     accounts,
     activities,
-    isDryRun = false
+    assetProfiles,
+    isDryRun = false,
+    tags
   }: {
     activities: CreateOrderDto[];
-    accounts?: CreateAccountDto[];
+    accounts?: CreateAccountWithBalancesDto[];
+    assetProfiles?: CreateAssetProfileWithMarketDataDto[];
     isDryRun?: boolean;
+    tags?: CreateTagDto[];
   }): Promise<{
     activities: Activity[];
-    accounts?: CreateAccountDto[];
   }> {
     return new Promise((resolve, reject) => {
       this.postImport(
         {
           accounts,
-          activities
+          activities,
+          assetProfiles,
+          tags
         },
         isDryRun
       )
@@ -106,13 +113,16 @@ export class ImportActivitiesService {
 
   public importSelectedActivities({
     accounts,
-    activities
+    activities,
+    assetProfiles,
+    tags
   }: {
-    accounts: CreateAccountDto[];
+    accounts?: CreateAccountWithBalancesDto[];
     activities: Activity[];
+    assetProfiles?: CreateAssetProfileWithMarketDataDto[];
+    tags?: CreateTagDto[];
   }): Promise<{
     activities: Activity[];
-    accounts?: CreateAccountDto[];
   }> {
     const importData: CreateOrderDto[] = [];
 
@@ -120,16 +130,23 @@ export class ImportActivitiesService {
       importData.push(this.convertToCreateOrderDto(activity));
     }
 
-    return this.importJson({ accounts, activities: importData });
+    return this.importJson({
+      accounts,
+      assetProfiles,
+      tags,
+      activities: importData
+    });
   }
 
   private convertToCreateOrderDto({
     accountId,
     comment,
+    currency,
     date,
     fee,
     quantity,
     SymbolProfile,
+    tags,
     type,
     unitPrice,
     updateAccountBalance
@@ -142,10 +159,13 @@ export class ImportActivitiesService {
       type,
       unitPrice,
       updateAccountBalance,
-      currency: SymbolProfile.currency,
+      currency: currency ?? SymbolProfile.currency,
       dataSource: SymbolProfile.dataSource,
       date: date.toString(),
-      symbol: SymbolProfile.symbol
+      symbol: SymbolProfile.symbol,
+      tags: tags?.map(({ id }) => {
+        return id;
+      })
     };
   }
 
@@ -342,8 +362,6 @@ export class ImportActivitiesService {
             return 'FEE';
           case 'interest':
             return 'INTEREST';
-          case 'item':
-            return 'ITEM';
           case 'liability':
             return 'LIABILITY';
           case 'sell':
@@ -384,7 +402,12 @@ export class ImportActivitiesService {
   }
 
   private postImport(
-    aImportData: { accounts: CreateAccountDto[]; activities: CreateOrderDto[] },
+    aImportData: {
+      accounts?: CreateAccountWithBalancesDto[];
+      activities: CreateOrderDto[];
+      assetProfiles?: CreateAssetProfileWithMarketDataDto[];
+      tags?: CreateTagDto[];
+    },
     aIsDryRun = false
   ) {
     return this.http.post<{ activities: Activity[] }>(

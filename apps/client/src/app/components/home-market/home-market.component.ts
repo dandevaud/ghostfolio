@@ -1,3 +1,4 @@
+import { GfFearAndGreedIndexModule } from '@ghostfolio/client/components/fear-and-greed-index/fear-and-greed-index.module';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { ghostfolioFearAndGreedIndexSymbol } from '@ghostfolio/common/config';
@@ -9,13 +10,27 @@ import {
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
+import { GfBenchmarkComponent } from '@ghostfolio/ui/benchmark';
+import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
 
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 @Component({
+  imports: [
+    GfBenchmarkComponent,
+    GfFearAndGreedIndexModule,
+    GfLineChartComponent
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-home-market',
   styleUrls: ['./home-market.scss'],
   templateUrl: './home-market.html'
@@ -29,7 +44,6 @@ export class HomeMarketComponent implements OnDestroy, OnInit {
   public hasPermissionToAccessFearAndGreedIndex: boolean;
   public historicalDataItems: HistoricalDataItem[];
   public info: InfoItem;
-  public isLoading = true;
   public readonly numberOfDays = 365;
   public user: User;
 
@@ -43,7 +57,6 @@ export class HomeMarketComponent implements OnDestroy, OnInit {
   ) {
     this.deviceType = this.deviceService.getDeviceInfo().deviceType;
     this.info = this.dataService.fetchInfo();
-    this.isLoading = true;
 
     this.userService.stateChanged
       .pipe(takeUntil(this.unsubscribeSubject))
@@ -89,7 +102,6 @@ export class HomeMarketComponent implements OnDestroy, OnInit {
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe(({ benchmarks }) => {
         this.benchmarks = benchmarks;
-        this.isLoading = false;
 
         this.changeDetectorRef.markForCheck();
       });

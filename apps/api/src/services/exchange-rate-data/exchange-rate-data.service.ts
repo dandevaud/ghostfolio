@@ -1,3 +1,4 @@
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { IDataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
@@ -22,7 +23,7 @@ import {
   isToday,
   subDays
 } from 'date-fns';
-import { isNumber, uniq } from 'lodash';
+import { isNumber } from 'lodash';
 import ms from 'ms';
 
 @Injectable()
@@ -46,6 +47,7 @@ export class ExchangeRateDataService {
     return this.currencyPairs;
   }
 
+  @LogPerformance
   public async getExchangeRatesByCurrency({
     currencies,
     endDate = new Date(),
@@ -61,11 +63,11 @@ export class ExchangeRateDataService {
       return {};
     }
 
-    let exchangeRatesByCurrency: {
+    const exchangeRatesByCurrency: {
       [currency: string]: { [dateString: string]: number };
     } = {};
 
-    for (let currency of currencies) {
+    for (const currency of currencies) {
       exchangeRatesByCurrency[`${currency}${targetCurrency}`] =
         await this.getExchangeRates({
           startDate,
@@ -92,7 +94,7 @@ export class ExchangeRateDataService {
         !isBefore(date, startDate);
         date = subDays(resetHours(date), 1)
       ) {
-        let dateString = format(date, DATE_FORMAT);
+        const dateString = format(date, DATE_FORMAT);
 
         // Check if the exchange rate for the current date is missing
         if (
@@ -349,7 +351,7 @@ export class ExchangeRateDataService {
     startDate: Date;
   }) {
     const dates = eachDayOfInterval({ end: endDate, start: startDate });
-    let factors: { [dateString: string]: number } = {};
+    const factors: { [dateString: string]: number } = {};
 
     if (currencyFrom === currencyTo) {
       for (const date of dates) {
@@ -377,10 +379,10 @@ export class ExchangeRateDataService {
       } else {
         // Calculate indirectly via base currency
 
-        let marketPriceBaseCurrencyFromCurrency: {
+        const marketPriceBaseCurrencyFromCurrency: {
           [dateString: string]: number;
         } = {};
-        let marketPriceBaseCurrencyToCurrency: {
+        const marketPriceBaseCurrencyToCurrency: {
           [dateString: string]: number;
         } = {};
 
@@ -495,9 +497,8 @@ export class ExchangeRateDataService {
       currencies.push(currency);
     });
 
-    const customCurrencies = (await this.propertyService.getByKey(
-      PROPERTY_CURRENCIES
-    )) as string[];
+    const customCurrencies =
+      await this.propertyService.getByKey<string[]>(PROPERTY_CURRENCIES);
 
     if (customCurrencies?.length > 0) {
       currencies = currencies.concat(customCurrencies);
@@ -513,7 +514,7 @@ export class ExchangeRateDataService {
       }
     }
 
-    return uniq(currencies).filter(Boolean).sort();
+    return Array.from(new Set(currencies)).filter(Boolean).sort();
   }
 
   private prepareCurrencyPairs(aCurrencies: string[]) {

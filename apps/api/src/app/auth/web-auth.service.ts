@@ -13,17 +13,19 @@ import {
 import { REQUEST } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import {
+  generateAuthenticationOptions,
   GenerateAuthenticationOptionsOpts,
+  generateRegistrationOptions,
   GenerateRegistrationOptionsOpts,
   VerifiedAuthenticationResponse,
   VerifiedRegistrationResponse,
-  VerifyAuthenticationResponseOpts,
-  VerifyRegistrationResponseOpts,
-  generateAuthenticationOptions,
-  generateRegistrationOptions,
   verifyAuthenticationResponse,
-  verifyRegistrationResponse
+  VerifyAuthenticationResponseOpts,
+  verifyRegistrationResponse,
+  VerifyRegistrationResponseOpts
 } from '@simplewebauthn/server';
+import { isoBase64URL, isoUint8Array } from '@simplewebauthn/server/helpers';
+import ms from 'ms';
 
 import {
   AssertionCredentialJSON,
@@ -40,58 +42,57 @@ export class WebAuthService {
     @Inject(REQUEST) private readonly request: RequestWithUser
   ) {}
 
-  get rpID() {
-    return new URL(this.configurationService.get('ROOT_URL')).hostname;
+  private get expectedOrigin() {
+    return this.configurationService.get('ROOT_URL');
   }
 
-  get expectedOrigin() {
-    return this.configurationService.get('ROOT_URL');
+  private get rpID() {
+    return new URL(this.configurationService.get('ROOT_URL')).hostname;
   }
 
   public async generateRegistrationOptions() {
     const user = this.request.user;
 
     const opts: GenerateRegistrationOptionsOpts = {
-      rpName: 'Ghostfolio',
-      rpID: this.rpID,
-      userID: user.id,
-      userName: '',
-      timeout: 60000,
-      attestationType: 'indirect',
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
-        requireResidentKey: false,
-        userVerification: 'required'
-      }
+        residentKey: 'required',
+        userVerification: 'preferred'
+      },
+      rpID: this.rpID,
+      rpName: 'Ghostfolio',
+      timeout: ms('60 seconds'),
+      userID: isoUint8Array.fromUTF8String(user.id),
+      userName: ''
     };
 
-    const options = await generateRegistrationOptions(opts);
+    const registrationOptions = await generateRegistrationOptions(opts);
 
     await this.userService.updateUser({
       data: {
-        authChallenge: options.challenge
+        authChallenge: registrationOptions.challenge
       },
       where: {
         id: user.id
       }
     });
 
-    return options;
+    return registrationOptions;
   }
 
   public async verifyAttestation(
-    deviceName: string,
     credential: AttestationCredentialJSON
   ): Promise<AuthDeviceDto> {
     const user = this.request.user;
     const expectedChallenge = user.authChallenge;
-
     let verification: VerifiedRegistrationResponse;
+
     try {
       const opts: VerifyRegistrationResponseOpts = {
         expectedChallenge,
         expectedOrigin: this.expectedOrigin,
         expectedRPID: this.rpID,
+        requireUserVerification: false,
         response: {
           clientExtensionResults: credential.clientExtensionResults,
           id: credential.id,
@@ -100,6 +101,7 @@ export class WebAuthService {
           type: 'public-key'
         }
       };
+
       verification = await verifyRegistrationResponse(opts);
     } catch (error) {
       Logger.error(error, 'WebAuthService');
@@ -112,11 +114,17 @@ export class WebAuthService {
       where: { userId: user.id }
     });
     if (registrationInfo && verified) {
-      const { counter, credentialID, credentialPublicKey } = registrationInfo;
+      const {
+        credential: {
+          counter,
+          id: credentialId,
+          publicKey: credentialPublicKey
+        }
+      } = registrationInfo;
 
-      let existingDevice = devices.find(
-        (device) => device.credentialId === credentialID
-      );
+      let existingDevice = devices.find((device) => {
+        return isoBase64URL.fromBuffer(device.credentialId) === credentialId;
+      });
 
       if (!existingDevice) {
         /**
@@ -124,9 +132,9 @@ export class WebAuthService {
          */
         existingDevice = await this.deviceService.createAuthDevice({
           counter,
-          credentialId: Buffer.from(credentialID),
+          credentialId: Buffer.from(credentialId),
           credentialPublicKey: Buffer.from(credentialPublicKey),
-          User: { connect: { id: user.id } }
+          user: { connect: { id: user.id } }
         });
       }
 
@@ -139,7 +147,7 @@ export class WebAuthService {
     throw new InternalServerErrorException('An unknown error occurred');
   }
 
-  public async generateAssertionOptions(deviceId: string) {
+  public async generateAuthenticationOptions(deviceId: string) {
     const device = await this.deviceService.authDevice({ id: deviceId });
 
     if (!device) {
@@ -147,33 +155,27 @@ export class WebAuthService {
     }
 
     const opts: GenerateAuthenticationOptionsOpts = {
-      allowCredentials: [
-        {
-          id: device.credentialId,
-          transports: ['internal'],
-          type: 'public-key'
-        }
-      ],
+      allowCredentials: [],
       rpID: this.rpID,
-      timeout: 60000,
+      timeout: ms('60 seconds'),
       userVerification: 'preferred'
     };
 
-    const options = await generateAuthenticationOptions(opts);
+    const authenticationOptions = await generateAuthenticationOptions(opts);
 
     await this.userService.updateUser({
       data: {
-        authChallenge: options.challenge
+        authChallenge: authenticationOptions.challenge
       },
       where: {
         id: device.userId
       }
     });
 
-    return options;
+    return authenticationOptions;
   }
 
-  public async verifyAssertion(
+  public async verifyAuthentication(
     deviceId: string,
     credential: AssertionCredentialJSON
   ) {
@@ -186,16 +188,18 @@ export class WebAuthService {
     const user = await this.userService.user({ id: device.userId });
 
     let verification: VerifiedAuthenticationResponse;
+
     try {
       const opts: VerifyAuthenticationResponseOpts = {
-        authenticator: {
-          credentialID: device.credentialId,
-          credentialPublicKey: device.credentialPublicKey,
-          counter: device.counter
+        credential: {
+          counter: device.counter,
+          id: isoBase64URL.fromBuffer(device.credentialId),
+          publicKey: device.credentialPublicKey
         },
         expectedChallenge: `${user.authChallenge}`,
         expectedOrigin: this.expectedOrigin,
         expectedRPID: this.rpID,
+        requireUserVerification: false,
         response: {
           clientExtensionResults: credential.clientExtensionResults,
           id: credential.id,
@@ -204,13 +208,14 @@ export class WebAuthService {
           type: 'public-key'
         }
       };
+
       verification = await verifyAuthenticationResponse(opts);
     } catch (error) {
       Logger.error(error, 'WebAuthService');
       throw new InternalServerErrorException({ error: error.message });
     }
 
-    const { verified, authenticationInfo } = verification;
+    const { authenticationInfo, verified } = verification;
 
     if (verified) {
       device.counter = authenticationInfo.newCounter;

@@ -1,35 +1,42 @@
 import { RuleSettings } from '@ghostfolio/api/models/interfaces/rule-settings.interface';
 import { Rule } from '@ghostfolio/api/models/rule';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
-import { UserSettings } from '@ghostfolio/common/interfaces';
-import { TimelinePosition } from '@ghostfolio/common/models';
+import { I18nService } from '@ghostfolio/api/services/i18n/i18n.service';
+import { PortfolioPosition, UserSettings } from '@ghostfolio/common/interfaces';
 
 export class CurrencyClusterRiskBaseCurrencyCurrentInvestment extends Rule<Settings> {
-  private positions: TimelinePosition[];
+  private holdings: PortfolioPosition[];
 
   public constructor(
     protected exchangeRateDataService: ExchangeRateDataService,
-    positions: TimelinePosition[]
+    private i18nService: I18nService,
+    holdings: PortfolioPosition[],
+    languageCode: string
   ) {
     super(exchangeRateDataService, {
       key: CurrencyClusterRiskBaseCurrencyCurrentInvestment.name,
-      name: 'Investment: Base Currency'
+      languageCode
     });
 
-    this.positions = positions;
+    this.holdings = holdings;
   }
 
   public evaluate(ruleSettings: Settings) {
-    const positionsGroupedByCurrency = this.groupCurrentPositionsByAttribute(
-      this.positions,
+    const holdingsGroupedByCurrency = this.groupCurrentHoldingsByAttribute(
+      this.holdings,
       'currency',
       ruleSettings.baseCurrency
     );
 
-    let maxItem = positionsGroupedByCurrency[0];
+    let maxItem = holdingsGroupedByCurrency[0];
     let totalValue = 0;
 
-    positionsGroupedByCurrency.forEach((groupItem) => {
+    const baseCurrencyValue =
+      holdingsGroupedByCurrency.find(({ groupKey }) => {
+        return groupKey === ruleSettings.baseCurrency;
+      })?.value ?? 0;
+
+    for (const groupItem of holdingsGroupedByCurrency) {
       // Calculate total value
       totalValue += groupItem.value;
 
@@ -37,35 +44,63 @@ export class CurrencyClusterRiskBaseCurrencyCurrentInvestment extends Rule<Setti
       if (groupItem.investment > maxItem.investment) {
         maxItem = groupItem;
       }
-    });
+    }
 
-    const baseCurrencyItem = positionsGroupedByCurrency.find((item) => {
-      return item.groupKey === ruleSettings.baseCurrency;
-    });
-
-    const baseCurrencyValueRatio = baseCurrencyItem?.value / totalValue || 0;
+    const baseCurrencyValueRatio = totalValue
+      ? baseCurrencyValue / totalValue
+      : 0;
 
     if (maxItem?.groupKey !== ruleSettings.baseCurrency) {
       return {
-        evaluation: `The major part of your current investment is not in your base currency (${(
-          baseCurrencyValueRatio * 100
-        ).toPrecision(3)}% in ${ruleSettings.baseCurrency})`,
+        evaluation: this.i18nService.getTranslation({
+          id: 'rule.currencyClusterRiskBaseCurrencyCurrentInvestment.false',
+          languageCode: this.getLanguageCode(),
+          placeholders: {
+            baseCurrency: ruleSettings.baseCurrency,
+            baseCurrencyValueRatio: (baseCurrencyValueRatio * 100).toPrecision(
+              3
+            )
+          }
+        }),
         value: false
       };
     }
 
     return {
-      evaluation: `The major part of your current investment is in your base currency (${(
-        baseCurrencyValueRatio * 100
-      ).toPrecision(3)}% in ${ruleSettings.baseCurrency})`,
+      evaluation: this.i18nService.getTranslation({
+        id: 'rule.currencyClusterRiskBaseCurrencyCurrentInvestment.true',
+        languageCode: this.getLanguageCode(),
+        placeholders: {
+          baseCurrency: ruleSettings.baseCurrency,
+          baseCurrencyValueRatio: (baseCurrencyValueRatio * 100).toPrecision(3)
+        }
+      }),
       value: true
     };
   }
 
-  public getSettings(aUserSettings: UserSettings): Settings {
+  public getCategoryName() {
+    return this.i18nService.getTranslation({
+      id: 'rule.currencyClusterRisk.category',
+      languageCode: this.getLanguageCode()
+    });
+  }
+
+  public getConfiguration() {
+    return undefined;
+  }
+
+  public getName() {
+    return this.i18nService.getTranslation({
+      id: 'rule.currencyClusterRiskBaseCurrencyCurrentInvestment',
+      languageCode: this.getLanguageCode()
+    });
+  }
+
+  public getSettings({ baseCurrency, xRayRules }: UserSettings): Settings {
     return {
-      baseCurrency: aUserSettings.baseCurrency,
-      isActive: aUserSettings.xRayRules[this.getKey()].isActive
+      baseCurrency,
+      isActive: xRayRules?.[this.getKey()]?.isActive ?? true
     };
   }
 }

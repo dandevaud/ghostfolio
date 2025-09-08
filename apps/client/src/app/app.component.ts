@@ -3,13 +3,14 @@ import { HoldingDetailDialogParams } from '@ghostfolio/client/components/holding
 import { getCssVariable } from '@ghostfolio/common/helper';
 import { InfoItem, User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
+import { internalRoutes, publicRoutes } from '@ghostfolio/common/routes/routes';
 import { ColorScheme } from '@ghostfolio/common/types';
 
-import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DOCUMENT,
   HostBinding,
   Inject,
   OnDestroy,
@@ -24,6 +25,8 @@ import {
   Router
 } from '@angular/router';
 import { DataSource } from '@prisma/client';
+import { addIcons } from 'ionicons';
+import { openOutline } from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -38,7 +41,8 @@ import { UserService } from './services/user/user.service';
   selector: 'gf-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  standalone: false
 })
 export class AppComponent implements OnDestroy, OnInit {
   @HostBinding('class.has-info-message') get getHasMessage() {
@@ -47,6 +51,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
   public canCreateAccount: boolean;
   public currentRoute: string;
+  public currentSubRoute: string;
   public currentYear = new Date().getFullYear();
   public deviceType: string;
   public hasImpersonationId: boolean;
@@ -54,22 +59,29 @@ export class AppComponent implements OnDestroy, OnInit {
   public hasPermissionForStatistics: boolean;
   public hasPermissionForSubscription: boolean;
   public hasPermissionToAccessFearAndGreedIndex: boolean;
+  public hasPermissionToChangeDateRange: boolean;
+  public hasPermissionToChangeFilters: boolean;
+  public hasPromotion = false;
   public hasTabs = false;
   public info: InfoItem;
   public pageTitle: string;
-  public routerLinkAbout = ['/' + $localize`about`];
-  public routerLinkAboutChangelog = ['/' + $localize`about`, 'changelog'];
-  public routerLinkAboutLicense = ['/' + $localize`about`, $localize`license`];
-  public routerLinkAboutPrivacyPolicy = [
-    '/' + $localize`about`,
-    $localize`privacy-policy`
-  ];
-  public routerLinkFaq = ['/' + $localize`faq`];
-  public routerLinkFeatures = ['/' + $localize`features`];
-  public routerLinkMarkets = ['/' + $localize`markets`];
-  public routerLinkPricing = ['/' + $localize`pricing`];
-  public routerLinkRegister = ['/' + $localize`register`];
-  public routerLinkResources = ['/' + $localize`resources`];
+  public routerLinkAbout = publicRoutes.about.routerLink;
+  public routerLinkAboutChangelog =
+    publicRoutes.about.subRoutes.changelog.routerLink;
+  public routerLinkAboutLicense =
+    publicRoutes.about.subRoutes.license.routerLink;
+  public routerLinkAboutPrivacyPolicy =
+    publicRoutes.about.subRoutes.privacyPolicy.routerLink;
+  public routerLinkAboutTermsOfService =
+    publicRoutes.about.subRoutes.termsOfService.routerLink;
+  public routerLinkBlog = publicRoutes.blog.routerLink;
+  public routerLinkFaq = publicRoutes.faq.routerLink;
+  public routerLinkFeatures = publicRoutes.features.routerLink;
+  public routerLinkMarkets = publicRoutes.markets.routerLink;
+  public routerLinkOpenStartup = publicRoutes.openStartup.routerLink;
+  public routerLinkPricing = publicRoutes.pricing.routerLink;
+  public routerLinkRegister = publicRoutes.register.routerLink;
+  public routerLinkResources = publicRoutes.resources.routerLink;
   public showFooter = false;
   public user: User;
 
@@ -106,6 +118,8 @@ export class AppComponent implements OnDestroy, OnInit {
           });
         }
       });
+
+    addIcons({ openOutline });
   }
 
   public ngOnInit() {
@@ -127,6 +141,10 @@ export class AppComponent implements OnDestroy, OnInit {
       permissions.enableFearAndGreedIndex
     );
 
+    this.hasPromotion =
+      !!this.info?.subscriptionOffer?.coupon ||
+      !!this.info?.subscriptionOffer?.durationExtension;
+
     this.impersonationStorageService
       .onChangeHasImpersonation()
       .pipe(takeUntil(this.unsubscribeSubject))
@@ -141,27 +159,64 @@ export class AppComponent implements OnDestroy, OnInit {
         const urlSegmentGroup = urlTree.root.children[PRIMARY_OUTLET];
         const urlSegments = urlSegmentGroup.segments;
         this.currentRoute = urlSegments[0].path;
+        this.currentSubRoute = urlSegments[1]?.path;
+
+        if (
+          ((this.currentRoute === internalRoutes.home.path &&
+            !this.currentSubRoute) ||
+            (this.currentRoute === internalRoutes.home.path &&
+              this.currentSubRoute ===
+                internalRoutes.home.subRoutes.holdings.path) ||
+            (this.currentRoute === internalRoutes.portfolio.path &&
+              !this.currentSubRoute)) &&
+          this.user?.settings?.viewMode !== 'ZEN'
+        ) {
+          this.hasPermissionToChangeDateRange = true;
+        } else {
+          this.hasPermissionToChangeDateRange = false;
+        }
+
+        if (
+          (this.currentRoute === internalRoutes.home.path &&
+            this.currentSubRoute ===
+              internalRoutes.home.subRoutes.holdings.path) ||
+          (this.currentRoute === internalRoutes.portfolio.path &&
+            !this.currentSubRoute) ||
+          (this.currentRoute === internalRoutes.portfolio.path &&
+            this.currentSubRoute ===
+              internalRoutes.portfolio.subRoutes.activities.path) ||
+          (this.currentRoute === internalRoutes.portfolio.path &&
+            this.currentSubRoute ===
+              internalRoutes.portfolio.subRoutes.allocations.path) ||
+          (this.currentRoute === internalRoutes.zen.path &&
+            this.currentSubRoute ===
+              internalRoutes.home.subRoutes.holdings.path)
+        ) {
+          this.hasPermissionToChangeFilters = true;
+        } else {
+          this.hasPermissionToChangeFilters = false;
+        }
 
         this.hasTabs =
-          (this.currentRoute === this.routerLinkAbout[0].slice(1) ||
-            this.currentRoute === this.routerLinkFaq[0].slice(1) ||
-            this.currentRoute === 'account' ||
-            this.currentRoute === 'admin' ||
-            this.currentRoute === 'home' ||
-            this.currentRoute === 'portfolio' ||
-            this.currentRoute === 'zen') &&
+          (this.currentRoute === publicRoutes.about.path ||
+            this.currentRoute === publicRoutes.faq.path ||
+            this.currentRoute === publicRoutes.resources.path ||
+            this.currentRoute === internalRoutes.account.path ||
+            this.currentRoute === internalRoutes.adminControl.path ||
+            this.currentRoute === internalRoutes.home.path ||
+            this.currentRoute === internalRoutes.portfolio.path ||
+            this.currentRoute === internalRoutes.zen.path) &&
           this.deviceType !== 'mobile';
 
         this.showFooter =
-          (this.currentRoute === 'blog' ||
-            this.currentRoute === this.routerLinkFeatures[0].slice(1) ||
-            this.currentRoute === this.routerLinkMarkets[0].slice(1) ||
-            this.currentRoute === 'open' ||
-            this.currentRoute === 'p' ||
-            this.currentRoute === this.routerLinkPricing[0].slice(1) ||
-            this.currentRoute === this.routerLinkRegister[0].slice(1) ||
-            this.currentRoute === this.routerLinkResources[0].slice(1) ||
-            this.currentRoute === 'start') &&
+          (this.currentRoute === publicRoutes.blog.path ||
+            this.currentRoute === publicRoutes.features.path ||
+            this.currentRoute === publicRoutes.markets.path ||
+            this.currentRoute === publicRoutes.openStartup.path ||
+            this.currentRoute === publicRoutes.public.path ||
+            this.currentRoute === publicRoutes.pricing.path ||
+            this.currentRoute === publicRoutes.register.path ||
+            this.currentRoute === publicRoutes.start.path) &&
           this.deviceType !== 'mobile';
 
         if (this.deviceType === 'mobile') {
@@ -176,6 +231,8 @@ export class AppComponent implements OnDestroy, OnInit {
             this.changeDetectorRef.markForCheck();
           });
         }
+
+        this.changeDetectorRef.markForCheck();
       });
 
     this.userService.stateChanged
@@ -190,6 +247,10 @@ export class AppComponent implements OnDestroy, OnInit {
 
         this.hasInfoMessage =
           this.canCreateAccount || !!this.user?.systemMessage;
+
+        this.hasPromotion =
+          !!this.user?.subscription?.offer?.coupon ||
+          !!this.user?.subscription?.offer?.durationExtension;
 
         this.initializeTheme(this.user?.settings.colorScheme);
 
@@ -252,14 +313,18 @@ export class AppComponent implements OnDestroy, OnInit {
 
         const dialogRef = this.dialog.open(GfHoldingDetailDialogComponent, {
           autoFocus: false,
-          data: <HoldingDetailDialogParams>{
+          data: {
             dataSource,
             symbol,
             baseCurrency: this.user?.settings?.baseCurrency,
             colorScheme: this.user?.settings?.colorScheme,
             deviceType: this.deviceType,
             hasImpersonationId: this.hasImpersonationId,
-            hasPermissionToCreateOrder:
+            hasPermissionToAccessAdminControl: hasPermission(
+              this.user?.permissions,
+              permissions.accessAdminControl
+            ),
+            hasPermissionToCreateActivity:
               !this.hasImpersonationId &&
               hasPermission(this.user?.permissions, permissions.createOrder) &&
               !this.user?.settings?.isRestrictedView,
@@ -272,9 +337,8 @@ export class AppComponent implements OnDestroy, OnInit {
               hasPermission(this.user?.permissions, permissions.updateOrder) &&
               !this.user?.settings?.isRestrictedView,
             locale: this.user?.settings?.locale
-          },
-          height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
-          maxWidth: this.deviceType === 'mobile' ? '95vw' : '50rem',
+          } as HoldingDetailDialogParams,
+          height: this.deviceType === 'mobile' ? '98vh' : '80vh',
           width: this.deviceType === 'mobile' ? '100vw' : '50rem'
         });
 

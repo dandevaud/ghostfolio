@@ -6,17 +6,25 @@ import {
 import { TokenStorageService } from '@ghostfolio/client/services/token-storage.service';
 
 import { ChangeDetectionStrategy, Component, Inject } from '@angular/core';
+import { FormControl, Validators } from '@angular/forms';
 import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { addIcons } from 'ionicons';
+import { eyeOffOutline, eyeOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'gf-login-with-access-token-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./login-with-access-token-dialog.scss'],
-  templateUrl: 'login-with-access-token-dialog.html'
+  templateUrl: 'login-with-access-token-dialog.html',
+  standalone: false
 })
 export class LoginWithAccessTokenDialog {
+  public accessTokenFormControl = new FormControl(
+    this.data.accessToken,
+    Validators.required
+  );
   public isAccessTokenHidden = true;
 
   public constructor(
@@ -26,9 +34,9 @@ export class LoginWithAccessTokenDialog {
     private router: Router,
     private settingsStorageService: SettingsStorageService,
     private tokenStorageService: TokenStorageService
-  ) {}
-
-  ngOnInit() {}
+  ) {
+    addIcons({ eyeOffOutline, eyeOutline });
+  }
 
   public onChangeStaySignedIn(aValue: MatCheckboxChange) {
     this.settingsStorageService.setSetting(
@@ -42,8 +50,10 @@ export class LoginWithAccessTokenDialog {
   }
 
   public onLoginWithAccessToken() {
-    if (this.data.accessToken) {
-      this.dialogRef.close(this.data);
+    if (this.accessTokenFormControl.valid) {
+      this.dialogRef.close({
+        accessToken: this.accessTokenFormControl.value
+      });
     }
   }
 

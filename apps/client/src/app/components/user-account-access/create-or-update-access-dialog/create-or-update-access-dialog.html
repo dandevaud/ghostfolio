@@ -27,18 +27,18 @@
       </mat-form-field>
     </div>
 
-    @if (accessForm.get('type').value === 'PRIVATE') {
-      <div>
-        <mat-form-field appearance="outline" class="w-100">
-          <mat-label i18n>Permission</mat-label>
-          <mat-select formControlName="permissions">
-            <mat-option i18n value="READ_RESTRICTED"
-              >Restricted view</mat-option
-            >
+    <div>
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label i18n>Permission</mat-label>
+        <mat-select formControlName="permissions">
+          <mat-option i18n value="READ_RESTRICTED">Restricted view</mat-option>
+          @if (accessForm.get('type').value === 'PRIVATE') {
             <mat-option i18n value="READ">View</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    @if (accessForm.get('type').value === 'PRIVATE') {
       <div>
         <mat-form-field appearance="outline" class="w-100">
           <mat-label>
@@ -55,12 +55,18 @@
     }
   </div>
   <div class="justify-content-end" mat-dialog-actions>
-    <button i18n mat-button type="button" (click)="onCancel()">Cancel</button>
+    <button mat-button type="button" (click)="onCancel()">
+      @if (accessForm.dirty) {
+        <ng-container i18n>Cancel</ng-container>
+      } @else {
+        <ng-container i18n>Close</ng-container>
+      }
+    </button>
     <button
       color="primary"
       mat-flat-button
       type="submit"
-      [disabled]="!accessForm.valid"
+      [disabled]="!(accessForm.dirty && accessForm.valid)"
     >
       <ng-container i18n>Save</ng-container>
     </button>

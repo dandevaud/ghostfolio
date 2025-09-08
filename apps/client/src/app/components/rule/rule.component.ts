@@ -1,5 +1,9 @@
 import { UpdateUserSettingDto } from '@ghostfolio/api/app/user/update-user-setting.dto';
-import { PortfolioReportRule } from '@ghostfolio/common/interfaces';
+import { RuleSettings } from '@ghostfolio/api/models/interfaces/rule-settings.interface';
+import {
+  PortfolioReportRule,
+  XRayRulesSettings
+} from '@ghostfolio/common/interfaces';
 
 import {
   ChangeDetectionStrategy,
@@ -9,23 +13,82 @@ import {
   OnInit,
   Output
 } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { addIcons } from 'ionicons';
+import {
+  addCircleOutline,
+  checkmarkCircleOutline,
+  ellipsisHorizontal,
+  optionsOutline,
+  removeCircleOutline,
+  warningOutline
+} from 'ionicons/icons';
+import { DeviceDetectorService } from 'ngx-device-detector';
+import { Subject, takeUntil } from 'rxjs';
+
+import { IRuleSettingsDialogParams } from './rule-settings-dialog/interfaces/interfaces';
+import { GfRuleSettingsDialogComponent } from './rule-settings-dialog/rule-settings-dialog.component';
 
 @Component({
   selector: 'gf-rule',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './rule.component.html',
-  styleUrls: ['./rule.component.scss']
+  styleUrls: ['./rule.component.scss'],
+  standalone: false
 })
 export class RuleComponent implements OnInit {
+  @Input() categoryName: string;
   @Input() hasPermissionToUpdateUserSettings: boolean;
   @Input() isLoading: boolean;
   @Input() rule: PortfolioReportRule;
+  @Input() settings: XRayRulesSettings['AccountClusterRiskCurrentInvestment'];
 
   @Output() ruleUpdated = new EventEmitter<UpdateUserSettingDto>();
 
-  public constructor() {}
+  private deviceType: string;
+  private unsubscribeSubject = new Subject<void>();
 
-  public ngOnInit() {}
+  public constructor(
+    private deviceService: DeviceDetectorService,
+    private dialog: MatDialog
+  ) {
+    addIcons({
+      addCircleOutline,
+      checkmarkCircleOutline,
+      ellipsisHorizontal,
+      optionsOutline,
+      removeCircleOutline,
+      warningOutline
+    });
+  }
+
+  public ngOnInit() {
+    this.deviceType = this.deviceService.getDeviceInfo().deviceType;
+  }
+
+  public onCustomizeRule(rule: PortfolioReportRule) {
+    const dialogRef = this.dialog.open(GfRuleSettingsDialogComponent, {
+      data: {
+        rule,
+        categoryName: this.categoryName,
+        settings: this.settings
+      } as IRuleSettingsDialogParams,
+      width: this.deviceType === 'mobile' ? '100vw' : '50rem'
+    });
+
+    dialogRef
+      .afterClosed()
+      .pipe(takeUntil(this.unsubscribeSubject))
+      .subscribe((settings: RuleSettings) => {
+        if (settings) {
+          this.ruleUpdated.emit({
+            xRayRules: {
+              [rule.key]: settings
+            }
+          });
+        }
+      });
+  }
 
   public onUpdateRule(rule: PortfolioReportRule) {
     const settings: UpdateUserSettingDto = {
@@ -35,5 +98,10 @@ export class RuleComponent implements OnInit {
     };
 
     this.ruleUpdated.emit(settings);
+  }
+
+  public ngOnDestroy() {
+    this.unsubscribeSubject.next();
+    this.unsubscribeSubject.complete();
   }
 }

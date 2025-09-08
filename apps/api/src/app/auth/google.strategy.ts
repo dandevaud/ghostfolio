@@ -11,7 +11,7 @@ import { AuthService } from './auth.service';
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   public constructor(
     private readonly authService: AuthService,
-    private readonly configurationService: ConfigurationService
+    configurationService: ConfigurationService
   ) {
     super({
       callbackURL: `${configurationService.get(
@@ -25,12 +25,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   }
 
   public async validate(
-    request: any,
-    token: string,
-    refreshToken: string,
+    _request: any,
+    _token: string,
+    _refreshToken: string,
     profile: Profile,
-    done: Function,
-    done2: Function
+    done: Function
   ) {
     try {
       const jwt = await this.authService.validateOAuthLogin({

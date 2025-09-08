@@ -2,11 +2,13 @@ import {
   getAnnualizedPerformancePercent,
   getIntervalFromDateRange
 } from '@ghostfolio/common/calculation-helper';
+import { getTooltipOptions } from '@ghostfolio/common/chart-helper';
+import { getLocale } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   PortfolioPosition
 } from '@ghostfolio/common/interfaces';
-import { DateRange } from '@ghostfolio/common/types';
+import { ColorScheme, DateRange } from '@ghostfolio/common/types';
 
 import { CommonModule } from '@angular/common';
 import {
@@ -25,11 +27,14 @@ import { DataSource } from '@prisma/client';
 import { Big } from 'big.js';
 import { ChartConfiguration } from 'chart.js';
 import { LinearScale } from 'chart.js';
-import { Chart } from 'chart.js';
+import { Chart, Tooltip } from 'chart.js';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
+import { isUUID } from 'class-validator';
 import { differenceInDays, max } from 'date-fns';
 import { orderBy } from 'lodash';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+
+import { GetColorParams } from './interfaces/interfaces';
 
 const { gray, green, red } = require('open-color');
 
@@ -37,30 +42,29 @@ const { gray, green, red } = require('open-color');
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, NgxSkeletonLoaderModule],
   selector: 'gf-treemap-chart',
-  standalone: true,
   styleUrls: ['./treemap-chart.component.scss'],
   templateUrl: './treemap-chart.component.html'
 })
 export class GfTreemapChartComponent
   implements AfterViewInit, OnChanges, OnDestroy
 {
+  @Input() baseCurrency: string;
+  @Input() colorScheme: ColorScheme;
   @Input() cursor: string;
   @Input() dateRange: DateRange;
   @Input() holdings: PortfolioPosition[];
+  @Input() locale = getLocale();
 
   @Output() treemapChartClicked = new EventEmitter<AssetProfileIdentifier>();
 
   @ViewChild('chartCanvas') chartCanvas: ElementRef<HTMLCanvasElement>;
 
-  public static readonly HEAT_MULTIPLIER = 5;
-
   public chart: Chart<'treemap'>;
   public isLoading = true;
 
   public constructor() {
-    Chart.register(LinearScale, TreemapController, TreemapElement);
+    Chart.register(LinearScale, Tooltip, TreemapController, TreemapElement);
   }
-
   public ngAfterViewInit() {
     if (this.holdings) {
       this.initialize();
@@ -77,102 +81,225 @@ export class GfTreemapChartComponent
     this.chart?.destroy();
   }
 
+  private getColor({
+    annualizedNetPerformancePercent,
+    negativeNetPerformancePercentsRange,
+    positiveNetPerformancePercentsRange
+  }: GetColorParams) {
+    if (Math.abs(annualizedNetPerformancePercent) === 0) {
+      return {
+        backgroundColor: gray[3],
+        fontColor: gray[9]
+      };
+    }
+
+    if (annualizedNetPerformancePercent > 0) {
+      let backgroundIndex: number;
+      const range =
+        positiveNetPerformancePercentsRange.max -
+        positiveNetPerformancePercentsRange.min;
+
+      if (
+        annualizedNetPerformancePercent >=
+        positiveNetPerformancePercentsRange.max - range * 0.25
+      ) {
+        backgroundIndex = 9;
+      } else if (
+        annualizedNetPerformancePercent >=
+        positiveNetPerformancePercentsRange.max - range * 0.5
+      ) {
+        backgroundIndex = 7;
+      } else if (
+        annualizedNetPerformancePercent >=
+        positiveNetPerformancePercentsRange.max - range * 0.75
+      ) {
+        backgroundIndex = 5;
+      } else {
+        backgroundIndex = 3;
+      }
+
+      return {
+        backgroundColor: green[backgroundIndex],
+        fontColor: green[backgroundIndex <= 4 ? 9 : 0]
+      };
+    } else {
+      let backgroundIndex: number;
+      const range =
+        negativeNetPerformancePercentsRange.min -
+        negativeNetPerformancePercentsRange.max;
+
+      if (
+        annualizedNetPerformancePercent <=
+        negativeNetPerformancePercentsRange.min + range * 0.25
+      ) {
+        backgroundIndex = 9;
+      } else if (
+        annualizedNetPerformancePercent <=
+        negativeNetPerformancePercentsRange.min + range * 0.5
+      ) {
+        backgroundIndex = 7;
+      } else if (
+        annualizedNetPerformancePercent <=
+        negativeNetPerformancePercentsRange.min + range * 0.75
+      ) {
+        backgroundIndex = 5;
+      } else {
+        backgroundIndex = 3;
+      }
+
+      return {
+        backgroundColor: red[backgroundIndex],
+        fontColor: red[backgroundIndex <= 4 ? 9 : 0]
+      };
+    }
+  }
+
   private initialize() {
     this.isLoading = true;
 
     const { endDate, startDate } = getIntervalFromDateRange(this.dateRange);
 
-    const data: ChartConfiguration['data'] = <any>{
+    const netPerformancePercentsWithCurrencyEffect = this.holdings.map(
+      ({ dateOfFirstActivity, netPerformancePercentWithCurrencyEffect }) => {
+        return getAnnualizedPerformancePercent({
+          daysInMarket: differenceInDays(
+            endDate,
+            max([dateOfFirstActivity ?? new Date(0), startDate])
+          ),
+          netPerformancePercentage: new Big(
+            netPerformancePercentWithCurrencyEffect
+          )
+        }).toNumber();
+      }
+    );
+
+    const positiveNetPerformancePercents =
+      netPerformancePercentsWithCurrencyEffect.filter(
+        (annualizedNetPerformancePercent) => {
+          return annualizedNetPerformancePercent > 0;
+        }
+      );
+
+    const positiveNetPerformancePercentsRange = {
+      max: Math.max(...positiveNetPerformancePercents),
+      min: Math.min(...positiveNetPerformancePercents)
+    };
+
+    const negativeNetPerformancePercents =
+      netPerformancePercentsWithCurrencyEffect.filter(
+        (annualizedNetPerformancePercent) => {
+          return annualizedNetPerformancePercent < 0;
+        }
+      );
+
+    const negativeNetPerformancePercentsRange = {
+      max: Math.max(...negativeNetPerformancePercents),
+      min: Math.min(...negativeNetPerformancePercents)
+    };
+
+    const data: ChartConfiguration<'treemap'>['data'] = {
       datasets: [
         {
-          backgroundColor(ctx) {
-            const annualizedNetPerformancePercentWithCurrencyEffect =
+          backgroundColor: (context) => {
+            let annualizedNetPerformancePercent =
               getAnnualizedPerformancePercent({
                 daysInMarket: differenceInDays(
                   endDate,
                   max([
-                    ctx.raw._data.dateOfFirstActivity ?? new Date(0),
+                    context.raw._data.dateOfFirstActivity ?? new Date(0),
                     startDate
                   ])
                 ),
                 netPerformancePercentage: new Big(
-                  ctx.raw._data.netPerformancePercentWithCurrencyEffect
+                  context.raw._data.netPerformancePercentWithCurrencyEffect
                 )
               }).toNumber();
 
-            if (
-              annualizedNetPerformancePercentWithCurrencyEffect >
-              0.03 * GfTreemapChartComponent.HEAT_MULTIPLIER
-            ) {
-              return green[9];
-            } else if (
-              annualizedNetPerformancePercentWithCurrencyEffect >
-              0.02 * GfTreemapChartComponent.HEAT_MULTIPLIER
-            ) {
-              return green[7];
-            } else if (
-              annualizedNetPerformancePercentWithCurrencyEffect >
-              0.01 * GfTreemapChartComponent.HEAT_MULTIPLIER
-            ) {
-              return green[5];
-            } else if (annualizedNetPerformancePercentWithCurrencyEffect > 0) {
-              return green[3];
-            } else if (
-              annualizedNetPerformancePercentWithCurrencyEffect === 0
-            ) {
-              return gray[3];
-            } else if (
-              annualizedNetPerformancePercentWithCurrencyEffect >
-              -0.01 * GfTreemapChartComponent.HEAT_MULTIPLIER
-            ) {
-              return red[3];
-            } else if (
-              annualizedNetPerformancePercentWithCurrencyEffect >
-              -0.02 * GfTreemapChartComponent.HEAT_MULTIPLIER
-            ) {
-              return red[5];
-            } else if (
-              annualizedNetPerformancePercentWithCurrencyEffect >
-              -0.03 * GfTreemapChartComponent.HEAT_MULTIPLIER
-            ) {
-              return red[7];
-            } else {
-              return red[9];
-            }
+            // Round to 2 decimal places
+            annualizedNetPerformancePercent =
+              Math.round(annualizedNetPerformancePercent * 100) / 100;
+
+            const { backgroundColor } = this.getColor({
+              annualizedNetPerformancePercent,
+              negativeNetPerformancePercentsRange,
+              positiveNetPerformancePercentsRange
+            });
+
+            return backgroundColor;
           },
           borderRadius: 4,
           key: 'allocationInPercentage',
           labels: {
             align: 'left',
-            color: ['white'],
+            color: (context) => {
+              let annualizedNetPerformancePercent =
+                getAnnualizedPerformancePercent({
+                  daysInMarket: differenceInDays(
+                    endDate,
+                    max([
+                      context.raw._data.dateOfFirstActivity ?? new Date(0),
+                      startDate
+                    ])
+                  ),
+                  netPerformancePercentage: new Big(
+                    context.raw._data.netPerformancePercentWithCurrencyEffect
+                  )
+                }).toNumber();
+
+              // Round to 2 decimal places
+              annualizedNetPerformancePercent =
+                Math.round(annualizedNetPerformancePercent * 100) / 100;
+
+              const { fontColor } = this.getColor({
+                annualizedNetPerformancePercent,
+                negativeNetPerformancePercentsRange,
+                positiveNetPerformancePercentsRange
+              });
+
+              return fontColor;
+            },
             display: true,
-            font: [{ size: 14 }, { size: 11 }, { lineHeight: 2, size: 14 }],
-            formatter(ctx) {
-              const netPerformancePercentWithCurrencyEffect =
-                ctx.raw._data.netPerformancePercentWithCurrencyEffect;
+            font: [{ size: 16 }, { lineHeight: 1.5, size: 14 }],
+            formatter: ({ raw }) => {
+              // Round to 4 decimal places
+              let netPerformancePercentWithCurrencyEffect =
+                Math.round(
+                  raw._data.netPerformancePercentWithCurrencyEffect * 10000
+                ) / 10000;
+
+              if (Math.abs(netPerformancePercentWithCurrencyEffect) === 0) {
+                netPerformancePercentWithCurrencyEffect = Math.abs(
+                  netPerformancePercentWithCurrencyEffect
+                );
+              }
+
+              const name = raw._data.name;
+              const symbol = raw._data.symbol;
 
               return [
-                ctx.raw._data.name,
-                ctx.raw._data.symbol,
-                `${netPerformancePercentWithCurrencyEffect > 0 ? '+' : ''}${(ctx.raw._data.netPerformancePercentWithCurrencyEffect * 100).toFixed(2)}%`
+                isUUID(symbol) ? (name ?? symbol) : symbol,
+                `${netPerformancePercentWithCurrencyEffect > 0 ? '+' : ''}${(netPerformancePercentWithCurrencyEffect * 100).toFixed(2)}%`
               ];
             },
+            hoverColor: undefined,
             position: 'top'
           },
           spacing: 1,
           tree: this.holdings
         }
       ]
-    };
+    } as any;
 
     if (this.chartCanvas) {
       if (this.chart) {
         this.chart.data = data;
+        this.chart.options.plugins.tooltip =
+          this.getTooltipPluginConfiguration() as unknown;
         this.chart.update();
       } else {
         this.chart = new Chart(this.chartCanvas.nativeElement, {
           data,
-          options: <unknown>{
+          options: {
             animation: false,
             onClick: (event, activeElements) => {
               try {
@@ -199,16 +326,68 @@ export class GfTreemapChartComponent
               }
             },
             plugins: {
-              tooltip: {
-                enabled: false
-              }
+              tooltip: this.getTooltipPluginConfiguration()
             }
-          },
+          } as unknown,
           type: 'treemap'
         });
       }
     }
 
     this.isLoading = false;
+  }
+
+  private getTooltipPluginConfiguration() {
+    return {
+      ...getTooltipOptions({
+        colorScheme: this.colorScheme,
+        currency: this.baseCurrency,
+        locale: this.locale
+      }),
+      callbacks: {
+        label: ({ raw }) => {
+          const allocationInPercentage = `${((raw._data.allocationInPercentage as number) * 100).toFixed(2)}%`;
+          const name = raw._data.name;
+          const sign =
+            raw._data.netPerformancePercentWithCurrencyEffect > 0 ? '+' : '';
+          const symbol = raw._data.symbol;
+
+          const netPerformanceInPercentageWithSign = `${sign}${(raw._data.netPerformancePercentWithCurrencyEffect * 100).toFixed(2)}%`;
+
+          if (raw._data.valueInBaseCurrency !== null) {
+            const value = raw._data.valueInBaseCurrency as number;
+
+            return [
+              `${name ?? symbol} (${allocationInPercentage})`,
+              `${value.toLocaleString(this.locale, {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2
+              })} ${this.baseCurrency}`,
+              '',
+              $localize`Change` + ' (' + $localize`Performance` + ')',
+              `${sign}${raw._data.netPerformanceWithCurrencyEffect.toLocaleString(
+                this.locale,
+                {
+                  maximumFractionDigits: 2,
+                  minimumFractionDigits: 2
+                }
+              )} ${this.baseCurrency} (${netPerformanceInPercentageWithSign})`
+            ];
+          } else {
+            return [
+              `${name ?? symbol} (${allocationInPercentage})`,
+              '',
+              $localize`Performance`,
+              netPerformanceInPercentageWithSign
+            ];
+          }
+        },
+        title: () => {
+          return '';
+        }
+      },
+      xAlign: 'center',
+      yAlign: 'center'
+    };
   }
 }

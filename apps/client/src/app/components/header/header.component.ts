@@ -1,5 +1,6 @@
 import { UpdateUserSettingDto } from '@ghostfolio/api/app/user/update-user-setting.dto';
 import { LoginWithAccessTokenDialog } from '@ghostfolio/client/components/login-with-access-token-dialog/login-with-access-token-dialog.component';
+import { LoginWithAccessTokenDialogModule } from '@ghostfolio/client/components/login-with-access-token-dialog/login-with-access-token-dialog.module';
 import { LayoutService } from '@ghostfolio/client/core/layout.service';
 import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
@@ -12,12 +13,17 @@ import { TokenStorageService } from '@ghostfolio/client/services/token-storage.s
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { Filter, InfoItem, User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
+import { internalRoutes, publicRoutes } from '@ghostfolio/common/routes/routes';
 import { DateRange } from '@ghostfolio/common/types';
 import { GfAssistantComponent } from '@ghostfolio/ui/assistant/assistant.component';
+import { GfLogoComponent } from '@ghostfolio/ui/logo';
+import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
 
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  CUSTOM_ELEMENTS_SCHEMA,
   EventEmitter,
   HostListener,
   Input,
@@ -25,19 +31,47 @@ import {
   Output,
   ViewChild
 } from '@angular/core';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatMenuTrigger } from '@angular/material/menu';
-import { Router } from '@angular/router';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { Router, RouterModule } from '@angular/router';
+import { IonIcon } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import {
+  closeOutline,
+  logoGithub,
+  menuOutline,
+  optionsOutline,
+  personCircleOutline,
+  radioButtonOffOutline,
+  radioButtonOnOutline
+} from 'ionicons/icons';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 
 @Component({
-  selector: 'gf-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CommonModule,
+    GfAssistantComponent,
+    GfLogoComponent,
+    GfPremiumIndicatorComponent,
+    IonIcon,
+    LoginWithAccessTokenDialogModule,
+    MatBadgeModule,
+    MatButtonModule,
+    MatMenuModule,
+    MatToolbarModule,
+    RouterModule
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  selector: 'gf-header',
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss']
 })
-export class HeaderComponent implements OnChanges {
+export class GfHeaderComponent implements OnChanges {
   @HostListener('window:keydown', ['$event'])
   openAssistantWithHotKey(event: KeyboardEvent) {
     if (
@@ -56,6 +90,9 @@ export class HeaderComponent implements OnChanges {
 
   @Input() currentRoute: string;
   @Input() deviceType: string;
+  @Input() hasPermissionToChangeDateRange: boolean;
+  @Input() hasPermissionToChangeFilters: boolean;
+  @Input() hasPromotion: boolean;
   @Input() hasTabs: boolean;
   @Input() info: InfoItem;
   @Input() pageTitle: string;
@@ -67,6 +104,7 @@ export class HeaderComponent implements OnChanges {
   @ViewChild('assistantTrigger') assistentMenuTriggerElement: MatMenuTrigger;
 
   public hasFilters: boolean;
+  public hasImpersonationId: boolean;
   public hasPermissionForSocialLogin: boolean;
   public hasPermissionForSubscription: boolean;
   public hasPermissionToAccessAdminControl: boolean;
@@ -74,18 +112,23 @@ export class HeaderComponent implements OnChanges {
   public hasPermissionToAccessFearAndGreedIndex: boolean;
   public hasPermissionToCreateUser: boolean;
   public impersonationId: string;
+  public internalRoutes = internalRoutes;
   public isMenuOpen: boolean;
-  public routeAbout = $localize`about`;
-  public routeFeatures = $localize`features`;
-  public routeMarkets = $localize`markets`;
-  public routePricing = $localize`pricing`;
-  public routeResources = $localize`resources`;
-  public routerLinkAbout = ['/' + $localize`about`];
-  public routerLinkFeatures = ['/' + $localize`features`];
-  public routerLinkMarkets = ['/' + $localize`markets`];
-  public routerLinkPricing = ['/' + $localize`pricing`];
-  public routerLinkRegister = ['/' + $localize`register`];
-  public routerLinkResources = ['/' + $localize`resources`];
+  public routeAbout = publicRoutes.about.path;
+  public routeFeatures = publicRoutes.features.path;
+  public routeMarkets = publicRoutes.markets.path;
+  public routePricing = publicRoutes.pricing.path;
+  public routeResources = publicRoutes.resources.path;
+  public routerLinkAbout = publicRoutes.about.routerLink;
+  public routerLinkAccount = internalRoutes.account.routerLink;
+  public routerLinkAccounts = internalRoutes.accounts.routerLink;
+  public routerLinkAdminControl = internalRoutes.adminControl.routerLink;
+  public routerLinkFeatures = publicRoutes.features.routerLink;
+  public routerLinkMarkets = publicRoutes.markets.routerLink;
+  public routerLinkPortfolio = internalRoutes.portfolio.routerLink;
+  public routerLinkPricing = publicRoutes.pricing.routerLink;
+  public routerLinkRegister = publicRoutes.register.routerLink;
+  public routerLinkResources = publicRoutes.resources.routerLink;
 
   private unsubscribeSubject = new Subject<void>();
 
@@ -104,8 +147,19 @@ export class HeaderComponent implements OnChanges {
       .onChangeHasImpersonation()
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((impersonationId) => {
+        this.hasImpersonationId = !!impersonationId;
         this.impersonationId = impersonationId;
       });
+
+    addIcons({
+      closeOutline,
+      logoGithub,
+      menuOutline,
+      optionsOutline,
+      personCircleOutline,
+      radioButtonOffOutline,
+      radioButtonOnOutline
+    });
   }
 
   public ngOnChanges() {
@@ -172,17 +226,17 @@ export class HeaderComponent implements OnChanges {
     const userSetting: UpdateUserSettingDto = {};
 
     for (const filter of filters) {
-      let filtersType: string;
-
       if (filter.type === 'ACCOUNT') {
-        filtersType = 'accounts';
+        userSetting['filters.accounts'] = filter.id ? [filter.id] : null;
       } else if (filter.type === 'ASSET_CLASS') {
-        filtersType = 'assetClasses';
+        userSetting['filters.assetClasses'] = filter.id ? [filter.id] : null;
+      } else if (filter.type === 'DATA_SOURCE') {
+        userSetting['filters.dataSource'] = filter.id ? filter.id : null;
+      } else if (filter.type === 'SYMBOL') {
+        userSetting['filters.symbol'] = filter.id ? filter.id : null;
       } else if (filter.type === 'TAG') {
-        filtersType = 'tags';
+        userSetting['filters.tags'] = filter.id ? [filter.id] : null;
       }
-
-      userSetting[`filters.${filtersType}`] = filter.id ? [filter.id] : null;
     }
 
     this.dataService
@@ -197,7 +251,7 @@ export class HeaderComponent implements OnChanges {
   }
 
   public onLogoClick() {
-    if (this.currentRoute === 'home' || this.currentRoute === 'zen') {
+    if (['home', 'zen'].includes(this.currentRoute)) {
       this.layoutService.getShouldReloadSubject().next();
     }
   }
@@ -259,7 +313,18 @@ export class HeaderComponent implements OnChanges {
       this.settingsStorageService.getSetting(KEY_STAY_SIGNED_IN) === 'true'
     );
 
-    this.router.navigate(['/']);
+    this.userService
+      .get()
+      .pipe(takeUntil(this.unsubscribeSubject))
+      .subscribe((user) => {
+        const userLanguage = user?.settings?.language;
+
+        if (userLanguage && document.documentElement.lang !== userLanguage) {
+          window.location.href = `../${userLanguage}`;
+        } else {
+          this.router.navigate(['/']);
+        }
+      });
   }
 
   public ngOnDestroy() {

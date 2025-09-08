@@ -7,11 +7,11 @@
 **Open Source Wealth Management Software**
 
 [**Ghostfol.io**](https://ghostfol.io) | [**Live Demo**](https://ghostfol.io/en/demo) | [**Ghostfolio Premium**](https://ghostfol.io/en/pricing) | [**FAQ**](https://ghostfol.io/en/faq) |
-[**Blog**](https://ghostfol.io/en/blog) | [**Slack**](https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg) | [**X**](https://x.com/ghostfolio_)
+[**Blog**](https://ghostfol.io/en/blog) | [**LinkedIn**](https://www.linkedin.com/company/ghostfolio) | [**Slack**](https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg) | [**X**](https://x.com/ghostfolio_)
 
 [![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://www.buymeacoffee.com/ghostfolio)
-[![Shield: Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-orange.svg)](#contributing)
-[![Shield: License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Shield: Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-limegreen.svg)](#contributing) [![Shield: Docker Pulls](https://img.shields.io/docker/pulls/ghostfolio/ghostfolio?label=Docker%20Pulls)](https://hub.docker.com/r/ghostfolio/ghostfolio)
+[![Shield: License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-orange.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 </div>
 
@@ -25,7 +25,7 @@
 
 ## Ghostfolio Premium
 
-Our official **[Ghostfolio Premium](https://ghostfol.io/en/pricing)** cloud offering is the easiest way to get started. Due to the time it saves, this will be the best option for most people. Revenue is used to cover the costs of the hosting infrastructure and to fund ongoing development.
+Our official **[Ghostfolio Premium](https://ghostfol.io/en/pricing)** cloud offering is the easiest way to get started. Due to the time it saves, this will be the best option for most people. Revenue is used to cover operational costs for the hosting infrastructure and professional data providers, and to fund ongoing development.
 
 If you prefer to run Ghostfolio on your own infrastructure, please find further instructions in the [Self-hosting](#self-hosting) section.
 
@@ -47,7 +47,7 @@ Ghostfolio is for you if you are...
 
 - ✅ Create, update and delete transactions
 - ✅ Multi account management
-- ✅ Portfolio performance: Time-weighted rate of return (TWR) for `Today`, `WTD`, `MTD`, `YTD`, `1Y`, `5Y`, `Max`
+- ✅ Portfolio performance: Return on Average Investment (ROAI) for `Today`, `WTD`, `MTD`, `YTD`, `1Y`, `5Y`, `Max`
 - ✅ Various charts
 - ✅ Static analysis to identify potential risks in your portfolio
 - ✅ Import and export transactions
@@ -85,23 +85,24 @@ We provide official container images hosted on [Docker Hub](https://hub.docker.c
 
 ### Supported Environment Variables
 
-| Name                     | Type                | Default Value | Description                                                                                                                         |
-| ------------------------ | ------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `ACCESS_TOKEN_SALT`      | `string`            |               | A random string used as salt for access tokens                                                                                      |
-| `API_KEY_COINGECKO_DEMO` | `string` (optional) |               | The _CoinGecko_ Demo API key                                                                                                        |
-| `API_KEY_COINGECKO_PRO`  | `string` (optional) |               | The _CoinGecko_ Pro API key                                                                                                         |
-| `DATABASE_URL`           | `string`            |               | The database connection URL, e.g. `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=prefer` |
-| `HOST`                   | `string` (optional) | `0.0.0.0`     | The host where the Ghostfolio application will run on                                                                               |
-| `JWT_SECRET_KEY`         | `string`            |               | A random string used for _JSON Web Tokens_ (JWT)                                                                                    |
-| `PORT`                   | `number` (optional) | `3333`        | The port where the Ghostfolio application will run on                                                                               |
-| `POSTGRES_DB`            | `string`            |               | The name of the _PostgreSQL_ database                                                                                               |
-| `POSTGRES_PASSWORD`      | `string`            |               | The password of the _PostgreSQL_ database                                                                                           |
-| `POSTGRES_USER`          | `string`            |               | The user of the _PostgreSQL_ database                                                                                               |
-| `REDIS_DB`               | `number` (optional) | `0`           | The database index of _Redis_                                                                                                       |
-| `REDIS_HOST`             | `string`            |               | The host where _Redis_ is running                                                                                                   |
-| `REDIS_PASSWORD`         | `string`            |               | The password of _Redis_                                                                                                             |
-| `REDIS_PORT`             | `number`            |               | The port where _Redis_ is running                                                                                                   |
-| `REQUEST_TIMEOUT`        | `number` (optional) | `2000`        | The timeout of network requests to data providers in milliseconds                                                                   |
+| Name                     | Type                  | Default Value | Description                                                                                                                         |
+| ------------------------ | --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `ACCESS_TOKEN_SALT`      | `string`              |               | A random string used as salt for access tokens                                                                                      |
+| `API_KEY_COINGECKO_DEMO` | `string` (optional)   |               | The _CoinGecko_ Demo API key                                                                                                        |
+| `API_KEY_COINGECKO_PRO`  | `string` (optional)   |               | The _CoinGecko_ Pro API key                                                                                                         |
+| `DATABASE_URL`           | `string`              |               | The database connection URL, e.g. `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=prefer` |
+| `HOST`                   | `string` (optional)   | `0.0.0.0`     | The host where the Ghostfolio application will run on                                                                               |
+| `JWT_SECRET_KEY`         | `string`              |               | A random string used for _JSON Web Tokens_ (JWT)                                                                                    |
+| `LOG_LEVELS`             | `string[]` (optional) |               | The logging levels for the Ghostfolio application, e.g. `["debug","error","log","warn"]`                                            |
+| `PORT`                   | `number` (optional)   | `3333`        | The port where the Ghostfolio application will run on                                                                               |
+| `POSTGRES_DB`            | `string`              |               | The name of the _PostgreSQL_ database                                                                                               |
+| `POSTGRES_PASSWORD`      | `string`              |               | The password of the _PostgreSQL_ database                                                                                           |
+| `POSTGRES_USER`          | `string`              |               | The user of the _PostgreSQL_ database                                                                                               |
+| `REDIS_DB`               | `number` (optional)   | `0`           | The database index of _Redis_                                                                                                       |
+| `REDIS_HOST`             | `string`              |               | The host where _Redis_ is running                                                                                                   |
+| `REDIS_PASSWORD`         | `string`              |               | The password of _Redis_                                                                                                             |
+| `REDIS_PORT`             | `number`              |               | The port where _Redis_ is running                                                                                                   |
+| `REQUEST_TIMEOUT`        | `number` (optional)   | `2000`        | The timeout of network requests to data providers in milliseconds                                                                   |
 
 ### Run with Docker Compose
 
@@ -117,7 +118,7 @@ We provide official container images hosted on [Docker Hub](https://hub.docker.c
 Run the following command to start the Docker images from [Docker Hub](https://hub.docker.com/r/ghostfolio/ghostfolio):
 
 ```bash
-docker compose --env-file ./.env -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 #### b. Build and run environment
@@ -125,8 +126,8 @@ docker compose --env-file ./.env -f docker/docker-compose.yml up -d
 Run the following commands to build and start the Docker images:
 
 ```bash
-docker compose --env-file ./.env -f docker/docker-compose.build.yml build
-docker compose --env-file ./.env -f docker/docker-compose.build.yml up -d
+docker compose -f docker/docker-compose.build.yml build
+docker compose -f docker/docker-compose.build.yml up -d
 ```
 
 #### Setup
@@ -136,9 +137,18 @@ docker compose --env-file ./.env -f docker/docker-compose.build.yml up -d
 
 #### Upgrade Version
 
-1. Increase the version of the `ghostfolio/ghostfolio` Docker image in `docker/docker-compose.yml`
-1. Run the following command to start the new Docker image: `docker compose --env-file ./.env -f docker/docker-compose.yml up -d`  
-   At each start, the container will automatically apply the database schema migrations if needed.
+1. Update the _Ghostfolio_ Docker image
+   - Increase the version of the `ghostfolio/ghostfolio` Docker image in `docker/docker-compose.yml`
+   - Run the following command if `ghostfolio:latest` is set:
+     ```bash
+     docker compose -f docker/docker-compose.yml pull
+     ```
+
+1. Run the following command to start the new Docker image:
+   ```bash
+   docker compose -f docker/docker-compose.yml up -d
+   ```
+   The container will automatically apply any required database schema migrations during startup.
 
 ### Home Server Systems (Community)
 
@@ -162,7 +172,31 @@ You can get the _Bearer Token_ via `POST http://localhost:3333/api/v1/auth/anony
 
 Deprecated: `GET http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TOKEN_OF_ACCOUNT>` or `curl -s http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TOKEN_OF_ACCOUNT>`.
 
+### Health Check (experimental)
+
+#### Request
+
+`GET http://localhost:3333/api/v1/health`
+
+**Info:** No Bearer Token is required for health check
+
+#### Response
+
+##### Success
+
+`200 OK`
+
+```
+{
+  "status": "OK"
+}
+```
+
 ### Import Activities
+
+#### Prerequisites
+
+[Bearer Token](#authorization-bearer-token) for authorization
 
 #### Request
 
@@ -187,18 +221,18 @@ Deprecated: `GET http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TO
 }
 ```
 
-| Field        | Type                | Description                                                                   |
-| ------------ | ------------------- | ----------------------------------------------------------------------------- |
-| `accountId`  | `string` (optional) | Id of the account                                                             |
-| `comment`    | `string` (optional) | Comment of the activity                                                       |
-| `currency`   | `string`            | `CHF` \| `EUR` \| `USD` etc.                                                  |
-| `dataSource` | `string`            | `COINGECKO` \| `MANUAL` (for type `ITEM`) \| `YAHOO`                          |
-| `date`       | `string`            | Date in the format `ISO-8601`                                                 |
-| `fee`        | `number`            | Fee of the activity                                                           |
-| `quantity`   | `number`            | Quantity of the activity                                                      |
-| `symbol`     | `string`            | Symbol of the activity (suitable for `dataSource`)                            |
-| `type`       | `string`            | `BUY` \| `DIVIDEND` \| `FEE` \| `INTEREST` \| `ITEM` \| `LIABILITY` \| `SELL` |
-| `unitPrice`  | `number`            | Price per unit of the activity                                                |
+| Field        | Type                | Description                                                         |
+| ------------ | ------------------- | ------------------------------------------------------------------- |
+| `accountId`  | `string` (optional) | Id of the account                                                   |
+| `comment`    | `string` (optional) | Comment of the activity                                             |
+| `currency`   | `string`            | `CHF` \| `EUR` \| `USD` etc.                                        |
+| `dataSource` | `string`            | `COINGECKO` \| `MANUAL` \| `YAHOO`                                  |
+| `date`       | `string`            | Date in the format `ISO-8601`                                       |
+| `fee`        | `number`            | Fee of the activity                                                 |
+| `quantity`   | `number`            | Quantity of the activity                                            |
+| `symbol`     | `string`            | Symbol of the activity (suitable for `dataSource`)                  |
+| `type`       | `string`            | `BUY` \| `DIVIDEND` \| `FEE` \| `INTEREST` \| `LIABILITY` \| `SELL` |
+| `unitPrice`  | `number`            | Price per unit of the activity                                      |
 
 #### Response
 
@@ -219,6 +253,38 @@ Deprecated: `GET http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TO
 }
 ```
 
+### Portfolio (experimental)
+
+#### Prerequisites
+
+Grant access of type _Public_ in the _Access_ tab of _My Ghostfolio_.
+
+#### Request
+
+`GET http://localhost:3333/api/v1/public/<INSERT_ACCESS_ID>/portfolio`
+
+**Info:** No Bearer Token is required for authorization
+
+#### Response
+
+##### Success
+
+```
+{
+  "performance": {
+    "1d": {
+      "relativeChange": 0 // normalized from -1 to 1
+    };
+    "ytd": {
+      "relativeChange": 0 // normalized from -1 to 1
+    },
+    "max": {
+      "relativeChange": 0 // normalized from -1 to 1
+    }
+  }
+}
+```
+
 ## Community Projects
 
 Discover a variety of community projects for Ghostfolio: https://github.com/topics/ghostfolio
@@ -229,7 +295,7 @@ Are you building your own project? Add the `ghostfolio` topic to your _GitHub_ r
 
 Ghostfolio is **100% free** and **open source**. We encourage and support an active and healthy community that accepts contributions from the public - including you.
 
-Not sure what to work on? We have [some ideas](https://github.com/ghostfolio/ghostfolio/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22), even for [newcomers](https://github.com/ghostfolio/ghostfolio/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). Please join the Ghostfolio [Slack](https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg) channel or post to [@ghostfolio\_](https://x.com/ghostfolio_) on _X_. We would love to hear from you.
+Not sure what to work on? We have [some ideas](https://github.com/ghostfolio/ghostfolio/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22%20no%3Aassignee), even for [newcomers](https://github.com/ghostfolio/ghostfolio/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22%20no%3Aassignee). Please join the Ghostfolio [Slack](https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg) channel or post to [@ghostfolio\_](https://x.com/ghostfolio_) on _X_. We would love to hear from you.
 
 If you like to support this project, get [**Ghostfolio Premium**](https://ghostfol.io/en/pricing) or [**Buy me a coffee**](https://www.buymeacoffee.com/ghostfolio).
 
@@ -239,6 +305,6 @@ If you like to support this project, get [**Ghostfolio Premium**](https://ghostf
 
 ## License
 
-© 2021 - 2024 [Ghostfolio](https://ghostfol.io)
+© 2021 - 2025 [Ghostfolio](https://ghostfol.io)
 
 Licensed under the [AGPLv3 License](https://www.gnu.org/licenses/agpl-3.0.html).

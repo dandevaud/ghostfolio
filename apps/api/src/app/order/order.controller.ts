@@ -4,8 +4,8 @@ import { RedactValuesInResponseInterceptor } from '@ghostfolio/api/interceptors/
 import { TransformDataSourceInRequestInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-request/transform-data-source-in-request.interceptor';
 import { TransformDataSourceInResponseInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-response/transform-data-source-in-response.interceptor';
 import { ApiService } from '@ghostfolio/api/services/api/api.service';
-import { DataGatheringService } from '@ghostfolio/api/services/data-gathering/data-gathering.service';
 import { ImpersonationService } from '@ghostfolio/api/services/impersonation/impersonation.service';
+import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import {
   DATA_GATHERING_QUEUE_PRIORITY_HIGH,
@@ -53,14 +53,19 @@ export class OrderController {
   @Delete()
   @HasPermission(permissions.deleteOrder)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
+  @UseInterceptors(TransformDataSourceInRequestInterceptor)
   public async deleteOrders(
     @Query('accounts') filterByAccounts?: string,
     @Query('assetClasses') filterByAssetClasses?: string,
+    @Query('dataSource') filterByDataSource?: string,
+    @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string
   ): Promise<number> {
     const filters = this.apiService.buildFiltersFromQueryParams({
       filterByAccounts,
       filterByAssetClasses,
+      filterByDataSource,
+      filterBySymbol,
       filterByTags
     });
 
@@ -94,15 +99,18 @@ export class OrderController {
   @Get()
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   @UseInterceptors(RedactValuesInResponseInterceptor)
+  @UseInterceptors(TransformDataSourceInRequestInterceptor)
   @UseInterceptors(TransformDataSourceInResponseInterceptor)
   public async getAllOrders(
-    @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId,
+    @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string,
     @Query('accounts') filterByAccounts?: string,
     @Query('assetClasses') filterByAssetClasses?: string,
+    @Query('dataSource') filterByDataSource?: string,
     @Query('range') dateRange?: DateRange,
     @Query('skip') skip?: number,
     @Query('sortColumn') sortColumn?: string,
     @Query('sortDirection') sortDirection?: Prisma.SortOrder,
+    @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string,
     @Query('take') take?: number
   ): Promise<Activities> {
@@ -116,12 +124,14 @@ export class OrderController {
     const filters = this.apiService.buildFiltersFromQueryParams({
       filterByAccounts,
       filterByAssetClasses,
+      filterByDataSource,
+      filterBySymbol,
       filterByTags
     });
 
     const impersonationUserId =
       await this.impersonationService.validateImpersonationId(impersonationId);
-    const userCurrency = this.request.user.Settings.settings.baseCurrency;
+    const userCurrency = this.request.user.settings.settings.baseCurrency;
 
     const { activities, count } = await this.orderService.getOrders({
       endDate,
@@ -134,7 +144,7 @@ export class OrderController {
       skip: isNaN(skip) ? undefined : skip,
       take: isNaN(take) ? undefined : take,
       userId: impersonationUserId || this.request.user.id,
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
 
     return { activities, count };
@@ -145,17 +155,17 @@ export class OrderController {
   @UseInterceptors(RedactValuesInResponseInterceptor)
   @UseInterceptors(TransformDataSourceInResponseInterceptor)
   public async getOrderById(
-    @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId,
+    @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string,
     @Param('id') id: string
   ): Promise<Activity> {
     const impersonationUserId =
       await this.impersonationService.validateImpersonationId(impersonationId);
-    const userCurrency = this.request.user.Settings.settings.baseCurrency;
+    const userCurrency = this.request.user.settings.settings.baseCurrency;
 
     const { activities } = await this.orderService.getOrders({
       userCurrency,
       userId: impersonationUserId || this.request.user.id,
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
 
     const activity = activities.find((activity) => {
@@ -179,12 +189,15 @@ export class OrderController {
   public async createOrder(@Body() data: CreateOrderDto): Promise<OrderModel> {
     const currency = data.currency;
     const customCurrency = data.customCurrency;
+    const dataSource = data.dataSource;
 
     if (customCurrency) {
       data.currency = customCurrency;
 
       delete data.customCurrency;
     }
+
+    delete data.dataSource;
 
     const order = await this.orderService.createOrder({
       ...data,
@@ -193,28 +206,31 @@ export class OrderController {
         connectOrCreate: {
           create: {
             currency,
-            dataSource: data.dataSource,
+            dataSource,
             symbol: data.symbol
           },
           where: {
             dataSource_symbol: {
-              dataSource: data.dataSource,
+              dataSource,
               symbol: data.symbol
             }
           }
         }
       },
-      User: { connect: { id: this.request.user.id } },
+      tags: data.tags?.map((id) => {
+        return { id };
+      }),
+      user: { connect: { id: this.request.user.id } },
       userId: this.request.user.id
     });
 
-    if (data.dataSource && !order.isDraft) {
+    if (dataSource && !order.isDraft) {
       // Gather symbol data in the background, if data source is set
       // (not MANUAL) and not draft
       this.dataGatheringService.gatherSymbols({
         dataGatheringItems: [
           {
-            dataSource: data.dataSource,
+            dataSource,
             date: order.date,
             symbol: data.symbol
           }
@@ -246,6 +262,7 @@ export class OrderController {
 
     const accountId = data.accountId;
     const customCurrency = data.customCurrency;
+    const dataSource = data.dataSource;
 
     delete data.accountId;
 
@@ -255,11 +272,13 @@ export class OrderController {
       delete data.customCurrency;
     }
 
+    delete data.dataSource;
+
     return this.orderService.updateOrder({
       data: {
         ...data,
         date,
-        Account: {
+        account: {
           connect: {
             id_userId: { id: accountId, userId: this.request.user.id }
           }
@@ -267,7 +286,7 @@ export class OrderController {
         SymbolProfile: {
           connect: {
             dataSource_symbol: {
-              dataSource: data.dataSource,
+              dataSource,
               symbol: data.symbol
             }
           },
@@ -277,7 +296,10 @@ export class OrderController {
             name: data.symbol
           }
         },
-        User: { connect: { id: this.request.user.id } }
+        tags: data.tags?.map((id) => {
+          return { id };
+        }),
+        user: { connect: { id: this.request.user.id } }
       },
       where: {
         id

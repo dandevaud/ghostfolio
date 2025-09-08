@@ -1,23 +1,20 @@
-import { GfAssetProfileIconComponent } from '@ghostfolio/client/components/asset-profile-icon/asset-profile-icon.component';
-import { GfHoldingDetailDialogComponent } from '@ghostfolio/client/components/holding-detail-dialog/holding-detail-dialog.component';
 import { GfSymbolModule } from '@ghostfolio/client/pipes/symbol/symbol.module';
 import { getLocale } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   PortfolioPosition
 } from '@ghostfolio/common/interfaces';
-import { GfNoTransactionsInfoComponent } from '@ghostfolio/ui/no-transactions-info';
-import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { CommonModule } from '@angular/common';
 import {
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
   Component,
+  EventEmitter,
   Input,
   OnChanges,
   OnDestroy,
-  OnInit,
+  Output,
   ViewChild
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,18 +22,18 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { Router, RouterModule } from '@angular/router';
 import { AssetSubClass } from '@prisma/client';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { Subject, Subscription } from 'rxjs';
+
+import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
+import { GfValueComponent } from '../value/value.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
-    GfAssetProfileIconComponent,
-    GfHoldingDetailDialogComponent,
-    GfNoTransactionsInfoComponent,
+    GfEntityLogoComponent,
     GfSymbolModule,
     GfValueComponent,
     MatButtonModule,
@@ -44,30 +41,29 @@ import { Subject, Subscription } from 'rxjs';
     MatPaginatorModule,
     MatSortModule,
     MatTableModule,
-    NgxSkeletonLoaderModule,
-    RouterModule
+    NgxSkeletonLoaderModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-holdings-table',
-  standalone: true,
   styleUrls: ['./holdings-table.component.scss'],
   templateUrl: './holdings-table.component.html'
 })
-export class GfHoldingsTableComponent implements OnChanges, OnDestroy, OnInit {
+export class GfHoldingsTableComponent implements OnChanges, OnDestroy {
   @Input() baseCurrency: string;
   @Input() deviceType: string;
-  @Input() hasPermissionToCreateActivity: boolean;
   @Input() hasPermissionToOpenDetails = true;
+  @Input() hasPermissionToShowQuantities = true;
   @Input() hasPermissionToShowValues = true;
   @Input() holdings: PortfolioPosition[];
   @Input() locale = getLocale();
   @Input() pageSize = Number.MAX_SAFE_INTEGER;
 
+  @Output() holdingClicked = new EventEmitter<AssetProfileIdentifier>();
+
   @ViewChild(MatPaginator) paginator: MatPaginator;
   @ViewChild(MatSort) sort: MatSort;
 
-  public dataSource: MatTableDataSource<PortfolioPosition> =
-    new MatTableDataSource();
+  public dataSource = new MatTableDataSource<PortfolioPosition>();
   public displayedColumns = [];
   public ignoreAssetSubClasses = [AssetSubClass.CASH];
   public isLoading = true;
@@ -75,12 +71,12 @@ export class GfHoldingsTableComponent implements OnChanges, OnDestroy, OnInit {
 
   private unsubscribeSubject = new Subject<void>();
 
-  public constructor(private router: Router) {}
-
-  public ngOnInit() {}
-
   public ngOnChanges() {
     this.displayedColumns = ['icon', 'nameWithSymbol', 'dateOfFirstActivity'];
+
+    if (this.hasPermissionToShowQuantities) {
+      this.displayedColumns.push('quantity');
+    }
 
     if (this.hasPermissionToShowValues) {
       this.displayedColumns.push('valueInBaseCurrency');
@@ -107,9 +103,7 @@ export class GfHoldingsTableComponent implements OnChanges, OnDestroy, OnInit {
 
   public onOpenHoldingDialog({ dataSource, symbol }: AssetProfileIdentifier) {
     if (this.hasPermissionToOpenDetails) {
-      this.router.navigate([], {
-        queryParams: { dataSource, symbol, holdingDetailDialog: true }
-      });
+      this.holdingClicked.emit({ dataSource, symbol });
     }
   }
 

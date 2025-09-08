@@ -1,5 +1,5 @@
-import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { CryptocurrencyService } from '@ghostfolio/api/services/cryptocurrency/cryptocurrency.service';
+import { AssetProfileDelistedError } from '@ghostfolio/api/services/data-provider/errors/asset-profile-delisted.error';
 import { DataEnhancerInterface } from '@ghostfolio/api/services/data-provider/interfaces/data-enhancer.interface';
 import {
   DEFAULT_CURRENCY,
@@ -18,13 +18,16 @@ import {
 } from '@prisma/client';
 import { isISIN } from 'class-validator';
 import { countries } from 'countries-list';
-import yahooFinance from 'yahoo-finance2';
-import type { Price } from 'yahoo-finance2/dist/esm/src/modules/quoteSummary-iface';
+import YahooFinance from 'yahoo-finance2';
+import type { Price } from 'yahoo-finance2/esm/src/modules/quoteSummary-iface';
 
 @Injectable()
 export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
+  private readonly yahooFinance = new YahooFinance({
+    suppressNotices: ['yahooSurvey']
+  });
+
   public constructor(
-    private readonly configurationService: ConfigurationService,
     private readonly cryptocurrencyService: CryptocurrencyService
   ) {}
 
@@ -60,7 +63,8 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
       if (
         isCurrency(
           aSymbol.substring(0, aSymbol.length - DEFAULT_CURRENCY.length)
-        )
+        ) &&
+        isCurrency(aSymbol.substring(aSymbol.length - DEFAULT_CURRENCY.length))
       ) {
         return `${aSymbol}=X`;
       } else if (
@@ -83,7 +87,6 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
   }
 
   public async enhance({
-    requestTimeout = this.configurationService.get('REQUEST_TIMEOUT'),
     response,
     symbol
   }: {
@@ -101,8 +104,8 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
       if (response.dataSource === 'YAHOO') {
         yahooSymbol = symbol;
       } else {
-        const { quotes } = await yahooFinance.search(response.isin);
-        yahooSymbol = quotes[0].symbol;
+        const { quotes } = await this.yahooFinance.search(response.isin);
+        yahooSymbol = quotes[0].symbol as string;
       }
 
       const { countries, sectors, url } =
@@ -160,24 +163,26 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
   public async getAssetProfile(
     aSymbol: string
   ): Promise<Partial<SymbolProfile>> {
-    const response: Partial<SymbolProfile> = {};
+    let response: Partial<SymbolProfile> = {};
 
     try {
       let symbol = aSymbol;
 
       if (isISIN(symbol)) {
         try {
-          const { quotes } = await yahooFinance.search(symbol);
+          const { quotes } = await this.yahooFinance.search(symbol);
 
-          if (quotes.length === 1) {
-            symbol = quotes[0].symbol;
+          if (quotes?.[0]?.symbol) {
+            symbol = quotes[0].symbol as string;
           }
         } catch {}
+      } else if (symbol?.endsWith(`-${DEFAULT_CURRENCY}`)) {
+        throw new Error(`${symbol} is not valid`);
       } else {
         symbol = this.convertToYahooFinanceSymbol(symbol);
       }
 
-      const assetProfile = await yahooFinance.quoteSummary(symbol, {
+      const assetProfile = await this.yahooFinance.quoteSummary(symbol, {
         modules: ['price', 'summaryProfile', 'topHoldings']
       });
 
@@ -200,17 +205,20 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
         assetProfile.price.symbol
       );
 
-      if (assetSubClass === AssetSubClass.MUTUALFUND) {
+      if (['ETF', 'MUTUALFUND'].includes(assetSubClass)) {
         response.sectors = [];
 
         for (const sectorWeighting of assetProfile.topHoldings
           ?.sectorWeightings ?? []) {
           for (const [sector, weight] of Object.entries(sectorWeighting)) {
-            response.sectors.push({ weight, name: this.parseSector(sector) });
+            response.sectors.push({
+              name: this.parseSector(sector),
+              weight: weight as number
+            });
           }
         }
       } else if (
-        assetSubClass === AssetSubClass.STOCK &&
+        assetSubClass === 'STOCK' &&
         assetProfile.summaryProfile?.country
       ) {
         // Add country if asset is stock and country available
@@ -233,11 +241,20 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
       }
 
       const url = assetProfile.summaryProfile?.website;
+
       if (url) {
         response.url = url;
       }
     } catch (error) {
-      Logger.error(error, 'YahooFinanceService');
+      response = undefined;
+
+      if (error.message === `Quote not found for symbol: ${aSymbol}`) {
+        throw new AssetProfileDelistedError(
+          `No data found, ${aSymbol} (${this.getName()}) may be delisted`
+        );
+      } else {
+        Logger.error(error, 'YahooFinanceService');
+      }
     }
 
     return response;

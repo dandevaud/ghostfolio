@@ -10,7 +10,7 @@
                 (click)="onCreateAccount()"
               >
                 <span i18n>You are using the Live Demo.</span>
-                <span class="a ml-2" i18n>Create Account</span>
+                <span class="a ml-2 p-1" i18n>Create Account</span>
               </div></a
             >
           }
@@ -31,6 +31,9 @@
     class="position-fixed w-100"
     [currentRoute]="currentRoute"
     [deviceType]="deviceType"
+    [hasPermissionToChangeDateRange]="hasPermissionToChangeDateRange"
+    [hasPermissionToChangeFilters]="hasPermissionToChangeFilters"
+    [hasPromotion]="hasPromotion"
     [hasTabs]="hasTabs"
     [info]="info"
     [pageTitle]="pageTitle"
@@ -44,7 +47,7 @@
 </main>
 
 @if (showFooter) {
-  <footer class="d-flex justify-content-center py-4 w-100">
+  <footer class="justify-content-center overflow-hidden py-4 w-100">
     <div class="container">
       <div class="mb-3 row">
         <div class="col-sm">
@@ -67,7 +70,7 @@
             <li><a i18n [routerLink]="routerLinkAbout">About</a></li>
             @if (hasPermissionForSubscription) {
               <li>
-                <a i18n [routerLink]="['/blog']">Blog</a>
+                <a i18n [routerLink]="routerLinkBlog">Blog</a>
               </li>
             }
             <li>
@@ -81,12 +84,14 @@
                 >
               </li>
             }
-            <li>
-              <a i18n [routerLink]="routerLinkAboutLicense">License</a>
-            </li>
+            @if (!hasPermissionForSubscription) {
+              <li>
+                <a i18n [routerLink]="routerLinkAboutLicense">License</a>
+              </li>
+            }
             @if (hasPermissionForStatistics) {
               <li>
-                <a [routerLink]="['/open']">Open Startup</a>
+                <a [routerLink]="routerLinkOpenStartup">Open Startup</a>
               </li>
             }
             @if (hasPermissionForSubscription) {
@@ -98,6 +103,13 @@
               <li>
                 <a i18n [routerLink]="routerLinkAboutPrivacyPolicy"
                   >Privacy Policy</a
+                >
+              </li>
+            }
+            @if (hasPermissionForSubscription) {
+              <li>
+                <a i18n [routerLink]="routerLinkAboutTermsOfService"
+                  >Terms of Service</a
                 >
               </li>
             }
@@ -129,6 +141,15 @@
             <li>
               <a
                 class="align-items-baseline d-flex"
+                href="https://linkedin.com/company/ghostfolio"
+                target="_blank"
+                title="Follow Ghostfolio on LinkedIn"
+                >LinkedIn<ion-icon class="ml-1" name="open-outline"
+              /></a>
+            </li>
+            <li>
+              <a
+                class="align-items-baseline d-flex"
                 href="https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg"
                 target="_blank"
                 title="Join the Ghostfolio Slack community"
@@ -151,6 +172,9 @@
               </li>
             -->
             <li>
+              <a href="../zh" title="Ghostfolio in Chinese">Chinese</a>
+            </li>
+            <li>
               <a href="../de" title="Ghostfolio in Deutsch">Deutsch</a>
             </li>
             <li>
@@ -168,11 +192,9 @@
             <li>
               <a href="../nl" title="Ghostfolio in Nederlands">Nederlands</a>
             </li>
-            <!--
-              <li>
-                <a href="../pl" title="Ghostfolio in Polski">Polski</a>
-              </li>
-            -->
+            <li>
+              <a href="../pl" title="Ghostfolio in Polski">Polski</a>
+            </li>
             <li>
               <a href="../pt" title="Ghostfolio in Português">Português</a>
             </li>
@@ -181,13 +203,13 @@
             </li>
             <!--
               <li>
-                <a href="../zh" title="Ghostfolio in Chinese">Chinese</a>
+                <a href="../uk" title="Ghostfolio in Українська">Українська</a>
               </li>
             -->
           </ul>
         </div>
       </div>
-      <div class="row text-center">
+      <div class="mb-2 row text-center">
         <div class="col">
           © 2021 - {{ currentYear }}
           <a href="https://ghostfol.io">Ghostfolio</a>
@@ -195,11 +217,16 @@
       </div>
       <div class="row text-center text-muted">
         <div class="col">
-          <small i18n
+          <small class="d-block" i18n
             >The risk of loss in trading can be substantial. It is not advisable
             to invest money you may need in the short term.</small
           >
         </div>
+      </div>
+    </div>
+    <div class="container d-none d-md-block mt-5">
+      <div class="row justify-content-center">
+        <div class="font-weight-bold line-height-1 logotype">Ghostfolio</div>
       </div>
     </div>
   </footer>

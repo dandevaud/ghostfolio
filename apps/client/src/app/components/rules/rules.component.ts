@@ -1,5 +1,8 @@
 import { UpdateUserSettingDto } from '@ghostfolio/api/app/user/update-user-setting.dto';
-import { PortfolioReportRule } from '@ghostfolio/common/interfaces';
+import {
+  PortfolioReportRule,
+  XRayRulesSettings
+} from '@ghostfolio/common/interfaces';
 
 import {
   ChangeDetectionStrategy,
@@ -13,16 +16,17 @@ import {
   selector: 'gf-rules',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './rules.component.html',
-  styleUrls: ['./rules.component.scss']
+  styleUrls: ['./rules.component.scss'],
+  standalone: false
 })
 export class RulesComponent {
+  @Input() categoryName: string;
   @Input() hasPermissionToUpdateUserSettings: boolean;
   @Input() isLoading: boolean;
   @Input() rules: PortfolioReportRule[];
+  @Input() settings: XRayRulesSettings;
 
   @Output() rulesUpdated = new EventEmitter<UpdateUserSettingDto>();
-
-  public constructor() {}
 
   public onRuleUpdated(event: UpdateUserSettingDto) {
     this.rulesUpdated.emit(event);

@@ -14,10 +14,13 @@ export interface AdminMarketDataItem {
   dataSource: DataSource;
   date: Date;
   id: string;
+  isActive: boolean;
   isBenchmark?: boolean;
   isUsedByUsersWithSubscription?: boolean;
+  lastMarketPrice: number;
   marketDataItemCount: number;
   name: string;
   sectorsCount: number;
   symbol: string;
+  watchedByCount: number;
 }

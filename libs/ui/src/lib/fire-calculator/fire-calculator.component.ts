@@ -41,7 +41,7 @@ import {
   Tooltip
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import * as Color from 'color';
+import Color from 'color';
 import {
   add,
   addYears,
@@ -71,7 +71,6 @@ import { FireCalculatorService } from './fire-calculator.service';
   ],
   providers: [FireCalculatorService],
   selector: 'gf-fire-calculator',
-  standalone: true,
   styleUrls: ['./fire-calculator.component.scss'],
   templateUrl: './fire-calculator.component.html'
 })

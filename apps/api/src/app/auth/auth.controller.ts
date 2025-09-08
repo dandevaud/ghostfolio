@@ -14,12 +14,12 @@ import {
   Req,
   Res,
   UseGuards,
-  VERSION_NEUTRAL,
-  Version
+  Version,
+  VERSION_NEUTRAL
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
-import { StatusCodes, getReasonPhrase } from 'http-status-codes';
+import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
 import { AuthService } from './auth.service';
 import {
@@ -85,7 +85,7 @@ export class AuthController {
     @Res() response: Response
   ) {
     // Handles the Google OAuth2 callback
-    const jwt: string = (<any>request.user).jwt;
+    const jwt: string = (request.user as any).jwt;
 
     if (jwt) {
       response.redirect(
@@ -130,23 +130,22 @@ export class AuthController {
   public async verifyAttestation(
     @Body() body: { deviceName: string; credential: AttestationCredentialJSON }
   ) {
-    return this.webAuthService.verifyAttestation(
-      body.deviceName,
-      body.credential
-    );
+    return this.webAuthService.verifyAttestation(body.credential);
   }
 
-  @Post('webauthn/generate-assertion-options')
-  public async generateAssertionOptions(@Body() body: { deviceId: string }) {
-    return this.webAuthService.generateAssertionOptions(body.deviceId);
+  @Post('webauthn/generate-authentication-options')
+  public async generateAuthenticationOptions(
+    @Body() body: { deviceId: string }
+  ) {
+    return this.webAuthService.generateAuthenticationOptions(body.deviceId);
   }
 
-  @Post('webauthn/verify-assertion')
-  public async verifyAssertion(
+  @Post('webauthn/verify-authentication')
+  public async verifyAuthentication(
     @Body() body: { deviceId: string; credential: AssertionCredentialJSON }
   ) {
     try {
-      const authToken = await this.webAuthService.verifyAssertion(
+      const authToken = await this.webAuthService.verifyAuthentication(
         body.deviceId,
         body.credential
       );
