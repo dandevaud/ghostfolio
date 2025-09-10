@@ -588,7 +588,7 @@ export abstract class PortfolioCalculator {
       userId: this.userId,
       userCurrency: currency,
       types: ['BUY', 'SELL', 'STAKE'],
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
     const orders = this.activitiesToPortfolioOrder(activities.activities);
     const start = orders.reduce(
