@@ -133,6 +133,9 @@ export class ExchangeRateDataService {
     startDate: Date,
     endDate: Date
   ) {
+    if (currencies.every((currency) => currency === targetCurrency)) {
+      return [];
+    }
     const dataSource = this.dataProviderService.getDataSourceForExchangeRates();
 
     const currencyProfiles = currencies.reduce((acc, currency) => {
