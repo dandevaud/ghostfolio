@@ -75,14 +75,6 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public benchmarkDataItems: HistoricalDataItem[] = [];
   public benchmarks: Partial<SymbolProfile>[];
   public bottom5: PortfolioPosition[];
-  public dateRangeOptions = ToggleComponent.DEFAULT_DATE_RANGE_OPTIONS;
-  public timeWeightedPerformanceOptions = [
-    { label: $localize`No`, value: 'N' },
-    { label: $localize`Both`, value: 'B' },
-    { label: $localize`Only`, value: 'O' }
-  ];
-  public selectedTimeWeightedPerformanceOption: string;
-  public daysInMarket: number;
   public deviceType: string;
   public dividendsByGroup: InvestmentItem[];
   public dividendTimelineDataLabel = $localize`Dividend`;

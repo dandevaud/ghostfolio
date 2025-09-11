@@ -52,12 +52,16 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
-import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent
+} from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MatCheckboxChange,
   MatCheckboxModule
 } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
   MatDialogModule,
@@ -109,6 +113,8 @@ import { AssetProfileDialogParams } from './interfaces/interfaces';
     MatInputModule,
     MatMenuModule,
     MatSelectModule,
+    MatAutocompleteModule,
+    MatChipsModule,
     MatSnackBarModule,
     ReactiveFormsModule,
     TextFieldModule
@@ -118,7 +124,7 @@ import { AssetProfileDialogParams } from './interfaces/interfaces';
   styleUrls: ['./asset-profile-dialog.component.scss'],
   templateUrl: 'asset-profile-dialog.html'
 })
-export class AssetProfileDialog implements OnDestroy, OnInit {
+export class GfAssetProfileDialogComponent implements OnDestroy, OnInit {
   @ViewChild('tagInput') tagInput: ElementRef<HTMLInputElement>;
   public separatorKeysCodes: number[] = [ENTER, COMMA];
   private static readonly HISTORICAL_DATA_TEMPLATE = `date;marketPrice\n${format(
