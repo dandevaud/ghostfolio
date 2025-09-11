@@ -54,6 +54,13 @@ export const personalFinanceTools: Product[] = [
     slogan: 'The Intelligent Family Office Suite'
   },
   {
+    founded: 2016,
+    key: 'atominvest',
+    name: 'Atominvest',
+    origin: 'United Kingdom',
+    slogan: 'Portfolio Management'
+  },
+  {
     founded: 2020,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
@@ -102,6 +109,40 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Take control of your financial future'
   },
   {
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'capitally',
+    name: 'Capitally',
+    origin: 'Poland',
+    pricingPerYear: '€80',
+    slogan: 'Optimize your investments performance'
+  },
+  {
+    founded: 2022,
+    isArchived: true,
+    key: 'capmon',
+    name: 'CapMon.org',
+    origin: 'Germany',
+    note: 'CapMon.org was discontinued in 2023',
+    slogan: 'Next Generation Assets Tracking'
+  },
+  {
+    founded: 2024,
+    hasFreePlan: true,
+    isOpenSource: true,
+    key: 'cleverbilling',
+    languages: ['Español'],
+    name: 'CleverBilling',
+    slogan: 'Toma el control total de tus finanzas.'
+  },
+  {
+    founded: 2011,
+    key: 'cobalt',
+    name: 'Cobalt',
+    origin: 'United States',
+    slogan: 'Next-Level Portfolio Monitoring'
+  },
+  {
     founded: 2017,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
@@ -123,35 +164,6 @@ export const personalFinanceTools: Product[] = [
     slogan: 'The leading Crypto Portfolio Tracker & Tax Calculator'
   },
   {
-    founded: 2022,
-    hasFreePlan: true,
-    hasSelfHostingAbility: false,
-    key: 'degiro-portfolio-tracker-by-capitalyse',
-    languages: ['English'],
-    name: 'DEGIRO Portfolio Tracker by Capitalyse',
-    origin: 'Netherlands',
-    pricingPerYear: '€24',
-    slogan: 'Democratizing Data Analytics'
-  },
-  {
-    hasFreePlan: true,
-    hasSelfHostingAbility: false,
-    key: 'capitally',
-    name: 'Capitally',
-    origin: 'Poland',
-    pricingPerYear: '€50',
-    slogan: 'Optimize your investments performance'
-  },
-  {
-    founded: 2022,
-    isArchived: true,
-    key: 'capmon',
-    name: 'CapMon.org',
-    origin: 'Germany',
-    note: 'CapMon.org was discontinued in 2023',
-    slogan: 'Next Generation Assets Tracking'
-  },
-  {
     founded: 2019,
     key: 'compound-planning',
     name: 'Compound Planning',
@@ -165,7 +177,7 @@ export const personalFinanceTools: Product[] = [
     key: 'copilot-money',
     name: 'Copilot Money',
     origin: 'United States',
-    pricingPerYear: '$70',
+    pricingPerYear: '$95',
     slogan: 'Do money better with Copilot'
   },
   {
@@ -184,6 +196,28 @@ export const personalFinanceTools: Product[] = [
     slogan: 'DeFi Portfolio Tracker'
   },
   {
+    founded: 2016,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'defi-portfolio-tracker-by-zerion',
+    languages: ['English'],
+    name: 'DeFi Portfolio Tracker by Zerion',
+    origin: 'United States',
+    pricingPerYear: '$99',
+    slogan: 'DeFi Portfolio Tracker for All Chains'
+  },
+  {
+    founded: 2022,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'degiro-portfolio-tracker-by-capitalyse',
+    languages: ['English'],
+    name: 'DEGIRO Portfolio Tracker by Capitalyse',
+    origin: 'Netherlands',
+    pricingPerYear: '€24',
+    slogan: 'Democratizing Data Analytics'
+  },
+  {
     founded: 2017,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
@@ -193,6 +227,15 @@ export const personalFinanceTools: Product[] = [
     origin: 'Belgium',
     pricingPerYear: '$150',
     slogan: 'The app to track all your investments. Make smart moves only.'
+  },
+  {
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'digrin',
+    languages: ['English'],
+    name: 'Digrin',
+    pricingPerYear: '$49.90',
+    slogan: 'Dividend Portfolio Tracker'
   },
   {
     founded: 2019,
@@ -336,6 +379,24 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Take control over your investments'
   },
   {
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'gasti',
+    languages: [
+      'Deutsch',
+      'English',
+      'Español',
+      'Français',
+      'Italiano',
+      'Português'
+    ],
+    name: 'Gasti',
+    origin: 'Argentina',
+    pricingPerYear: '$60',
+    regions: ['Global'],
+    slogan: 'Take control of your finances from WhatsApp'
+  },
+  {
     founded: 2020,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
@@ -367,6 +428,15 @@ export const personalFinanceTools: Product[] = [
     useAnonymously: true
   },
   {
+    founded: 2022,
+    key: 'income-reign',
+    languages: ['English'],
+    name: 'Income Reign',
+    note: 'Income Reign was discontinued in 2025',
+    origin: 'United States',
+    pricingPerYear: '$120'
+  },
+  {
     hasFreePlan: true,
     hasSelfHostingAbility: false,
     isArchived: true,
@@ -384,6 +454,18 @@ export const personalFinanceTools: Product[] = [
     name: 'Investify',
     origin: 'Pakistan',
     slogan: 'Advanced portfolio tracking and stock market information'
+  },
+  {
+    founded: 2021,
+    hasFreePlan: true,
+    hasSelfHostingAbility: true,
+    key: 'invmon',
+    name: 'InvMon',
+    note: 'Originally named as A2PB',
+    origin: 'Switzerland',
+    pricingPerYear: '$156',
+    slogan: 'Track all your assets, investments and portfolios in one place',
+    useAnonymously: true
   },
   {
     founded: 2011,
@@ -421,7 +503,7 @@ export const personalFinanceTools: Product[] = [
     key: 'kubera',
     name: 'Kubera®',
     origin: 'United States',
-    pricingPerYear: '$150',
+    pricingPerYear: '$249',
     slogan: 'The Time Machine for your Net Worth'
   },
   {
@@ -464,12 +546,14 @@ export const personalFinanceTools: Product[] = [
   },
   {
     founded: 2021,
-    hasSelfHostingAbility: false,
+    hasFreePlan: false,
+    hasSelfHostingAbility: true,
     isArchived: true,
+    isOpenSource: true,
     key: 'maybe-finance',
     languages: ['English'],
     name: 'Maybe Finance',
-    note: 'Maybe Finance was discontinued in 2023',
+    note: 'Maybe Finance was discontinued in 2023, relaunched in 2024, and discontinued again in 2025',
     origin: 'United States',
     pricingPerYear: '$145',
     regions: ['United States'],
@@ -533,6 +617,17 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Gain financial control and keep your data private.'
   },
   {
+    founded: 2025,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'monsy',
+    languages: ['English'],
+    name: 'Monsy',
+    origin: 'Indonesia',
+    pricingPerYear: '$20',
+    slogan: 'Smart, simple, stress-free money tracking.'
+  },
+  {
     hasFreePlan: true,
     hasSelfHostingAbility: false,
     key: 'morningstar-portfolio-manager',
@@ -570,7 +665,7 @@ export const personalFinanceTools: Product[] = [
     name: 'Parqet',
     note: 'Originally named as Tresor One',
     origin: 'Germany',
-    pricingPerYear: '€88',
+    pricingPerYear: '€99.99',
     regions: ['Austria', 'Germany', 'Switzerland'],
     slogan: 'Dein Vermögen immer im Blick'
   },
@@ -609,6 +704,16 @@ export const personalFinanceTools: Product[] = [
     name: 'Plannix',
     origin: 'Italy',
     slogan: 'Your Personal Finance Hub'
+  },
+  {
+    founded: 2015,
+    hasFreePlan: false,
+    hasSelfHostingAbility: false,
+    key: 'pocketguard',
+    name: 'PocketGuard',
+    origin: 'United States',
+    pricingPerYear: '$74.99',
+    slogan: 'Budgeting App & Finance Planner'
   },
   {
     founded: 2008,
@@ -859,6 +964,16 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Virtual Family Office for Smart Wealth Management'
   },
   {
+    founded: 2020,
+    hasFreePlan: false,
+    hasSelfHostingAbility: false,
+    key: 'walletguide',
+    name: 'Walletguide',
+    origin: 'Germany',
+    pricingPerYear: '€90',
+    slogan: 'Personal finance reimagined with AI'
+  },
+  {
     hasSelfHostingAbility: false,
     key: 'wallmine',
     languages: ['English'],
@@ -880,6 +995,7 @@ export const personalFinanceTools: Product[] = [
     founded: 2024,
     hasSelfHostingAbility: true,
     isArchived: true,
+    isOpenSource: true,
     key: 'wealthfolio',
     languages: ['English'],
     name: 'Wealthfolio',
@@ -940,7 +1056,7 @@ export const personalFinanceTools: Product[] = [
     key: 'ynab',
     name: 'YNAB (You Need a Budget)',
     origin: 'United States',
-    pricingPerYear: '$99',
+    pricingPerYear: '$109',
     slogan: 'Change Your Relationship With Money'
   },
   {
@@ -950,7 +1066,7 @@ export const personalFinanceTools: Product[] = [
     key: 'ziggma',
     name: 'Ziggma',
     origin: 'United States',
-    pricingPerYear: '$90',
+    pricingPerYear: '$84',
     slogan: 'Your solution for investing success'
   }
 ];

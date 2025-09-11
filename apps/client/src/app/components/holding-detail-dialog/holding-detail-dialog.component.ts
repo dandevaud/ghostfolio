@@ -1,10 +1,13 @@
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
-import { GfAccountsTableModule } from '@ghostfolio/client/components/accounts-table/accounts-table.module';
-import { GfDialogFooterModule } from '@ghostfolio/client/components/dialog-footer/dialog-footer.module';
-import { GfDialogHeaderModule } from '@ghostfolio/client/components/dialog-header/dialog-header.module';
+import { GfDialogFooterComponent } from '@ghostfolio/client/components/dialog-footer/dialog-footer.component';
+import { GfDialogHeaderComponent } from '@ghostfolio/client/components/dialog-header/dialog-header.component';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { NUMERICAL_PRECISION_THRESHOLD } from '@ghostfolio/common/config';
+import {
+  NUMERICAL_PRECISION_THRESHOLD_3_FIGURES,
+  NUMERICAL_PRECISION_THRESHOLD_5_FIGURES,
+  NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
+} from '@ghostfolio/common/config';
 import { DATE_FORMAT, downloadAsFile } from '@ghostfolio/common/helper';
 import {
   DataProviderInfo,
@@ -15,6 +18,7 @@ import {
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
+import { GfAccountsTableComponent } from '@ghostfolio/ui/accounts-table';
 import { GfActivitiesTableComponent } from '@ghostfolio/ui/activities-table';
 import { GfDataProviderCreditsComponent } from '@ghostfolio/ui/data-provider-credits';
 import { GfHistoricalMarketDataEditorComponent } from '@ghostfolio/ui/historical-market-data-editor';
@@ -49,6 +53,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Router, RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Account, MarketData, Tag } from '@prisma/client';
+import { isUUID } from 'class-validator';
 import { format, isSameMonth, isToday, parseISO } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
@@ -70,11 +75,11 @@ import { HoldingDetailDialogParams } from './interfaces/interfaces';
   host: { class: 'd-flex flex-column h-100' },
   imports: [
     CommonModule,
-    GfAccountsTableModule,
+    GfAccountsTableComponent,
     GfActivitiesTableComponent,
     GfDataProviderCreditsComponent,
-    GfDialogFooterModule,
-    GfDialogHeaderModule,
+    GfDialogFooterComponent,
+    GfDialogHeaderComponent,
     GfHistoricalMarketDataEditorComponent,
     GfLineChartComponent,
     GfPortfolioProportionChartComponent,
@@ -100,7 +105,9 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
   public assetClass: string;
   public assetSubClass: string;
   public averagePrice: number;
+  public averagePricePrecision = 2;
   public benchmarkDataItems: LineChartItem[];
+  public benchmarkLabel = $localize`Average Unit Price`;
   public countries: {
     [code: string]: { name: string; value: number };
   };
@@ -117,14 +124,19 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
   public historicalDataItems: LineChartItem[];
   public investmentInBaseCurrencyWithCurrencyEffect: number;
   public investmentInBaseCurrencyWithCurrencyEffectPrecision = 2;
+  public isUUID = isUUID;
   public marketDataItems: MarketData[] = [];
   public marketPrice: number;
   public marketPriceMax: number;
+  public marketPriceMaxPrecision = 2;
   public marketPriceMin: number;
+  public marketPriceMinPrecision = 2;
+  public marketPricePrecision = 2;
   public netPerformance: number;
   public netPerformancePrecision = 2;
   public netPerformancePercent: number;
   public netPerformancePercentWithCurrencyEffect: number;
+  public netPerformancePercentWithCurrencyEffectPrecision = 2;
   public netPerformanceWithCurrencyEffect: number;
   public netPerformanceWithCurrencyEffectPrecision = 2;
   public quantity: number;
@@ -274,6 +286,14 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
           historicalData
         }) => {
           this.averagePrice = averagePrice;
+
+          if (
+            this.averagePrice >= NUMERICAL_PRECISION_THRESHOLD_6_FIGURES &&
+            this.data.deviceType === 'mobile'
+          ) {
+            this.averagePricePrecision = 0;
+          }
+
           this.benchmarkDataItems = [];
           this.countries = {};
           this.dataProviderInfo = dataProviderInfo;
@@ -282,7 +302,8 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
 
           if (
             this.data.deviceType === 'mobile' &&
-            this.dividendInBaseCurrency >= NUMERICAL_PRECISION_THRESHOLD
+            this.dividendInBaseCurrency >=
+              NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
           ) {
             this.dividendInBaseCurrencyPrecision = 0;
           }
@@ -321,19 +342,42 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
           if (
             this.data.deviceType === 'mobile' &&
             this.investmentInBaseCurrencyWithCurrencyEffect >=
-              NUMERICAL_PRECISION_THRESHOLD
+              NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
           ) {
             this.investmentInBaseCurrencyWithCurrencyEffectPrecision = 0;
           }
 
           this.marketPrice = marketPrice;
           this.marketPriceMax = marketPriceMax;
+
+          if (
+            this.data.deviceType === 'mobile' &&
+            this.marketPriceMax >= NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
+          ) {
+            this.marketPriceMaxPrecision = 0;
+          }
+
           this.marketPriceMin = marketPriceMin;
+
+          if (
+            this.data.deviceType === 'mobile' &&
+            this.marketPriceMin >= NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
+          ) {
+            this.marketPriceMinPrecision = 0;
+          }
+
+          if (
+            this.data.deviceType === 'mobile' &&
+            this.marketPrice >= NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
+          ) {
+            this.marketPricePrecision = 0;
+          }
+
           this.netPerformance = netPerformance;
 
           if (
             this.data.deviceType === 'mobile' &&
-            this.netPerformance >= NUMERICAL_PRECISION_THRESHOLD
+            this.netPerformance >= NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
           ) {
             this.netPerformancePrecision = 0;
           }
@@ -343,13 +387,21 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
           this.netPerformancePercentWithCurrencyEffect =
             netPerformancePercentWithCurrencyEffect;
 
+          if (
+            this.data.deviceType === 'mobile' &&
+            this.netPerformancePercentWithCurrencyEffect >=
+              NUMERICAL_PRECISION_THRESHOLD_3_FIGURES
+          ) {
+            this.netPerformancePercentWithCurrencyEffectPrecision = 0;
+          }
+
           this.netPerformanceWithCurrencyEffect =
             netPerformanceWithCurrencyEffect;
 
           if (
             this.data.deviceType === 'mobile' &&
             this.netPerformanceWithCurrencyEffect >=
-              NUMERICAL_PRECISION_THRESHOLD
+              NUMERICAL_PRECISION_THRESHOLD_5_FIGURES
           ) {
             this.netPerformanceWithCurrencyEffectPrecision = 0;
           }

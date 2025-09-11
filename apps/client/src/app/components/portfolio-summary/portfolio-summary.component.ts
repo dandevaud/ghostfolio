@@ -3,7 +3,9 @@ import { getDateFnsLocale, getLocale } from '@ghostfolio/common/helper';
 import { PortfolioSummary, User } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
+import { GfValueComponent } from '@ghostfolio/ui/value';
 
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,6 +14,8 @@ import {
   OnChanges,
   Output
 } from '@angular/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { IonIcon } from '@ionic/angular/standalone';
 import { formatDistanceToNow } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
@@ -20,13 +24,13 @@ import {
 } from 'ionicons/icons';
 
 @Component({
-  selector: 'gf-portfolio-summary',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './portfolio-summary.component.html',
+  imports: [CommonModule, GfValueComponent, IonIcon, MatTooltipModule],
+  selector: 'gf-portfolio-summary',
   styleUrls: ['./portfolio-summary.component.scss'],
-  standalone: false
+  templateUrl: './portfolio-summary.component.html'
 })
-export class PortfolioSummaryComponent implements OnChanges {
+export class GfPortfolioSummaryComponent implements OnChanges {
   @Input() baseCurrency: string;
   @Input() hasPermissionToUpdateUserSettings: boolean;
   @Input() isLoading: boolean;

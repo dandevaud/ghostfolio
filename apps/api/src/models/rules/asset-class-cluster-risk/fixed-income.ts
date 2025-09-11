@@ -67,6 +67,7 @@ export class AssetClassClusterRiskFixedIncome extends Rule<Settings> {
         value: false
       };
     }
+
     return {
       evaluation: this.i18nService.getTranslation({
         id: 'rule.assetClassClusterRiskFixedIncome.true',
@@ -79,6 +80,13 @@ export class AssetClassClusterRiskFixedIncome extends Rule<Settings> {
       }),
       value: true
     };
+  }
+
+  public getCategoryName() {
+    return this.i18nService.getTranslation({
+      id: 'rule.assetClassClusterRisk.category',
+      languageCode: this.getLanguageCode()
+    });
   }
 
   public getConfiguration() {

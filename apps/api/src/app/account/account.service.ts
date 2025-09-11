@@ -13,7 +13,8 @@ import {
   AccountBalance,
   Order,
   Platform,
-  Prisma
+  Prisma,
+  SymbolProfile
 } from '@prisma/client';
 import { Big } from 'big.js';
 import { format } from 'date-fns';
@@ -63,7 +64,7 @@ export class AccountService {
     orderBy?: Prisma.AccountOrderByWithRelationInput;
   }): Promise<
     (Account & {
-      activities?: Order[];
+      activities?: (Order & { SymbolProfile?: SymbolProfile })[];
       balances?: AccountBalance[];
       platform?: Platform;
     })[]

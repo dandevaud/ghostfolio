@@ -73,6 +73,8 @@ export class ImportController {
         maxActivitiesToImport,
         accountsWithBalancesDto: importData.accounts ?? [],
         activitiesDto: importData.activities,
+        assetProfilesWithMarketDataDto: importData.assetProfiles ?? [],
+        tagsDto: importData.tags ?? [],
         user: this.request.user
       });
 

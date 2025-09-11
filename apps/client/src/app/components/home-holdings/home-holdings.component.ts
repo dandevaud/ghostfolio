@@ -11,10 +11,23 @@ import {
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { HoldingType, HoldingsViewMode } from '@ghostfolio/common/types';
+import { GfHoldingsTableComponent } from '@ghostfolio/ui/holdings-table';
+import { GfToggleComponent } from '@ghostfolio/ui/toggle';
+import { GfTreemapChartComponent } from '@ghostfolio/ui/treemap-chart';
 
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import {
+  ChangeDetectorRef,
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { Router, RouterModule } from '@angular/router';
+import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { gridOutline, reorderFourOutline } from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
@@ -22,18 +35,30 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 @Component({
+  imports: [
+    CommonModule,
+    FormsModule,
+    GfHoldingsTableComponent,
+    GfToggleComponent,
+    GfTreemapChartComponent,
+    IonIcon,
+    MatButtonModule,
+    MatButtonToggleModule,
+    ReactiveFormsModule,
+    RouterModule
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-home-holdings',
   styleUrls: ['./home-holdings.scss'],
-  templateUrl: './home-holdings.html',
-  standalone: false
+  templateUrl: './home-holdings.html'
 })
-export class HomeHoldingsComponent implements OnDestroy, OnInit {
+export class GfHomeHoldingsComponent implements OnDestroy, OnInit {
   public static DEFAULT_HOLDINGS_VIEW_MODE: HoldingsViewMode = 'TABLE';
 
   public deviceType: string;
   public hasImpersonationId: boolean;
   public hasPermissionToAccessHoldingsChart: boolean;
-  public hasPermissionToCreateOrder: boolean;
+  public hasPermissionToCreateActivity: boolean;
   public holdings: PortfolioPosition[];
   public performance: PortfolioPerformance;
   public holdingType: HoldingType = 'ACTIVE';
@@ -45,7 +70,7 @@ export class HomeHoldingsComponent implements OnDestroy, OnInit {
     internalRoutes.portfolio.subRoutes.activities.routerLink;
   public user: User;
   public viewModeFormControl = new FormControl<HoldingsViewMode>(
-    HomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE
+    GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE
   );
 
   private unsubscribeSubject = new Subject<void>();
@@ -82,7 +107,7 @@ export class HomeHoldingsComponent implements OnDestroy, OnInit {
             permissions.accessHoldingsChart
           );
 
-          this.hasPermissionToCreateOrder = hasPermission(
+          this.hasPermissionToCreateActivity = hasPermission(
             this.user.permissions,
             permissions.createOrder
           );
@@ -155,14 +180,14 @@ export class HomeHoldingsComponent implements OnDestroy, OnInit {
 
       this.viewModeFormControl.setValue(
         this.deviceType === 'mobile'
-          ? HomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE
+          ? GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE
           : this.user?.settings?.holdingsViewMode ||
-              HomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE,
+              GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE,
         { emitEvent: false }
       );
     } else if (this.holdingType === 'CLOSED') {
       this.viewModeFormControl.setValue(
-        HomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE,
+        GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE,
         { emitEvent: false }
       );
     }

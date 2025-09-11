@@ -16,6 +16,7 @@ import { EconomicMarketClusterRiskDevelopedMarkets } from '@ghostfolio/api/model
 import { EconomicMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/economic-market-cluster-risk/emerging-markets';
 import { EmergencyFundSetup } from '@ghostfolio/api/models/rules/emergency-fund/emergency-fund-setup';
 import { FeeRatioInitialInvestment } from '@ghostfolio/api/models/rules/fees/fee-ratio-initial-investment';
+import { BuyingPower } from '@ghostfolio/api/models/rules/liquidity/buying-power';
 import { RegionalMarketClusterRiskAsiaPacific } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/asia-pacific';
 import { RegionalMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/emerging-markets';
 import { RegionalMarketClusterRiskEurope } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/europe';
@@ -34,6 +35,7 @@ import {
 import {
   DEFAULT_CURRENCY,
   TAG_ID_EMERGENCY_FUND,
+  TAG_ID_EXCLUDE_FROM_ANALYSIS,
   UNKNOWN_KEY
 } from '@ghostfolio/common/config';
 import { DATE_FORMAT, getSum, parseDate } from '@ghostfolio/common/helper';
@@ -49,6 +51,7 @@ import {
   PortfolioPerformanceResponse,
   PortfolioPosition,
   PortfolioReportResponse,
+  PortfolioReportRule,
   PortfolioSummary,
   UserSettings
 } from '@ghostfolio/common/interfaces';
@@ -162,7 +165,7 @@ export class PortfolioService {
       this.accountService.accounts({
         where,
         include: {
-          activities: true,
+          activities: { include: { SymbolProfile: true } },
           platform: true
         },
         orderBy: { name: 'asc' }
@@ -177,38 +180,74 @@ export class PortfolioService {
 
     const userCurrency = this.request.user.settings.settings.baseCurrency;
 
-    return accounts.map((account) => {
-      let transactionCount = 0;
+    return Promise.all(
+      accounts.map(async (account) => {
+        let dividendInBaseCurrency = 0;
+        let interestInBaseCurrency = 0;
+        let transactionCount = 0;
 
-      for (const { isDraft } of account.activities) {
-        if (!isDraft) {
-          transactionCount += 1;
+        for (const {
+          currency,
+          date,
+          isDraft,
+          quantity,
+          SymbolProfile,
+          type,
+          unitPrice
+        } of account.activities) {
+          switch (type) {
+            case ActivityType.DIVIDEND:
+              dividendInBaseCurrency +=
+                await this.exchangeRateDataService.toCurrencyAtDate(
+                  new Big(quantity).mul(unitPrice).toNumber(),
+                  currency ?? SymbolProfile.currency,
+                  userCurrency,
+                  date
+                );
+              break;
+            case ActivityType.INTEREST:
+              interestInBaseCurrency +=
+                await this.exchangeRateDataService.toCurrencyAtDate(
+                  unitPrice,
+                  currency ?? SymbolProfile.currency,
+                  userCurrency,
+                  date
+                );
+              break;
+          }
+
+          if (!isDraft) {
+            transactionCount += 1;
+          }
         }
-      }
 
-      const valueInBaseCurrency =
-        details.accounts[account.id]?.valueInBaseCurrency ?? 0;
+        const valueInBaseCurrency =
+          details.accounts[account.id]?.valueInBaseCurrency ?? 0;
 
-      const result = {
-        ...account,
-        transactionCount,
-        valueInBaseCurrency,
-        balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
-          account.balance,
-          account.currency,
-          userCurrency
-        ),
-        value: this.exchangeRateDataService.toCurrency(
+        const result = {
+          ...account,
+          dividendInBaseCurrency,
+          interestInBaseCurrency,
+          transactionCount,
           valueInBaseCurrency,
-          userCurrency,
-          account.currency
-        )
-      };
+          allocationInPercentage: 0,
+          balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
+            account.balance,
+            account.currency,
+            userCurrency
+          ),
+          value: this.exchangeRateDataService.toCurrency(
+            valueInBaseCurrency,
+            userCurrency,
+            account.currency
+          )
+        };
 
-      delete result.activities;
+        delete result.activities;
 
-      return result;
-    });
+        return result;
+      })
+    );
   }
 
   @LogPerformance
@@ -221,12 +260,30 @@ export class PortfolioService {
     userId: string;
     withExcludedAccounts?: boolean;
   }): Promise<AccountsResponse> {
-    const accounts = await this.getAccounts({
+    let accounts = await this.getAccounts({
       filters,
       userId,
       withExcludedAccounts
     });
+
+    const searchQuery = filters.find(({ type }) => {
+      return type === 'SEARCH_QUERY';
+    })?.id;
+
+    if (searchQuery) {
+      const fuse = new Fuse(accounts, {
+        keys: ['name', 'platform.name'],
+        threshold: 0.3
+      });
+
+      accounts = fuse.search(searchQuery).map(({ item }) => {
+        return item;
+      });
+    }
+
     let totalBalanceInBaseCurrency = new Big(0);
+    let totalDividendInBaseCurrency = new Big(0);
+    let totalInterestInBaseCurrency = new Big(0);
     let totalValueInBaseCurrency = new Big(0);
     let transactionCount = 0;
 
@@ -234,16 +291,33 @@ export class PortfolioService {
       totalBalanceInBaseCurrency = totalBalanceInBaseCurrency.plus(
         account.balanceInBaseCurrency
       );
+      totalDividendInBaseCurrency = totalDividendInBaseCurrency.plus(
+        account.dividendInBaseCurrency
+      );
+      totalInterestInBaseCurrency = totalInterestInBaseCurrency.plus(
+        account.interestInBaseCurrency
+      );
       totalValueInBaseCurrency = totalValueInBaseCurrency.plus(
         account.valueInBaseCurrency
       );
       transactionCount += account.transactionCount;
     }
 
+    for (const account of accounts) {
+      account.allocationInPercentage =
+        totalValueInBaseCurrency.toNumber() > Number.EPSILON
+          ? Big(account.valueInBaseCurrency)
+              .div(totalValueInBaseCurrency)
+              .toNumber()
+          : 0;
+    }
+
     return {
       accounts,
       transactionCount,
       totalBalanceInBaseCurrency: totalBalanceInBaseCurrency.toNumber(),
+      totalDividendInBaseCurrency: totalDividendInBaseCurrency.toNumber(),
+      totalInterestInBaseCurrency: totalInterestInBaseCurrency.toNumber(),
       totalValueInBaseCurrency: totalValueInBaseCurrency.toNumber()
     };
   }
@@ -281,13 +355,11 @@ export class PortfolioService {
     dateRange = 'max',
     filters,
     impersonationId,
-    query,
     userId
   }: {
     dateRange: DateRange;
     filters?: Filter[];
     impersonationId: string;
-    query?: string;
     userId: string;
   }) {
     userId = await this.getUserId(impersonationId, userId);
@@ -300,13 +372,17 @@ export class PortfolioService {
 
     let holdings = Object.values(holdingsMap);
 
-    if (query) {
+    const searchQuery = filters.find(({ type }) => {
+      return type === 'SEARCH_QUERY';
+    })?.id;
+
+    if (searchQuery) {
       const fuse = new Fuse(holdings, {
         keys: ['isin', 'name', 'symbol'],
         threshold: 0.3
       });
 
-      holdings = fuse.search(query).map(({ item }) => {
+      holdings = fuse.search(searchQuery).map(({ item }) => {
         return item;
       });
     }
@@ -1162,148 +1238,238 @@ export class PortfolioService {
       })
     ).toNumber();
 
-    const rules: PortfolioReportResponse['rules'] = {
-      accountClusterRisk:
-        summary.activityCount > 0
-          ? await this.rulesService.evaluate(
-              [
-                new AccountClusterRiskCurrentInvestment(
-                  this.exchangeRateDataService,
-                  this.i18nService,
-                  userSettings.language,
-                  accounts
-                ),
-                new AccountClusterRiskSingleAccount(
-                  this.exchangeRateDataService,
-                  this.i18nService,
-                  userSettings.language,
-                  accounts
-                )
-              ],
-              userSettings
+    const categories: PortfolioReportResponse['xRay']['categories'] = [
+      {
+        key: 'liquidity',
+        name: this.i18nService.getTranslation({
+          id: 'rule.liquidity.category',
+          languageCode: userSettings.language
+        }),
+        rules: await this.rulesService.evaluate(
+          [
+            new BuyingPower(
+              this.exchangeRateDataService,
+              this.i18nService,
+              summary.cash,
+              userSettings.language
             )
-          : undefined,
-      assetClassClusterRisk:
-        summary.activityCount > 0
-          ? await this.rulesService.evaluate(
-              [
-                new AssetClassClusterRiskEquity(
-                  this.exchangeRateDataService,
-                  this.i18nService,
-                  userSettings.language,
-                  Object.values(holdings)
-                ),
-                new AssetClassClusterRiskFixedIncome(
-                  this.exchangeRateDataService,
-                  this.i18nService,
-                  userSettings.language,
-                  Object.values(holdings)
-                )
-              ],
-              userSettings
+          ],
+          userSettings
+        )
+      },
+      {
+        key: 'emergencyFund',
+        name: this.i18nService.getTranslation({
+          id: 'rule.emergencyFund.category',
+          languageCode: userSettings.language
+        }),
+        rules: await this.rulesService.evaluate(
+          [
+            new EmergencyFundSetup(
+              this.exchangeRateDataService,
+              this.i18nService,
+              userSettings.language,
+              this.getTotalEmergencyFund({
+                userSettings,
+                emergencyFundHoldingsValueInBaseCurrency:
+                  this.getEmergencyFundHoldingsValueInBaseCurrency({ holdings })
+              }).toNumber()
             )
-          : undefined,
-      currencyClusterRisk:
-        summary.activityCount > 0
-          ? await this.rulesService.evaluate(
-              [
-                new CurrencyClusterRiskBaseCurrencyCurrentInvestment(
-                  this.exchangeRateDataService,
-                  this.i18nService,
-                  Object.values(holdings),
-                  userSettings.language
-                ),
-                new CurrencyClusterRiskCurrentInvestment(
-                  this.exchangeRateDataService,
-                  this.i18nService,
-                  Object.values(holdings),
-                  userSettings.language
-                )
-              ],
-              userSettings
+          ],
+          userSettings
+        )
+      },
+      {
+        key: 'currencyClusterRisk',
+        name: this.i18nService.getTranslation({
+          id: 'rule.currencyClusterRisk.category',
+          languageCode: userSettings.language
+        }),
+        rules:
+          summary.activityCount > 0
+            ? await this.rulesService.evaluate(
+                [
+                  new CurrencyClusterRiskBaseCurrencyCurrentInvestment(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    Object.values(holdings),
+                    userSettings.language
+                  ),
+                  new CurrencyClusterRiskCurrentInvestment(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    Object.values(holdings),
+                    userSettings.language
+                  )
+                ],
+                userSettings
+              )
+            : undefined
+      },
+      {
+        key: 'assetClassClusterRisk',
+        name: this.i18nService.getTranslation({
+          id: 'rule.assetClassClusterRisk.category',
+          languageCode: userSettings.language
+        }),
+        rules:
+          summary.activityCount > 0
+            ? await this.rulesService.evaluate(
+                [
+                  new AssetClassClusterRiskEquity(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    Object.values(holdings)
+                  ),
+                  new AssetClassClusterRiskFixedIncome(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    Object.values(holdings)
+                  )
+                ],
+                userSettings
+              )
+            : undefined
+      },
+      {
+        key: 'accountClusterRisk',
+        name: this.i18nService.getTranslation({
+          id: 'rule.accountClusterRisk.category',
+          languageCode: userSettings.language
+        }),
+        rules:
+          summary.activityCount > 0
+            ? await this.rulesService.evaluate(
+                [
+                  new AccountClusterRiskCurrentInvestment(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    accounts
+                  ),
+                  new AccountClusterRiskSingleAccount(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    accounts
+                  )
+                ],
+                userSettings
+              )
+            : undefined
+      },
+      {
+        key: 'economicMarketClusterRisk',
+        name: this.i18nService.getTranslation({
+          id: 'rule.economicMarketClusterRisk.category',
+          languageCode: userSettings.language
+        }),
+        rules:
+          summary.activityCount > 0
+            ? await this.rulesService.evaluate(
+                [
+                  new EconomicMarketClusterRiskDevelopedMarkets(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    marketsTotalInBaseCurrency,
+                    markets.developedMarkets.valueInBaseCurrency,
+                    userSettings.language
+                  ),
+                  new EconomicMarketClusterRiskEmergingMarkets(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    marketsTotalInBaseCurrency,
+                    markets.emergingMarkets.valueInBaseCurrency,
+                    userSettings.language
+                  )
+                ],
+                userSettings
+              )
+            : undefined
+      },
+      {
+        key: 'regionalMarketClusterRisk',
+        name: this.i18nService.getTranslation({
+          id: 'rule.regionalMarketClusterRisk.category',
+          languageCode: userSettings.language
+        }),
+        rules:
+          summary.activityCount > 0
+            ? await this.rulesService.evaluate(
+                [
+                  new RegionalMarketClusterRiskAsiaPacific(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    marketsAdvancedTotalInBaseCurrency,
+                    marketsAdvanced.asiaPacific.valueInBaseCurrency
+                  ),
+                  new RegionalMarketClusterRiskEmergingMarkets(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    marketsAdvancedTotalInBaseCurrency,
+                    marketsAdvanced.emergingMarkets.valueInBaseCurrency
+                  ),
+                  new RegionalMarketClusterRiskEurope(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    marketsAdvancedTotalInBaseCurrency,
+                    marketsAdvanced.europe.valueInBaseCurrency
+                  ),
+                  new RegionalMarketClusterRiskJapan(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    marketsAdvancedTotalInBaseCurrency,
+                    marketsAdvanced.japan.valueInBaseCurrency
+                  ),
+                  new RegionalMarketClusterRiskNorthAmerica(
+                    this.exchangeRateDataService,
+                    this.i18nService,
+                    userSettings.language,
+                    marketsAdvancedTotalInBaseCurrency,
+                    marketsAdvanced.northAmerica.valueInBaseCurrency
+                  )
+                ],
+                userSettings
+              )
+            : undefined
+      },
+      {
+        key: 'fees',
+        name: this.i18nService.getTranslation({
+          id: 'rule.fees.category',
+          languageCode: userSettings.language
+        }),
+        rules: await this.rulesService.evaluate(
+          [
+            new FeeRatioInitialInvestment(
+              this.exchangeRateDataService,
+              this.i18nService,
+              userSettings.language,
+              summary.committedFunds,
+              summary.fees
             )
-          : undefined,
-      economicMarketClusterRisk:
-        summary.activityCount > 0
-          ? await this.rulesService.evaluate(
-              [
-                new EconomicMarketClusterRiskDevelopedMarkets(
-                  this.exchangeRateDataService,
-                  marketsTotalInBaseCurrency,
-                  markets.developedMarkets.valueInBaseCurrency
-                ),
-                new EconomicMarketClusterRiskEmergingMarkets(
-                  this.exchangeRateDataService,
-                  marketsTotalInBaseCurrency,
-                  markets.emergingMarkets.valueInBaseCurrency
-                )
-              ],
-              userSettings
-            )
-          : undefined,
-      emergencyFund: await this.rulesService.evaluate(
-        [
-          new EmergencyFundSetup(
-            this.exchangeRateDataService,
-            this.i18nService,
-            userSettings.language,
-            this.getTotalEmergencyFund({
-              userSettings,
-              emergencyFundHoldingsValueInBaseCurrency:
-                this.getEmergencyFundHoldingsValueInBaseCurrency({ holdings })
-            }).toNumber()
-          )
-        ],
-        userSettings
-      ),
-      fees: await this.rulesService.evaluate(
-        [
-          new FeeRatioInitialInvestment(
-            this.exchangeRateDataService,
-            this.i18nService,
-            userSettings.language,
-            summary.committedFunds,
-            summary.fees
-          )
-        ],
-        userSettings
-      ),
-      regionalMarketClusterRisk:
-        summary.activityCount > 0
-          ? await this.rulesService.evaluate(
-              [
-                new RegionalMarketClusterRiskAsiaPacific(
-                  this.exchangeRateDataService,
-                  marketsAdvancedTotalInBaseCurrency,
-                  marketsAdvanced.asiaPacific.valueInBaseCurrency
-                ),
-                new RegionalMarketClusterRiskEmergingMarkets(
-                  this.exchangeRateDataService,
-                  marketsAdvancedTotalInBaseCurrency,
-                  marketsAdvanced.emergingMarkets.valueInBaseCurrency
-                ),
-                new RegionalMarketClusterRiskEurope(
-                  this.exchangeRateDataService,
-                  marketsAdvancedTotalInBaseCurrency,
-                  marketsAdvanced.europe.valueInBaseCurrency
-                ),
-                new RegionalMarketClusterRiskJapan(
-                  this.exchangeRateDataService,
-                  marketsAdvancedTotalInBaseCurrency,
-                  marketsAdvanced.japan.valueInBaseCurrency
-                ),
-                new RegionalMarketClusterRiskNorthAmerica(
-                  this.exchangeRateDataService,
-                  marketsAdvancedTotalInBaseCurrency,
-                  marketsAdvanced.northAmerica.valueInBaseCurrency
-                )
-              ],
-              userSettings
-            )
-          : undefined
-    };
+          ],
+          userSettings
+        )
+      }
+    ];
 
-    return { rules, statistics: this.getReportStatistics(rules) };
+    return {
+      xRay: {
+        categories,
+        statistics: this.getReportStatistics(
+          categories.flatMap(({ rules }) => {
+            return rules ?? [];
+          })
+        )
+      }
+    };
   }
 
   @LogPerformance
@@ -1541,8 +1707,8 @@ export class PortfolioService {
 
   @LogPerformance
   private getReportStatistics(
-    evaluatedRules: PortfolioReportResponse['rules']
-  ): PortfolioReportResponse['statistics'] {
+    evaluatedRules: PortfolioReportRule[]
+  ): PortfolioReportResponse['xRay']['statistics'] {
     const rulesActiveCount = Object.values(evaluatedRules)
       .flat()
       .filter((rule) => {
@@ -1605,13 +1771,18 @@ export class PortfolioService {
     const { activities } = await this.orderService.getOrders({
       userCurrency,
       userId,
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
     const excludedActivities: Activity[] = [];
     const nonExcludedActivities: Activity[] = [];
 
     for (const activity of activities) {
-      if (activity.account?.isExcluded) {
+      if (
+        activity.account?.isExcluded ||
+        activity.tags?.some(({ id }) => {
+          return id === TAG_ID_EXCLUDE_FROM_ANALYSIS;
+        })
+      ) {
         excludedActivities.push(activity);
       } else {
         nonExcludedActivities.push(activity);

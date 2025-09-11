@@ -29,7 +29,7 @@ import {
   Filter
 } from '@ghostfolio/common/interfaces';
 import { Sector } from '@ghostfolio/common/interfaces/sector.interface';
-import { MarketDataPreset, UserWithSettings } from '@ghostfolio/common/types';
+import { MarketDataPreset } from '@ghostfolio/common/types';
 
 import {
   BadRequestException,
@@ -133,36 +133,51 @@ export class AdminService {
     }
   }
 
-  public async get({ user }: { user: UserWithSettings }): Promise<AdminData> {
-    const dataSources = await this.dataProviderService.getDataSources({
-      user,
-      includeGhostfolio: true
-    });
+  public async get(): Promise<AdminData> {
+    const dataSources = Object.values(DataSource);
 
-    const [settings, transactionCount, userCount] = await Promise.all([
-      this.propertyService.get(),
-      this.prismaService.order.count(),
-      this.countUsersWithAnalytics()
-    ]);
+    const [enabledDataSources, settings, transactionCount, userCount] =
+      await Promise.all([
+        this.dataProviderService.getDataSources(),
+        this.propertyService.get(),
+        this.prismaService.order.count(),
+        this.countUsersWithAnalytics()
+      ]);
 
-    const dataProviders = await Promise.all(
-      dataSources.map(async (dataSource) => {
-        const dataProviderInfo = this.dataProviderService
-          .getDataProvider(dataSource)
-          .getDataProviderInfo();
+    const dataProviders = (
+      await Promise.all(
+        dataSources.map(async (dataSource) => {
+          const assetProfileCount =
+            await this.prismaService.symbolProfile.count({
+              where: {
+                dataSource
+              }
+            });
 
-        const assetProfileCount = await this.prismaService.symbolProfile.count({
-          where: {
-            dataSource
+          const isEnabled = enabledDataSources.includes(dataSource);
+
+          if (
+            assetProfileCount > 0 ||
+            dataSource === 'GHOSTFOLIO' ||
+            isEnabled
+          ) {
+            const dataProviderInfo = this.dataProviderService
+              .getDataProvider(dataSource)
+              .getDataProviderInfo();
+
+            return {
+              ...dataProviderInfo,
+              assetProfileCount,
+              useForExchangeRates:
+                dataSource ===
+                this.dataProviderService.getDataSourceForExchangeRates()
+            };
           }
-        });
 
-        return {
-          ...dataProviderInfo,
-          assetProfileCount
-        };
-      })
-    );
+          return null;
+        })
+      )
+    ).filter(Boolean);
 
     return {
       dataProviders,
@@ -214,12 +229,12 @@ export class AdminService {
       return type === 'SEARCH_QUERY';
     })?.id;
 
-    const { ASSET_SUB_CLASS: filtersByAssetSubClass } = groupBy(
-      filters,
-      ({ type }) => {
-        return type;
-      }
-    );
+    const {
+      ASSET_SUB_CLASS: filtersByAssetSubClass,
+      DATA_SOURCE: filtersByDataSource
+    } = groupBy(filters, ({ type }) => {
+      return type;
+    });
 
     const marketDataItems = await this.prismaService.marketData.groupBy({
       _count: true,
@@ -228,6 +243,10 @@ export class AdminService {
 
     if (filtersByAssetSubClass) {
       where.assetSubClass = AssetSubClass[filtersByAssetSubClass[0].id];
+    }
+
+    if (filtersByDataSource) {
+      where.dataSource = DataSource[filtersByDataSource[0].id];
     }
 
     if (searchQuery) {

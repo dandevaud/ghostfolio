@@ -144,7 +144,7 @@ export class OrderController {
       skip: isNaN(skip) ? undefined : skip,
       take: isNaN(take) ? undefined : take,
       userId: impersonationUserId || this.request.user.id,
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
 
     return { activities, count };
@@ -165,7 +165,7 @@ export class OrderController {
     const { activities } = await this.orderService.getOrders({
       userCurrency,
       userId: impersonationUserId || this.request.user.id,
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
 
     const activity = activities.find((activity) => {
@@ -217,6 +217,9 @@ export class OrderController {
           }
         }
       },
+      tags: data.tags?.map((id) => {
+        return { id };
+      }),
       user: { connect: { id: this.request.user.id } },
       userId: this.request.user.id
     });
@@ -293,6 +296,9 @@ export class OrderController {
             name: data.symbol
           }
         },
+        tags: data.tags?.map((id) => {
+          return { id };
+        }),
         user: { connect: { id: this.request.user.id } }
       },
       where: {

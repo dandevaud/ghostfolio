@@ -37,6 +37,16 @@ export class AccountClusterRiskCurrentInvestment extends Rule<Settings> {
       };
     }
 
+    if (Object.keys(accounts).length === 0) {
+      return {
+        evaluation: this.i18nService.getTranslation({
+          id: 'rule.accountClusterRiskCurrentInvestment.false.invalid',
+          languageCode: this.getLanguageCode()
+        }),
+        value: false
+      };
+    }
+
     let maxAccount: (typeof accounts)[0];
     let totalInvestment = 0;
 
@@ -85,6 +95,13 @@ export class AccountClusterRiskCurrentInvestment extends Rule<Settings> {
     };
   }
 
+  public getCategoryName() {
+    return this.i18nService.getTranslation({
+      id: 'rule.accountClusterRisk.category',
+      languageCode: this.getLanguageCode()
+    });
+  }
+
   public getConfiguration() {
     return {
       threshold: {
@@ -107,7 +124,7 @@ export class AccountClusterRiskCurrentInvestment extends Rule<Settings> {
   public getSettings({ baseCurrency, xRayRules }: UserSettings): Settings {
     return {
       baseCurrency,
-      isActive: xRayRules?.[this.getKey()].isActive ?? true,
+      isActive: xRayRules?.[this.getKey()]?.isActive ?? true,
       thresholdMax: xRayRules?.[this.getKey()]?.thresholdMax ?? 0.5
     };
   }

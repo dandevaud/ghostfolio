@@ -434,6 +434,7 @@ export class PortfolioController {
       filterByAssetClasses,
       filterByDataSource,
       filterByHoldingType,
+      filterBySearchQuery,
       filterBySymbol,
       filterByTags
     });
@@ -450,7 +451,6 @@ export class PortfolioController {
       dateRange,
       filters,
       impersonationId,
-      query: filterBySearchQuery,
       userId: this.request.user.id
     });
 
@@ -687,11 +687,11 @@ export class PortfolioController {
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
       this.request.user.subscription.type === 'Basic'
     ) {
-      for (const rule in report.rules) {
-        report.rules[rule] = null;
+      for (const category of report.xRay.categories) {
+        category.rules = null;
       }
 
-      report.statistics = {
+      report.xRay.statistics = {
         rulesActiveCount: 0,
         rulesFulfilledCount: 0
       };

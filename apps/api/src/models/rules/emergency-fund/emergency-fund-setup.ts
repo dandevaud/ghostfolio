@@ -41,6 +41,13 @@ export class EmergencyFundSetup extends Rule<Settings> {
     };
   }
 
+  public getCategoryName() {
+    return this.i18nService.getTranslation({
+      id: 'rule.emergencyFund.category',
+      languageCode: this.getLanguageCode()
+    });
+  }
+
   public getConfiguration() {
     return undefined;
   }
@@ -55,7 +62,7 @@ export class EmergencyFundSetup extends Rule<Settings> {
   public getSettings({ baseCurrency, xRayRules }: UserSettings): Settings {
     return {
       baseCurrency,
-      isActive: xRayRules?.[this.getKey()].isActive ?? true
+      isActive: xRayRules?.[this.getKey()]?.isActive ?? true
     };
   }
 }

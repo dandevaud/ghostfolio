@@ -1,6 +1,11 @@
 import { AdminService } from '@ghostfolio/client/services/admin.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
-import { PROPERTY_CURRENCIES } from '@ghostfolio/common/config';
+import {
+  DEFAULT_CURRENCY,
+  ghostfolioPrefix,
+  PROPERTY_CURRENCIES
+} from '@ghostfolio/common/config';
+import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
 
 import {
   ChangeDetectionStrategy,
@@ -14,48 +19,67 @@ import {
   FormBuilder,
   FormControl,
   FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
   ValidationErrors,
   ValidatorFn,
   Validators
 } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatRadioModule } from '@angular/material/radio';
+import { DataSource } from '@prisma/client';
 import { isISO4217CurrencyCode } from 'class-validator';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, switchMap, takeUntil } from 'rxjs';
 
 import { CreateAssetProfileDialogMode } from './interfaces/interfaces';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'h-100' },
+  imports: [
+    FormsModule,
+    GfSymbolAutocompleteComponent,
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatRadioModule,
+    ReactiveFormsModule
+  ],
   selector: 'gf-create-asset-profile-dialog',
   styleUrls: ['./create-asset-profile-dialog.component.scss'],
-  templateUrl: 'create-asset-profile-dialog.html',
-  standalone: false
+  templateUrl: 'create-asset-profile-dialog.html'
 })
-export class CreateAssetProfileDialog implements OnInit, OnDestroy {
+export class GfCreateAssetProfileDialogComponent implements OnInit, OnDestroy {
   public createAssetProfileForm: FormGroup;
   public mode: CreateAssetProfileDialogMode;
 
   private customCurrencies: string[];
+  private dataSourceForExchangeRates: DataSource;
   private unsubscribeSubject = new Subject<void>();
 
   public constructor(
     public readonly adminService: AdminService,
     private readonly changeDetectorRef: ChangeDetectorRef,
     private readonly dataService: DataService,
-    public readonly dialogRef: MatDialogRef<CreateAssetProfileDialog>,
+    public readonly dialogRef: MatDialogRef<GfCreateAssetProfileDialogComponent>,
     public readonly formBuilder: FormBuilder
   ) {}
 
   public ngOnInit() {
-    this.initializeCustomCurrencies();
+    this.initialize();
 
     this.createAssetProfileForm = this.formBuilder.group(
       {
         addCurrency: new FormControl(null, [
           this.iso4217CurrencyCodeValidator()
         ]),
-        addSymbol: new FormControl(null, [Validators.required]),
+        addSymbol: new FormControl(`${ghostfolioPrefix}_`, [
+          Validators.required
+        ]),
         searchSymbol: new FormControl(null, [Validators.required])
       },
       {
@@ -94,7 +118,15 @@ export class CreateAssetProfileDialog implements OnInit, OnDestroy {
         .putAdminSetting(PROPERTY_CURRENCIES, {
           value: JSON.stringify(currencies)
         })
-        .pipe(takeUntil(this.unsubscribeSubject))
+        .pipe(
+          switchMap(() => {
+            return this.adminService.gatherSymbol({
+              dataSource: this.dataSourceForExchangeRates,
+              symbol: `${DEFAULT_CURRENCY}${currency}`
+            });
+          }),
+          takeUntil(this.unsubscribeSubject)
+        )
         .subscribe(() => {
           this.dialogRef.close();
         });
@@ -149,12 +181,18 @@ export class CreateAssetProfileDialog implements OnInit, OnDestroy {
     return { atLeastOneValid: true };
   }
 
-  private initializeCustomCurrencies() {
+  private initialize() {
     this.adminService
       .fetchAdminData()
       .pipe(takeUntil(this.unsubscribeSubject))
-      .subscribe(({ settings }) => {
+      .subscribe(({ dataProviders, settings }) => {
         this.customCurrencies = settings[PROPERTY_CURRENCIES] as string[];
+
+        const { dataSource } = dataProviders.find(({ useForExchangeRates }) => {
+          return useForExchangeRates;
+        });
+
+        this.dataSourceForExchangeRates = dataSource;
 
         this.changeDetectorRef.markForCheck();
       });

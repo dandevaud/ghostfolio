@@ -22,9 +22,17 @@ export class AccountClusterRiskSingleAccount extends Rule<RuleSettings> {
   }
 
   public evaluate() {
-    const accounts: string[] = Object.keys(this.accounts);
+    const accountIds: string[] = Object.keys(this.accounts);
 
-    if (accounts.length === 1) {
+    if (accountIds.length === 0) {
+      return {
+        evaluation: this.i18nService.getTranslation({
+          id: 'rule.accountClusterRiskSingleAccount.false.invalid',
+          languageCode: this.getLanguageCode()
+        }),
+        value: false
+      };
+    } else if (accountIds.length === 1) {
       return {
         evaluation: this.i18nService.getTranslation({
           id: 'rule.accountClusterRiskSingleAccount.false',
@@ -39,11 +47,18 @@ export class AccountClusterRiskSingleAccount extends Rule<RuleSettings> {
         id: 'rule.accountClusterRiskSingleAccount.true',
         languageCode: this.getLanguageCode(),
         placeholders: {
-          accountsLength: accounts.length
+          accountsLength: accountIds.length
         }
       }),
       value: true
     };
+  }
+
+  public getCategoryName() {
+    return this.i18nService.getTranslation({
+      id: 'rule.accountClusterRisk.category',
+      languageCode: this.getLanguageCode()
+    });
   }
 
   public getConfiguration() {
@@ -55,12 +70,11 @@ export class AccountClusterRiskSingleAccount extends Rule<RuleSettings> {
       id: 'rule.accountClusterRiskSingleAccount',
       languageCode: this.getLanguageCode()
     });
-    return 'Single Account';
   }
 
   public getSettings({ xRayRules }: UserSettings): RuleSettings {
     return {
-      isActive: xRayRules?.[this.getKey()].isActive ?? true
+      isActive: xRayRules?.[this.getKey()]?.isActive ?? true
     };
   }
 }

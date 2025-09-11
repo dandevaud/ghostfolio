@@ -1,7 +1,5 @@
-import { GfBenchmarkComparatorModule } from '@ghostfolio/client/components/benchmark-comparator/benchmark-comparator.module';
+import { GfBenchmarkComparatorComponent } from '@ghostfolio/client/components/benchmark-comparator/benchmark-comparator.component';
 import { GfInvestmentChartModule } from '@ghostfolio/client/components/investment-chart/investment-chart.module';
-import { ToggleComponent } from '@ghostfolio/client/components/toggle/toggle.component';
-import { GfToggleModule } from '@ghostfolio/client/components/toggle/toggle.module';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
@@ -23,6 +21,7 @@ import type {
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
+import { GfToggleComponent } from '@ghostfolio/ui/toggle';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { Clipboard } from '@angular/cdk/clipboard';
@@ -38,6 +37,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { SymbolProfile } from '@prisma/client';
 import { addIcons } from 'ionicons';
@@ -51,17 +51,18 @@ import { takeUntil } from 'rxjs/operators';
 
 @Component({
   imports: [
-    GfBenchmarkComparatorModule,
+    GfBenchmarkComparatorComponent,
     GfInvestmentChartModule,
     GfPremiumIndicatorComponent,
-    GfToggleModule,
+    GfToggleComponent,
     GfValueComponent,
     IonIcon,
     MatButtonModule,
     MatCardModule,
     MatMenuModule,
     MatProgressSpinnerModule,
-    NgxSkeletonLoaderModule
+    NgxSkeletonLoaderModule,
+    RouterModule
   ],
   selector: 'gf-analysis-page',
   styleUrls: ['./analysis-page.scss'],
@@ -74,14 +75,6 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public benchmarkDataItems: HistoricalDataItem[] = [];
   public benchmarks: Partial<SymbolProfile>[];
   public bottom5: PortfolioPosition[];
-  public dateRangeOptions = ToggleComponent.DEFAULT_DATE_RANGE_OPTIONS;
-  public timeWeightedPerformanceOptions = [
-    { label: $localize`No`, value: 'N' },
-    { label: $localize`Both`, value: 'B' },
-    { label: $localize`Only`, value: 'O' }
-  ];
-  public selectedTimeWeightedPerformanceOption: string;
-  public daysInMarket: number;
   public deviceType: string;
   public dividendsByGroup: InvestmentItem[];
   public dividendTimelineDataLabel = $localize`Dividend`;

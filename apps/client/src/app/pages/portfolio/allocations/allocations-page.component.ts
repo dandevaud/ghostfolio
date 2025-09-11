@@ -1,6 +1,5 @@
-import { AccountDetailDialog } from '@ghostfolio/client/components/account-detail-dialog/account-detail-dialog.component';
+import { GfAccountDetailDialogComponent } from '@ghostfolio/client/components/account-detail-dialog/account-detail-dialog.component';
 import { AccountDetailDialogParams } from '@ghostfolio/client/components/account-detail-dialog/interfaces/interfaces';
-import { GfWorldMapChartModule } from '@ghostfolio/client/components/world-map-chart/world-map-chart.module';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
@@ -21,6 +20,7 @@ import { GfPortfolioProportionChartComponent } from '@ghostfolio/ui/portfolio-pr
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
 import { GfTopHoldingsComponent } from '@ghostfolio/ui/top-holdings';
 import { GfValueComponent } from '@ghostfolio/ui/value';
+import { GfWorldMapChartComponent } from '@ghostfolio/ui/world-map-chart';
 
 import { NgClass } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
@@ -46,7 +46,7 @@ import { takeUntil } from 'rxjs/operators';
     GfPremiumIndicatorComponent,
     GfTopHoldingsComponent,
     GfValueComponent,
-    GfWorldMapChartModule,
+    GfWorldMapChartComponent,
     MatCardModule,
     MatProgressBarModule,
     NgClass
@@ -606,13 +606,13 @@ export class GfAllocationsPageComponent implements OnDestroy, OnInit {
   }
 
   private openAccountDetailDialog(aAccountId: string) {
-    const dialogRef = this.dialog.open(AccountDetailDialog, {
+    const dialogRef = this.dialog.open(GfAccountDetailDialogComponent, {
       autoFocus: false,
       data: {
         accountId: aAccountId,
         deviceType: this.deviceType,
         hasImpersonationId: this.hasImpersonationId,
-        hasPermissionToCreateOrder:
+        hasPermissionToCreateActivity:
           !this.hasImpersonationId &&
           hasPermission(this.user?.permissions, permissions.createOrder) &&
           !this.user?.settings?.isRestrictedView

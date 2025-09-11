@@ -8,6 +8,7 @@ import type {
   AdminMarketDataItem
 } from './admin-market-data.interface';
 import type { AdminUsers } from './admin-users.interface';
+import type { AssetClassSelectorOption } from './asset-class-selector-option.interface';
 import type { AssetProfileIdentifier } from './asset-profile-identifier.interface';
 import type { BenchmarkMarketDataDetails } from './benchmark-market-data-details.interface';
 import type { BenchmarkProperty } from './benchmark-property.interface';
@@ -25,6 +26,7 @@ import type { InfoItem } from './info-item.interface';
 import type { InvestmentItem } from './investment-item.interface';
 import type { LineChartItem } from './line-chart-item.interface';
 import type { LookupItem } from './lookup-item.interface';
+import type { MarketData } from './market-data.interface';
 import type { PortfolioChart } from './portfolio-chart.interface';
 import type { PortfolioDetails } from './portfolio-details.interface';
 import type { PortfolioDividends } from './portfolio-dividends.interface';
@@ -85,6 +87,7 @@ export {
   AdminUsers,
   AiPromptResponse,
   ApiKeyResponse,
+  AssetClassSelectorOption,
   AssetProfileIdentifier,
   Benchmark,
   BenchmarkMarketDataDetails,
@@ -111,6 +114,7 @@ export {
   LineChartItem,
   LookupItem,
   LookupResponse,
+  MarketData,
   MarketDataDetailsResponse,
   MarketDataOfMarketsResponse,
   OAuthResponse,

@@ -1,7 +1,9 @@
-import { CreateAccountDto } from '@ghostfolio/api/app/account/create-account.dto';
+import { CreateTagDto } from '@ghostfolio/api/app/endpoints/tags/create-tag.dto';
+import { CreateAccountWithBalancesDto } from '@ghostfolio/api/app/import/create-account-with-balances.dto';
+import { CreateAssetProfileWithMarketDataDto } from '@ghostfolio/api/app/import/create-asset-profile-with-market-data.dto';
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
-import { GfDialogFooterModule } from '@ghostfolio/client/components/dialog-footer/dialog-footer.module';
-import { GfDialogHeaderModule } from '@ghostfolio/client/components/dialog-header/dialog-header.module';
+import { GfDialogFooterComponent } from '@ghostfolio/client/components/dialog-footer/dialog-footer.component';
+import { GfDialogHeaderComponent } from '@ghostfolio/client/components/dialog-header/dialog-header.component';
 import { GfFileDropModule } from '@ghostfolio/client/directives/file-drop/file-drop.module';
 import { GfSymbolModule } from '@ghostfolio/client/pipes/symbol/symbol.module';
 import { DataService } from '@ghostfolio/client/services/data.service';
@@ -54,10 +56,11 @@ import { ImportActivitiesDialogParams } from './interfaces/interfaces';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'd-flex flex-column h-100' },
   imports: [
     GfActivitiesTableComponent,
-    GfDialogFooterModule,
-    GfDialogHeaderModule,
+    GfDialogFooterComponent,
+    GfDialogHeaderComponent,
     GfFileDropModule,
     GfSymbolModule,
     IonIcon,
@@ -75,9 +78,10 @@ import { ImportActivitiesDialogParams } from './interfaces/interfaces';
   templateUrl: 'import-activities-dialog.html'
 })
 export class GfImportActivitiesDialog implements OnDestroy {
-  public accounts: CreateAccountDto[] = [];
+  public accounts: CreateAccountWithBalancesDto[] = [];
   public activities: Activity[] = [];
   public assetProfileForm: FormGroup;
+  public assetProfiles: CreateAssetProfileWithMarketDataDto[] = [];
   public dataSource: MatTableDataSource<Activity>;
   public details: any[] = [];
   public deviceType: string;
@@ -92,6 +96,7 @@ export class GfImportActivitiesDialog implements OnDestroy {
   public sortColumn = 'date';
   public sortDirection: SortDirection = 'desc';
   public stepperOrientation: StepperOrientation;
+  public tags: CreateTagDto[] = [];
   public totalItems: number;
 
   private unsubscribeSubject = new Subject<void>();
@@ -166,7 +171,9 @@ export class GfImportActivitiesDialog implements OnDestroy {
 
       await this.importActivitiesService.importSelectedActivities({
         accounts: this.accounts,
-        activities: this.selectedActivities
+        activities: this.selectedActivities,
+        assetProfiles: this.assetProfiles,
+        tags: this.tags
       });
 
       this.snackBar.open(
@@ -293,6 +300,8 @@ export class GfImportActivitiesDialog implements OnDestroy {
           const content = JSON.parse(fileContent);
 
           this.accounts = content.accounts;
+          this.assetProfiles = content.assetProfiles;
+          this.tags = content.tags;
 
           if (!isArray(content.activities)) {
             if (isArray(content.orders)) {
@@ -323,7 +332,9 @@ export class GfImportActivitiesDialog implements OnDestroy {
               await this.importActivitiesService.importJson({
                 accounts: content.accounts,
                 activities: content.activities,
-                isDryRun: true
+                assetProfiles: content.assetProfiles,
+                isDryRun: true,
+                tags: content.tags
               });
             this.activities = activities;
             this.dataSource = new MatTableDataSource(activities.reverse());

@@ -13,6 +13,7 @@ import { EconomicMarketClusterRiskDevelopedMarkets } from '@ghostfolio/api/model
 import { EconomicMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/economic-market-cluster-risk/emerging-markets';
 import { EmergencyFundSetup } from '@ghostfolio/api/models/rules/emergency-fund/emergency-fund-setup';
 import { FeeRatioInitialInvestment } from '@ghostfolio/api/models/rules/fees/fee-ratio-initial-investment';
+import { BuyingPower } from '@ghostfolio/api/models/rules/liquidity/buying-power';
 import { RegionalMarketClusterRiskAsiaPacific } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/asia-pacific';
 import { RegionalMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/emerging-markets';
 import { RegionalMarketClusterRiskEurope } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/europe';
@@ -28,6 +29,7 @@ import {
   DEFAULT_LANGUAGE_CODE,
   PROPERTY_IS_READ_ONLY_MODE,
   PROPERTY_SYSTEM_MESSAGE,
+  TAG_ID_EXCLUDE_FROM_ANALYSIS,
   locale
 } from '@ghostfolio/common/config';
 import {
@@ -121,7 +123,9 @@ export class UserService {
     const access = userData[0];
     const activitiesCount = userData[1];
     const firstActivity = userData[2];
-    let tags = userData[3];
+    let tags = userData[3].filter((tag) => {
+      return tag.id !== TAG_ID_EXCLUDE_FROM_ANALYSIS;
+    });
 
     let systemMessage: SystemMessage;
 
@@ -284,6 +288,12 @@ export class UserService {
         undefined,
         undefined
       ).getSettings(user.settings.settings),
+      BuyingPower: new BuyingPower(
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      ).getSettings(user.settings.settings),
       CurrencyClusterRiskBaseCurrencyCurrentInvestment:
         new CurrencyClusterRiskBaseCurrencyCurrentInvestment(
           undefined,
@@ -302,10 +312,14 @@ export class UserService {
         new EconomicMarketClusterRiskDevelopedMarkets(
           undefined,
           undefined,
+          undefined,
+          undefined,
           undefined
         ).getSettings(user.settings.settings),
       EconomicMarketClusterRiskEmergingMarkets:
         new EconomicMarketClusterRiskEmergingMarkets(
+          undefined,
+          undefined,
           undefined,
           undefined,
           undefined
@@ -327,10 +341,14 @@ export class UserService {
         new RegionalMarketClusterRiskAsiaPacific(
           undefined,
           undefined,
+          undefined,
+          undefined,
           undefined
         ).getSettings(user.settings.settings),
       RegionalMarketClusterRiskEmergingMarkets:
         new RegionalMarketClusterRiskEmergingMarkets(
+          undefined,
+          undefined,
           undefined,
           undefined,
           undefined
@@ -338,15 +356,21 @@ export class UserService {
       RegionalMarketClusterRiskEurope: new RegionalMarketClusterRiskEurope(
         undefined,
         undefined,
+        undefined,
+        undefined,
         undefined
       ).getSettings(user.settings.settings),
       RegionalMarketClusterRiskJapan: new RegionalMarketClusterRiskJapan(
+        undefined,
+        undefined,
         undefined,
         undefined,
         undefined
       ).getSettings(user.settings.settings),
       RegionalMarketClusterRiskNorthAmerica:
         new RegionalMarketClusterRiskNorthAmerica(
+          undefined,
+          undefined,
           undefined,
           undefined,
           undefined

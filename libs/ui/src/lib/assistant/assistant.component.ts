@@ -6,11 +6,8 @@ import { Filter, PortfolioPosition, User } from '@ghostfolio/common/interfaces';
 import { InternalRoute } from '@ghostfolio/common/routes/interfaces/internal-route.interface';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { DateRange } from '@ghostfolio/common/types';
-import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
-import { translate } from '@ghostfolio/ui/i18n';
 
 import { FocusKeyManager } from '@angular/cdk/a11y';
-import { CommonModule } from '@angular/common';
 import {
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
@@ -63,6 +60,8 @@ import {
   tap
 } from 'rxjs/operators';
 
+import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
+import { translate } from '../i18n';
 import { GfAssistantListItemComponent } from './assistant-list-item/assistant-list-item.component';
 import { SearchMode } from './enums/search-mode';
 import {
@@ -74,7 +73,6 @@ import {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     FormsModule,
     GfAssistantListItemComponent,
     GfEntityLogoComponent,
@@ -155,14 +153,16 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   });
   public holdings: PortfolioPosition[] = [];
   public isLoading = {
+    accounts: false,
     assetProfiles: false,
     holdings: false,
     quickLinks: false
   };
   public isOpen = false;
-  public placeholder = $localize`Find holding or page...`;
+  public placeholder = $localize`Find account, holding or page...`;
   public searchFormControl = new FormControl('');
   public searchResults: ISearchResults = {
+    accounts: [],
     assetProfiles: [],
     holdings: [],
     quickLinks: []
@@ -201,11 +201,13 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       .pipe(
         map((searchTerm) => {
           this.isLoading = {
+            accounts: true,
             assetProfiles: true,
             holdings: true,
             quickLinks: true
           };
           this.searchResults = {
+            accounts: [],
             assetProfiles: [],
             holdings: [],
             quickLinks: []
@@ -219,6 +221,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         distinctUntilChanged(),
         switchMap((searchTerm) => {
           const results = {
+            accounts: [],
             assetProfiles: [],
             holdings: [],
             quickLinks: []
@@ -228,6 +231,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
             return of(results).pipe(
               tap(() => {
                 this.isLoading = {
+                  accounts: false,
                   assetProfiles: false,
                   holdings: false,
                   quickLinks: false
@@ -235,6 +239,25 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
               })
             );
           }
+
+          // Accounts
+          const accounts$: Observable<Partial<ISearchResults>> =
+            this.searchAccounts(searchTerm).pipe(
+              map((accounts) => ({
+                accounts: accounts.slice(
+                  0,
+                  GfAssistantComponent.SEARCH_RESULTS_DEFAULT_LIMIT
+                )
+              })),
+              catchError((error) => {
+                console.error('Error fetching accounts for assistant:', error);
+                return of({ accounts: [] as ISearchResultItem[] });
+              }),
+              tap(() => {
+                this.isLoading.accounts = false;
+                this.changeDetectorRef.markForCheck();
+              })
+            );
 
           // Asset profiles
           const assetProfiles$: Observable<Partial<ISearchResults>> = this
@@ -301,13 +324,14 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
           );
 
           // Merge all results
-          return merge(quickLinks$, assetProfiles$, holdings$).pipe(
+          return merge(accounts$, assetProfiles$, holdings$, quickLinks$).pipe(
             scan(
               (acc: ISearchResults, curr: Partial<ISearchResults>) => ({
                 ...acc,
                 ...curr
               }),
               {
+                accounts: [],
                 assetProfiles: [],
                 holdings: [],
                 quickLinks: []
@@ -325,6 +349,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         error: (error) => {
           console.error('Assistant search stream error:', error);
           this.searchResults = {
+            accounts: [],
             assetProfiles: [],
             holdings: [],
             quickLinks: []
@@ -333,6 +358,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         },
         complete: () => {
           this.isLoading = {
+            accounts: false,
             assetProfiles: false,
             holdings: false,
             quickLinks: false
@@ -486,12 +512,14 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
 
   public initialize() {
     this.isLoading = {
+      accounts: true,
       assetProfiles: true,
       holdings: true,
       quickLinks: true
     };
     this.keyManager = new FocusKeyManager(this.assistantListItems).withWrap();
     this.searchResults = {
+      accounts: [],
       assetProfiles: [],
       holdings: [],
       quickLinks: []
@@ -507,6 +535,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
     });
 
     this.isLoading = {
+      accounts: false,
       assetProfiles: false,
       holdings: false,
       quickLinks: false
@@ -562,7 +591,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   public onChangeDateRange(dateRangeString: string) {
-    this.dateRangeChanged.emit(dateRangeString as DateRange);
+    this.dateRangeChanged.emit(dateRangeString);
   }
 
   public onCloseAssistant() {
@@ -597,6 +626,34 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
     return this.assistantListItems.find(({ getHasFocus }) => {
       return getHasFocus;
     });
+  }
+
+  private searchAccounts(aSearchTerm: string): Observable<ISearchResultItem[]> {
+    return this.dataService
+      .fetchAccounts({
+        filters: [
+          {
+            id: aSearchTerm,
+            type: 'SEARCH_QUERY'
+          }
+        ]
+      })
+      .pipe(
+        catchError(() => {
+          return EMPTY;
+        }),
+        map(({ accounts }) => {
+          return accounts.map(({ id, name }) => {
+            return {
+              id,
+              name,
+              routerLink: internalRoutes.accounts.routerLink,
+              mode: SearchMode.ACCOUNT as const
+            };
+          });
+        }),
+        takeUntil(this.unsubscribeSubject)
+      );
   }
 
   private searchAssetProfiles(
@@ -642,8 +699,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
             id: aSearchTerm,
             type: 'SEARCH_QUERY'
           }
-        ],
-        range: '1d'
+        ]
       })
       .pipe(
         catchError(() => {

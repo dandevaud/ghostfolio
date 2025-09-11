@@ -63,7 +63,8 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
       if (
         isCurrency(
           aSymbol.substring(0, aSymbol.length - DEFAULT_CURRENCY.length)
-        )
+        ) &&
+        isCurrency(aSymbol.substring(aSymbol.length - DEFAULT_CURRENCY.length))
       ) {
         return `${aSymbol}=X`;
       } else if (
@@ -162,7 +163,7 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
   public async getAssetProfile(
     aSymbol: string
   ): Promise<Partial<SymbolProfile>> {
-    const response: Partial<SymbolProfile> = {};
+    let response: Partial<SymbolProfile> = {};
 
     try {
       let symbol = aSymbol;
@@ -240,10 +241,13 @@ export class YahooFinanceDataEnhancerService implements DataEnhancerInterface {
       }
 
       const url = assetProfile.summaryProfile?.website;
+
       if (url) {
         response.url = url;
       }
     } catch (error) {
+      response = undefined;
+
       if (error.message === `Quote not found for symbol: ${aSymbol}`) {
         throw new AssetProfileDelistedError(
           `No data found, ${aSymbol} (${this.getName()}) may be delisted`

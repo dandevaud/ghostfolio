@@ -1,5 +1,5 @@
 import { CreateAccessDto } from '@ghostfolio/api/app/access/create-access.dto';
-import { GfPortfolioAccessTableModule } from '@ghostfolio/client/components/access-table/access-table.module';
+import { GfAccessTableComponent } from '@ghostfolio/client/components/access-table/access-table.component';
 import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
 import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
@@ -9,7 +9,6 @@ import { Access, User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
 
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -31,16 +30,13 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 
-import { CreateOrUpdateAccessDialog } from './create-or-update-access-dialog/create-or-update-access-dialog.component';
-import { GfCreateOrUpdateAccessDialogModule } from './create-or-update-access-dialog/create-or-update-access-dialog.module';
+import { GfCreateOrUpdateAccessDialog } from './create-or-update-access-dialog/create-or-update-access-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'has-fab' },
   imports: [
-    CommonModule,
-    GfCreateOrUpdateAccessDialogModule,
-    GfPortfolioAccessTableModule,
+    GfAccessTableComponent,
     GfPremiumIndicatorComponent,
     IonIcon,
     MatButtonModule,
@@ -183,7 +179,7 @@ export class GfUserAccountAccessComponent implements OnDestroy, OnInit {
   }
 
   private openCreateAccessDialog() {
-    const dialogRef = this.dialog.open(CreateOrUpdateAccessDialog, {
+    const dialogRef = this.dialog.open(GfCreateOrUpdateAccessDialog, {
       data: {
         access: {
           alias: '',

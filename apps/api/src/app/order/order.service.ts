@@ -8,7 +8,9 @@ import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/sy
 import {
   DATA_GATHERING_QUEUE_PRIORITY_HIGH,
   GATHER_ASSET_PROFILE_PROCESS_JOB_NAME,
-  GATHER_ASSET_PROFILE_PROCESS_JOB_OPTIONS
+  GATHER_ASSET_PROFILE_PROCESS_JOB_OPTIONS,
+  ghostfolioPrefix,
+  TAG_ID_EXCLUDE_FROM_ANALYSIS
 } from '@ghostfolio/common/config';
 import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
 import {
@@ -30,6 +32,7 @@ import {
   Type as ActivityType
 } from '@prisma/client';
 import { Big } from 'big.js';
+import { isUUID } from 'class-validator';
 import { endOfToday, isAfter } from 'date-fns';
 import { groupBy, uniqBy } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
@@ -118,7 +121,7 @@ export class OrderService {
       assetSubClass?: AssetSubClass;
       currency?: string;
       symbol?: string;
-      tags?: Tag[];
+      tags?: { id: string }[];
       updateAccountBalance?: boolean;
       userId: string;
     }
@@ -149,19 +152,33 @@ export class OrderService {
       const assetClass = data.assetClass;
       const assetSubClass = data.assetSubClass;
       const dataSource: DataSource = 'MANUAL';
-      const id = uuidv4();
-      const name = data.SymbolProfile.connectOrCreate.create.symbol;
 
-      data.id = id;
+      let name: string;
+      let symbol: string;
+
+      if (
+        data.SymbolProfile.connectOrCreate.create.symbol.startsWith(
+          `${ghostfolioPrefix}_`
+        ) ||
+        isUUID(data.SymbolProfile.connectOrCreate.create.symbol)
+      ) {
+        // Connect custom asset profile (clone)
+        symbol = data.SymbolProfile.connectOrCreate.create.symbol;
+      } else {
+        // Create custom asset profile
+        name = data.SymbolProfile.connectOrCreate.create.symbol;
+        symbol = uuidv4();
+      }
+
       data.SymbolProfile.connectOrCreate.create.assetClass = assetClass;
       data.SymbolProfile.connectOrCreate.create.assetSubClass = assetSubClass;
       data.SymbolProfile.connectOrCreate.create.dataSource = dataSource;
       data.SymbolProfile.connectOrCreate.create.name = name;
-      data.SymbolProfile.connectOrCreate.create.symbol = id;
+      data.SymbolProfile.connectOrCreate.create.symbol = symbol;
       data.SymbolProfile.connectOrCreate.create.userId = userId;
       data.SymbolProfile.connectOrCreate.where.dataSource_symbol = {
         dataSource,
-        symbol: id
+        symbol
       };
     }
 
@@ -208,9 +225,7 @@ export class OrderService {
         account,
         isDraft,
         tags: {
-          connect: tags.map(({ id }) => {
-            return { id };
-          })
+          connect: tags
         }
       },
       include: { SymbolProfile: true }
@@ -283,7 +298,7 @@ export class OrderService {
       userId,
       includeDrafts: true,
       userCurrency: undefined,
-      withExcludedAccounts: true
+      withExcludedAccountsAndActivities: true
     });
 
     const { count } = await this.prismaService.order.deleteMany({
@@ -341,7 +356,7 @@ export class OrderService {
     types,
     userCurrency,
     userId,
-    withExcludedAccounts = false
+    withExcludedAccountsAndActivities = false
   }: {
     endDate?: Date;
     filters?: Filter[];
@@ -354,7 +369,7 @@ export class OrderService {
     types?: ActivityType[];
     userCurrency: string;
     userId: string;
-    withExcludedAccounts?: boolean;
+    withExcludedAccountsAndActivities?: boolean;
   }): Promise<Activities> {
     let orderBy: Prisma.Enumerable<Prisma.OrderOrderByWithRelationInput> = [
       { date: 'asc' },
@@ -521,11 +536,18 @@ export class OrderService {
       where.type = { in: types };
     }
 
-    if (withExcludedAccounts === false) {
+    if (withExcludedAccountsAndActivities === false) {
       where.OR = [
         { account: null },
         { account: { NOT: { isExcluded: true } } }
       ];
+
+      where.tags = {
+        ...where.tags,
+        none: {
+          id: TAG_ID_EXCLUDE_FROM_ANALYSIS
+        }
+      };
     }
 
     const [orders, count] = await Promise.all([
@@ -643,7 +665,7 @@ export class OrderService {
       filters,
       userCurrency,
       userId,
-      withExcludedAccounts: false // TODO
+      withExcludedAccountsAndActivities: false // TODO
     });
   }
 
@@ -684,7 +706,7 @@ export class OrderService {
       assetSubClass?: AssetSubClass;
       currency?: string;
       symbol?: string;
-      tags?: Tag[];
+      tags?: { id: string }[];
       type?: ActivityType;
     };
     where: Prisma.OrderWhereUniqueInput;
@@ -746,9 +768,7 @@ export class OrderService {
         ...data,
         isDraft,
         tags: {
-          connect: tags.map(({ id }) => {
-            return { id };
-          })
+          connect: tags
         }
       }
     });

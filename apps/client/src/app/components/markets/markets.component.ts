@@ -1,5 +1,4 @@
 import { GfFearAndGreedIndexModule } from '@ghostfolio/client/components/fear-and-greed-index/fear-and-greed-index.module';
-import { GfToggleModule } from '@ghostfolio/client/components/toggle/toggle.module';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { resetHours } from '@ghostfolio/common/helper';
@@ -13,8 +12,8 @@ import {
 import { FearAndGreedIndexMode } from '@ghostfolio/common/types';
 import { GfBenchmarkComponent } from '@ghostfolio/ui/benchmark';
 import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
+import { GfToggleComponent } from '@ghostfolio/ui/toggle';
 
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -30,11 +29,10 @@ import { takeUntil } from 'rxjs/operators';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     GfBenchmarkComponent,
     GfFearAndGreedIndexModule,
     GfLineChartComponent,
-    GfToggleModule
+    GfToggleComponent
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-markets',

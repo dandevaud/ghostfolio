@@ -5,18 +5,32 @@ import { AdminService } from '@ghostfolio/client/services/admin.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { validateObjectForForm } from '@ghostfolio/client/util/form.util';
-import { ghostfolioScraperApiSymbolPrefix } from '@ghostfolio/common/config';
+import {
+  ASSET_CLASS_MAPPING,
+  ghostfolioScraperApiSymbolPrefix,
+  PROPERTY_IS_DATA_GATHERING_ENABLED
+} from '@ghostfolio/common/config';
 import { DATE_FORMAT } from '@ghostfolio/common/helper';
 import {
   AdminMarketDataDetails,
+  AssetClassSelectorOption,
   AssetProfileIdentifier,
   LineChartItem,
   ScraperConfiguration,
   User
 } from '@ghostfolio/common/interfaces';
+import { GfCurrencySelectorComponent } from '@ghostfolio/ui/currency-selector';
+import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
+import { GfHistoricalMarketDataEditorComponent } from '@ghostfolio/ui/historical-market-data-editor';
 import { translate } from '@ghostfolio/ui/i18n';
+import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
+import { GfPortfolioProportionChartComponent } from '@ghostfolio/ui/portfolio-proportion-chart';
+import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
+import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
+import { TextFieldModule } from '@angular/cdk/text-field';
+import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -33,13 +47,32 @@ import {
   AbstractControl,
   FormBuilder,
   FormControl,
+  FormsModule,
+  ReactiveFormsModule,
   ValidationErrors,
   Validators
 } from '@angular/forms';
-import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
-import { MatCheckboxChange } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent
+} from '@angular/material/autocomplete';
+import { MatButtonModule } from '@angular/material/button';
+import {
+  MatCheckboxChange,
+  MatCheckboxModule
+} from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef
+} from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { IonIcon } from '@ionic/angular/standalone';
 import {
   AssetClass,
   AssetSubClass,
@@ -48,6 +81,7 @@ import {
   SymbolProfile,
   Tag
 } from '@prisma/client';
+import { isUUID } from 'class-validator';
 import { format } from 'date-fns';
 import { StatusCodes } from 'http-status-codes';
 import { addIcons } from 'ionicons';
@@ -59,14 +93,38 @@ import { catchError, takeUntil } from 'rxjs/operators';
 import { AssetProfileDialogParams } from './interfaces/interfaces';
 
 @Component({
-  host: { class: 'd-flex flex-column h-100' },
-  selector: 'gf-asset-profile-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: 'asset-profile-dialog.html',
+  host: { class: 'd-flex flex-column h-100' },
+  imports: [
+    CommonModule,
+    FormsModule,
+    GfCurrencySelectorComponent,
+    GfEntityLogoComponent,
+    GfHistoricalMarketDataEditorComponent,
+    GfLineChartComponent,
+    GfPortfolioProportionChartComponent,
+    GfSymbolAutocompleteComponent,
+    GfValueComponent,
+    IonIcon,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatDialogModule,
+    MatExpansionModule,
+    MatInputModule,
+    MatMenuModule,
+    MatSelectModule,
+    MatAutocompleteModule,
+    MatChipsModule,
+    MatSnackBarModule,
+    ReactiveFormsModule,
+    TextFieldModule
+  ],
+  providers: [AdminMarketDataService],
+  selector: 'gf-asset-profile-dialog',
   styleUrls: ['./asset-profile-dialog.component.scss'],
-  standalone: false
+  templateUrl: 'asset-profile-dialog.html'
 })
-export class AssetProfileDialog implements OnDestroy, OnInit {
+export class GfAssetProfileDialogComponent implements OnDestroy, OnInit {
   @ViewChild('tagInput') tagInput: ElementRef<HTMLInputElement>;
   public separatorKeysCodes: number[] = [ENTER, COMMA];
   private static readonly HISTORICAL_DATA_TEMPLATE = `date;marketPrice\n${format(
@@ -77,15 +135,18 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
   @ViewChild('assetProfileFormElement')
   assetProfileFormElement: ElementRef<HTMLFormElement>;
 
-  public assetProfileClass: string;
+  public assetClassLabel: string;
+  public assetSubClassLabel: string;
 
-  public assetClasses = Object.keys(AssetClass).map((assetClass) => {
-    return { id: assetClass, label: translate(assetClass) };
-  });
+  public assetClassOptions: AssetClassSelectorOption[] = Object.keys(AssetClass)
+    .map((id) => {
+      return { id, label: translate(id) } as AssetClassSelectorOption;
+    })
+    .sort((a, b) => {
+      return a.label.localeCompare(b.label);
+    });
 
-  public assetSubClasses = Object.keys(AssetSubClass).map((assetSubClass) => {
-    return { id: assetSubClass, label: translate(assetSubClass) };
-  });
+  public assetSubClassOptions: AssetClassSelectorOption[] = [];
 
   public assetProfile: AdminMarketDataDetails['assetProfile'];
 
@@ -129,7 +190,6 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
     }
   );
 
-  public assetProfileSubClass: string;
   public benchmarks: Partial<SymbolProfile>[];
 
   public countries: {
@@ -140,7 +200,9 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
   public ghostfolioScraperApiSymbolPrefix = ghostfolioScraperApiSymbolPrefix;
   public historicalDataItems: LineChartItem[];
   public isBenchmark = false;
+  public isDataGatheringEnabled: boolean;
   public isEditAssetProfileIdentifierMode = false;
+  public isUUID = isUUID;
   public marketDataItems: MarketData[] = [];
 
   public modeValues = [
@@ -172,7 +234,7 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
     private changeDetectorRef: ChangeDetectorRef,
     @Inject(MAT_DIALOG_DATA) public data: AssetProfileDialogParams,
     private dataService: DataService,
-    public dialogRef: MatDialogRef<AssetProfileDialog>,
+    public dialogRef: MatDialogRef<GfAssetProfileDialogComponent>,
     private formBuilder: FormBuilder,
     private notificationService: NotificationService,
     private snackBar: MatSnackBar,
@@ -184,8 +246,7 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
   public get canEditAssetProfileIdentifier() {
     return (
       this.assetProfile?.assetClass &&
-      !['MANUAL'].includes(this.assetProfile?.dataSource) &&
-      this.user?.settings?.isExperimentalFeatures
+      !['MANUAL'].includes(this.assetProfile?.dataSource)
     );
   }
 
@@ -217,12 +278,42 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
 
     this.historicalDataItems = undefined;
 
+    this.adminService
+      .fetchAdminData()
+      .pipe(takeUntil(this.unsubscribeSubject))
+      .subscribe(({ settings }) => {
+        this.isDataGatheringEnabled =
+          settings[PROPERTY_IS_DATA_GATHERING_ENABLED] === false ? false : true;
+
+        this.changeDetectorRef.markForCheck();
+      });
+
     this.userService.stateChanged
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((state) => {
         if (state?.user) {
           this.user = state.user;
         }
+      });
+
+    this.assetProfileForm
+      .get('assetClass')
+      .valueChanges.pipe(takeUntil(this.unsubscribeSubject))
+      .subscribe((assetClass) => {
+        const assetSubClasses = ASSET_CLASS_MAPPING.get(assetClass) ?? [];
+
+        this.assetSubClassOptions = assetSubClasses
+          .map((assetSubClass) => {
+            return {
+              id: assetSubClass,
+              label: translate(assetSubClass)
+            };
+          })
+          .sort((a, b) => a.label.localeCompare(b.label));
+
+        this.assetProfileForm.get('assetSubClass').setValue(null);
+
+        this.changeDetectorRef.markForCheck();
       });
 
     this.dataService
@@ -234,8 +325,8 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
       .subscribe(({ assetProfile, marketData }) => {
         this.assetProfile = assetProfile;
 
-        this.assetProfileClass = translate(this.assetProfile?.assetClass);
-        this.assetProfileSubClass = translate(this.assetProfile?.assetSubClass);
+        this.assetClassLabel = translate(this.assetProfile?.assetClass);
+        this.assetSubClassLabel = translate(this.assetProfile?.assetSubClass);
         this.countries = {};
 
         this.isBenchmark = this.benchmarks.some(({ id }) => {
@@ -283,7 +374,7 @@ export class AssetProfileDialog implements OnDestroy, OnInit {
           ),
           currency: this.assetProfile?.currency,
           historicalData: {
-            csvString: AssetProfileDialog.HISTORICAL_DATA_TEMPLATE
+            csvString: GfAssetProfileDialogComponent.HISTORICAL_DATA_TEMPLATE
           },
           isActive: this.assetProfile?.isActive,
           name: this.assetProfile.name ?? this.assetProfile.symbol,
