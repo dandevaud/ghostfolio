@@ -59,7 +59,6 @@ export class SymbolProfileService {
     });
   }
 
-  @LogPerformance
   public async getSymbolProfiles(
     aAssetProfileIdentifiers: AssetProfileIdentifier[]
   ): Promise<EnhancedSymbolProfile[]> {
