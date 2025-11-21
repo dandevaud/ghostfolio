@@ -8,17 +8,16 @@ import {
   GetQuotesParams,
   GetSearchParams
 } from '@ghostfolio/api/services/data-provider/interfaces/data-provider.interface';
-import {
-  IDataProviderHistoricalResponse,
-  IDataProviderResponse
-} from '@ghostfolio/api/services/interfaces/interfaces';
+import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import {
   DEFAULT_CURRENCY,
   REPLACE_NAME_PARTS
 } from '@ghostfolio/common/config';
 import { DATE_FORMAT, isCurrency, parseDate } from '@ghostfolio/common/helper';
 import {
+  DataProviderHistoricalResponse,
   DataProviderInfo,
+  DataProviderResponse,
   LookupItem,
   LookupResponse
 } from '@ghostfolio/common/interfaces';
@@ -49,7 +48,8 @@ export class FinancialModelingPrepService implements DataProviderInterface {
 
   public constructor(
     private readonly configurationService: ConfigurationService,
-    private readonly cryptocurrencyService: CryptocurrencyService
+    private readonly cryptocurrencyService: CryptocurrencyService,
+    private readonly prismaService: PrismaService
   ) {
     this.apiKey = this.configurationService.get(
       'API_KEY_FINANCIAL_MODELING_PREP'
@@ -100,13 +100,20 @@ export class FinancialModelingPrepService implements DataProviderInterface {
           }
         ).then((res) => res.json());
 
+        if (!assetProfile) {
+          throw new Error(`${symbol} not found`);
+        }
+
         const { assetClass, assetSubClass } =
           this.parseAssetClass(assetProfile);
 
         response.assetClass = assetClass;
         response.assetSubClass = assetSubClass;
 
-        if (assetSubClass === AssetSubClass.ETF) {
+        if (
+          assetSubClass === AssetSubClass.ETF ||
+          assetSubClass === AssetSubClass.MUTUALFUND
+        ) {
           const etfCountryWeightings = await fetch(
             `${this.getUrl({ version: 'stable' })}/etf/country-weightings?symbol=${symbol}&apikey=${this.apiKey}`,
             {
@@ -158,7 +165,7 @@ export class FinancialModelingPrepService implements DataProviderInterface {
             }
           ).then((res) => res.json());
 
-          if (etfInformation.website) {
+          if (etfInformation?.website) {
             response.url = etfInformation.website;
           }
 
@@ -217,7 +224,7 @@ export class FinancialModelingPrepService implements DataProviderInterface {
 
   public getDataProviderInfo(): DataProviderInfo {
     return {
-      dataSource: DataSource.FINANCIAL_MODELING_PREP,
+      dataSource: this.getName(),
       isPremium: true,
       name: 'Financial Modeling Prep',
       url: 'https://financialmodelingprep.com/developer/docs'
@@ -236,7 +243,7 @@ export class FinancialModelingPrepService implements DataProviderInterface {
 
     try {
       const response: {
-        [date: string]: IDataProviderHistoricalResponse;
+        [date: string]: DataProviderHistoricalResponse;
       } = {};
 
       const dividends = await fetch(
@@ -280,11 +287,11 @@ export class FinancialModelingPrepService implements DataProviderInterface {
     symbol,
     to
   }: GetHistoricalParams): Promise<{
-    [symbol: string]: { [date: string]: IDataProviderHistoricalResponse };
+    [symbol: string]: { [date: string]: DataProviderHistoricalResponse };
   }> {
     const MAX_YEARS_PER_REQUEST = 5;
     const result: {
-      [symbol: string]: { [date: string]: IDataProviderHistoricalResponse };
+      [symbol: string]: { [date: string]: DataProviderHistoricalResponse };
     } = {
       [symbol]: {}
     };
@@ -344,8 +351,8 @@ export class FinancialModelingPrepService implements DataProviderInterface {
   public async getQuotes({
     requestTimeout = this.configurationService.get('REQUEST_TIMEOUT'),
     symbols
-  }: GetQuotesParams): Promise<{ [symbol: string]: IDataProviderResponse }> {
-    const response: { [symbol: string]: IDataProviderResponse } = {};
+  }: GetQuotesParams): Promise<{ [symbol: string]: DataProviderResponse }> {
+    const response: { [symbol: string]: DataProviderResponse } = {};
 
     if (symbols.length <= 0) {
       return response;
@@ -356,25 +363,57 @@ export class FinancialModelingPrepService implements DataProviderInterface {
         [symbol: string]: Pick<SymbolProfile, 'currency'>;
       } = {};
 
-      const quotes = await fetch(
-        `${this.getUrl({ version: 'stable' })}/batch-quote-short?symbols=${symbols.join(',')}&apikey=${this.apiKey}`,
-        {
-          signal: AbortSignal.timeout(requestTimeout)
-        }
-      ).then((res) => res.json());
+      const [assetProfileResolutions, quotes] = await Promise.all([
+        this.prismaService.assetProfileResolution.findMany({
+          where: {
+            dataSourceTarget: this.getDataProviderInfo().dataSource,
+            symbolTarget: { in: symbols }
+          }
+        }),
+        fetch(
+          `${this.getUrl({ version: 'stable' })}/batch-quote-short?symbols=${symbols.join(',')}&apikey=${this.apiKey}`,
+          {
+            signal: AbortSignal.timeout(requestTimeout)
+          }
+        ).then(
+          (res) => res.json() as unknown as { price: number; symbol: string }[]
+        )
+      ]);
 
-      await Promise.all(
-        quotes.map(({ symbol }) => {
-          return this.getAssetProfile({
-            requestTimeout,
-            symbol
-          }).then((assetProfile) => {
-            if (assetProfile?.currency) {
-              currencyBySymbolMap[symbol] = { currency: assetProfile.currency };
-            }
-          });
-        })
+      for (const { currency, symbolTarget } of assetProfileResolutions) {
+        currencyBySymbolMap[symbolTarget] = { currency };
+      }
+
+      const resolvedSymbols = assetProfileResolutions.map(
+        ({ symbolTarget }) => {
+          return symbolTarget;
+        }
       );
+
+      const symbolsToFetch = quotes
+        .map(({ symbol }) => {
+          return symbol;
+        })
+        .filter((symbol) => {
+          return !resolvedSymbols.includes(symbol);
+        });
+
+      if (symbolsToFetch.length > 0) {
+        await Promise.all(
+          symbolsToFetch.map(async (symbol) => {
+            const assetProfile = await this.getAssetProfile({
+              requestTimeout,
+              symbol
+            });
+
+            if (assetProfile?.currency) {
+              currencyBySymbolMap[symbol] = {
+                currency: assetProfile.currency
+              };
+            }
+          })
+        );
+      }
 
       for (const { price, symbol } of quotes) {
         let marketState: MarketState = 'delayed';
@@ -391,7 +430,7 @@ export class FinancialModelingPrepService implements DataProviderInterface {
           marketState,
           currency: currencyBySymbolMap[symbol]?.currency,
           dataProviderInfo: this.getDataProviderInfo(),
-          dataSource: DataSource.FINANCIAL_MODELING_PREP,
+          dataSource: this.getDataProviderInfo().dataSource,
           marketPrice: price
         };
       }
@@ -417,6 +456,7 @@ export class FinancialModelingPrepService implements DataProviderInterface {
   }
 
   public async search({
+    includeIndices = false,
     query,
     requestTimeout = this.configurationService.get('REQUEST_TIMEOUT')
   }: GetSearchParams): Promise<LookupResponse> {
@@ -463,17 +503,28 @@ export class FinancialModelingPrepService implements DataProviderInterface {
           }
         ).then((res) => res.json());
 
-        items = result.map(({ currency, name, symbol }) => {
-          return {
-            currency,
-            symbol,
-            assetClass: undefined, // TODO
-            assetSubClass: undefined, // TODO
-            dataProviderInfo: this.getDataProviderInfo(),
-            dataSource: this.getName(),
-            name: this.formatName({ name })
-          };
-        });
+        items = result
+          .filter(({ exchange, symbol }) => {
+            if (
+              exchange === 'FOREX' ||
+              (includeIndices === false && symbol.startsWith('^'))
+            ) {
+              return false;
+            }
+
+            return true;
+          })
+          .map(({ currency, name, symbol }) => {
+            return {
+              currency,
+              symbol,
+              assetClass: undefined, // TODO
+              assetSubClass: undefined, // TODO
+              dataProviderInfo: this.getDataProviderInfo(),
+              dataSource: this.getName(),
+              name: this.formatName({ name })
+            };
+          });
       }
     } catch (error) {
       let message = error;

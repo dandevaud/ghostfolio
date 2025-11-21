@@ -8,10 +8,6 @@ import {
   GetQuotesParams,
   GetSearchParams
 } from '@ghostfolio/api/services/data-provider/interfaces/data-provider.interface';
-import {
-  IDataProviderHistoricalResponse,
-  IDataProviderResponse
-} from '@ghostfolio/api/services/interfaces/interfaces';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
 import {
   HEADER_KEY_TOKEN,
@@ -20,7 +16,9 @@ import {
 import { DATE_FORMAT } from '@ghostfolio/common/helper';
 import {
   DataProviderGhostfolioAssetProfileResponse,
+  DataProviderHistoricalResponse,
   DataProviderInfo,
+  DataProviderResponse,
   DividendsResponse,
   HistoricalResponse,
   LookupResponse,
@@ -111,10 +109,10 @@ export class GhostfolioService implements DataProviderInterface {
     symbol,
     to
   }: GetDividendsParams): Promise<{
-    [date: string]: IDataProviderHistoricalResponse;
+    [date: string]: DataProviderHistoricalResponse;
   }> {
     let dividends: {
-      [date: string]: IDataProviderHistoricalResponse;
+      [date: string]: DataProviderHistoricalResponse;
     } = {};
 
     try {
@@ -164,7 +162,7 @@ export class GhostfolioService implements DataProviderInterface {
     symbol,
     to
   }: GetHistoricalParams): Promise<{
-    [symbol: string]: { [date: string]: IDataProviderHistoricalResponse };
+    [symbol: string]: { [date: string]: DataProviderHistoricalResponse };
   }> {
     try {
       const response = await fetch(
@@ -228,9 +226,9 @@ export class GhostfolioService implements DataProviderInterface {
     requestTimeout = this.configurationService.get('REQUEST_TIMEOUT'),
     symbols
   }: GetQuotesParams): Promise<{
-    [symbol: string]: IDataProviderResponse;
+    [symbol: string]: DataProviderResponse;
   }> {
-    let quotes: { [symbol: string]: IDataProviderResponse } = {};
+    let quotes: { [symbol: string]: DataProviderResponse } = {};
 
     if (symbols.length <= 0) {
       return quotes;

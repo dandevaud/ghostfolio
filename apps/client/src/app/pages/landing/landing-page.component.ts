@@ -4,6 +4,7 @@ import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { publicRoutes } from '@ghostfolio/common/routes/routes';
 import { GfCarouselComponent } from '@ghostfolio/ui/carousel';
 import { GfLogoComponent } from '@ghostfolio/ui/logo';
+import { GfLogoCarouselComponent } from '@ghostfolio/ui/logo-carousel';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 import { GfWorldMapChartComponent } from '@ghostfolio/ui/world-map-chart';
 
@@ -12,7 +13,6 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
-import { IonIcon } from '@ionic/angular/standalone';
 import { format } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
@@ -28,10 +28,10 @@ import { Subject } from 'rxjs';
   imports: [
     CommonModule,
     GfCarouselComponent,
+    GfLogoCarouselComponent,
     GfLogoComponent,
     GfValueComponent,
     GfWorldMapChartComponent,
-    IonIcon,
     MatButtonModule,
     MatCardModule,
     RouterModule
@@ -127,6 +127,7 @@ export class GfLandingPageComponent implements OnDestroy, OnInit {
     }
 
     this.hasPermissionForDemo = !!demoAuthToken;
+
     this.hasPermissionForStatistics = hasPermission(
       globalPermissions,
       permissions.enableStatistics

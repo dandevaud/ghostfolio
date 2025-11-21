@@ -28,11 +28,12 @@ export const permissions = {
   deleteTag: 'deleteTag',
   deleteUser: 'deleteUser',
   deleteWatchlistItem: 'deleteWatchlistItem',
+  enableAuthGoogle: 'enableAuthGoogle',
+  enableAuthToken: 'enableAuthToken',
   enableDataProviderGhostfolio: 'enableDataProviderGhostfolio',
   enableFearAndGreedIndex: 'enableFearAndGreedIndex',
   enableImport: 'enableImport',
   enableBlog: 'enableBlog',
-  enableSocialLogin: 'enableSocialLogin',
   enableStatistics: 'enableStatistics',
   enableSubscription: 'enableSubscription',
   enableSubscriptionInterstitial: 'enableSubscriptionInterstitial',
@@ -49,6 +50,7 @@ export const permissions = {
   syncDemoUserAccount: 'syncDemoUserAccount',
   toggleReadOnlyMode: 'toggleReadOnlyMode',
   updateAccount: 'updateAccount',
+  updateAccess: 'updateAccess',
   updateAuthDevice: 'updateAuthDevice',
   updateMarketData: 'updateMarketData',
   updateMarketDataOfOwnAssetProfile: 'updateMarketDataOfOwnAssetProfile',
@@ -93,6 +95,7 @@ export function getPermissions(aRole: Role): string[] {
         permissions.readTags,
         permissions.readWatchlist,
         permissions.updateAccount,
+        permissions.updateAccess,
         permissions.updateAuthDevice,
         permissions.updateMarketData,
         permissions.updateMarketDataOfOwnAssetProfile,
@@ -133,6 +136,7 @@ export function getPermissions(aRole: Role): string[] {
         permissions.readMarketDataOfOwnAssetProfile,
         permissions.readWatchlist,
         permissions.updateAccount,
+        permissions.updateAccess,
         permissions.updateAuthDevice,
         permissions.updateMarketDataOfOwnAssetProfile,
         permissions.updateOrder,
@@ -154,7 +158,7 @@ export function filterGlobalPermissions(
   if (aUtmSource === 'ios') {
     return globalPermissions.filter((permission) => {
       return (
-        permission !== permissions.enableSocialLogin &&
+        permission !== permissions.enableAuthGoogle &&
         permission !== permissions.enableSubscription
       );
     });
@@ -197,5 +201,9 @@ export function hasRole(aUser: UserWithSettings, aRole: Role) {
 }
 
 export function isRestrictedView(aUser: UserWithSettings) {
-  return aUser.settings.settings.isRestrictedView ?? false;
+  if (!aUser) {
+    return true;
+  }
+
+  return aUser?.settings?.settings?.isRestrictedView ?? false;
 }
