@@ -1,8 +1,6 @@
-import { CreateOrderDto } from '@ghostfolio/api/app/order/create-order.dto';
-import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import {
   activityDummyData,
-  loadActivityExportFile,
+  loadExportFile,
   symbolProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
@@ -17,9 +15,9 @@ import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-r
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
+import { Activity, ExportResponse } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
-import { Tag } from '@prisma/client';
 import { Big } from 'big.js';
 import { join } from 'path';
 
@@ -66,7 +64,7 @@ jest.mock(
 );
 
 describe('PortfolioCalculator', () => {
-  let activityDtos: CreateOrderDto[];
+  let exportResponse: ExportResponse;
 
   let configurationService: ConfigurationService;
   let currentRateService: CurrentRateService;
@@ -76,7 +74,7 @@ describe('PortfolioCalculator', () => {
   let redisCacheService: RedisCacheService;
 
   beforeAll(() => {
-    activityDtos = loadActivityExportFile(
+    exportResponse = loadExportFile(
       join(
         __dirname,
         '../../../../../../../test/import/ok/novn-buy-and-sell-partially.json'
@@ -114,23 +112,22 @@ describe('PortfolioCalculator', () => {
     it.only('with NOVN.SW buy and sell partially', async () => {
       jest.useFakeTimers().setSystemTime(parseDate('2022-04-11').getTime());
 
-      const activities: Activity[] = activityDtos.map((activity) => ({
-        ...activityDummyData,
-        ...activity,
-        date: parseDate(activity.date),
-        feeInAssetProfileCurrency: activity.fee,
-        SymbolProfile: {
-          ...symbolProfileDummyData,
-          currency: activity.currency,
-          dataSource: activity.dataSource,
-          name: 'Novartis AG',
-          symbol: activity.symbol
-        },
-        tags: activity.tags?.map((id) => {
-          return { id } as Tag;
-        }),
-        unitPriceInAssetProfileCurrency: activity.unitPrice
-      }));
+      const activities: Activity[] = exportResponse.activities.map(
+        (activity) => ({
+          ...activityDummyData,
+          ...activity,
+          date: parseDate(activity.date),
+          feeInAssetProfileCurrency: activity.fee,
+          SymbolProfile: {
+            ...symbolProfileDummyData,
+            currency: activity.currency,
+            dataSource: activity.dataSource,
+            name: 'Novartis AG',
+            symbol: activity.symbol
+          },
+          unitPriceInAssetProfileCurrency: activity.unitPrice
+        })
+      );
 
       const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,

@@ -419,6 +419,20 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
           .mul(order.quantity)
           .mul(getFactor(order.type));
     }
+    transactionInvestment = new Big(
+      Math.min(
+        transactionInvestment.toNumber(),
+        order.quantity.mul(order.unitPriceInBaseCurrency).toNumber()
+      )
+    );
+    transactionInvestmentWithCurrencyEffect = new Big(
+      Math.min(
+        transactionInvestmentWithCurrencyEffect.toNumber(),
+        order.quantity
+          .mul(order.unitPriceInBaseCurrencyWithCurrencyEffect)
+          .toNumber()
+      )
+    );
     return { transactionInvestment, transactionInvestmentWithCurrencyEffect };
   }
 

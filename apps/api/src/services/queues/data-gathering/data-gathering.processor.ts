@@ -1,9 +1,6 @@
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { AssetProfileDelistedError } from '@ghostfolio/api/services/data-provider/errors/asset-profile-delisted.error';
-import {
-  IDataGatheringItem,
-  IDataProviderHistoricalResponse
-} from '@ghostfolio/api/services/interfaces/interfaces';
+import { DataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import {
@@ -15,7 +12,10 @@ import {
   GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
 } from '@ghostfolio/common/config';
 import { DATE_FORMAT, getStartOfUtcDate } from '@ghostfolio/common/helper';
-import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
+import {
+  AssetProfileIdentifier,
+  DataProviderHistoricalResponse
+} from '@ghostfolio/common/interfaces';
 
 import { Process, Processor } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
@@ -106,8 +106,8 @@ export class DataGatheringProcessor {
     ),
     name: GATHER_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
   })
-  public async gatherHistoricalMarketData(job: Job<IDataGatheringItem>) {
-    const { dataSource, date, symbol } = job.data;
+  public async gatherHistoricalMarketData(job: Job<DataGatheringItem>) {
+    const { dataSource, date, force, symbol } = job.data;
 
     try {
       let currentDate = parseISO(date as unknown as string);
@@ -116,7 +116,7 @@ export class DataGatheringProcessor {
         `Historical market data gathering has been started for ${symbol} (${dataSource}) at ${format(
           currentDate,
           DATE_FORMAT
-        )}`,
+        )}${force ? ' (forced update)' : ''}`,
         `DataGatheringProcessor (${GATHER_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME})`
       );
 
@@ -164,7 +164,15 @@ export class DataGatheringProcessor {
         currentDate = addDays(currentDate, 1);
       }
 
-      await this.marketDataService.updateMany({ data });
+      if (force) {
+        await this.marketDataService.replaceForSymbol({
+          data,
+          dataSource,
+          symbol
+        });
+      } else {
+        await this.marketDataService.updateMany({ data });
+      }
 
       Logger.log(
         `Historical market data gathering has been completed for ${symbol} (${dataSource}) at ${format(
@@ -209,7 +217,7 @@ export class DataGatheringProcessor {
     ),
     name: GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
   })
-  public async gatherMissingHistoricalMarketData(job: Job<IDataGatheringItem>) {
+  public async gatherMissingHistoricalMarketData(job: Job<DataGatheringItem>) {
     const { dataSource, date, symbol } = job.data;
     try {
       Logger.log(
@@ -312,7 +320,7 @@ export class DataGatheringProcessor {
     missingMarketData: Date[],
     historicalData: Record<
       string,
-      Record<string, IDataProviderHistoricalResponse>
+      Record<string, DataProviderHistoricalResponse>
     >,
     symbol: string,
     dataSource: DataSource

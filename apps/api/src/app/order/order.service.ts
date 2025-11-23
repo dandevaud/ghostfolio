@@ -1,4 +1,5 @@
 import { AccountService } from '@ghostfolio/api/app/account/account.service';
+import { AssetProfileChangedEvent } from '@ghostfolio/api/events/asset-profile-changed.event';
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
@@ -14,6 +15,7 @@ import {
 } from '@ghostfolio/common/config';
 import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
 import {
+  ActivitiesResponse,
   AssetProfileIdentifier,
   EnhancedSymbolProfile,
   Filter
@@ -36,8 +38,6 @@ import { isUUID } from 'class-validator';
 import { endOfToday, isAfter } from 'date-fns';
 import { groupBy, uniqBy } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
-
-import { Activities } from './interfaces/activities.interface';
 
 @Injectable()
 export class OrderService {
@@ -153,7 +153,7 @@ export class OrderService {
       const assetSubClass = data.assetSubClass;
       const dataSource: DataSource = 'MANUAL';
 
-      let name: string;
+      let name = data.SymbolProfile.connectOrCreate.create.name;
       let symbol: string;
 
       if (
@@ -166,7 +166,7 @@ export class OrderService {
         symbol = data.SymbolProfile.connectOrCreate.create.symbol;
       } else {
         // Create custom asset profile
-        name = data.SymbolProfile.connectOrCreate.create.symbol;
+        name = name ?? data.SymbolProfile.connectOrCreate.create.symbol;
         symbol = uuidv4();
       }
 
@@ -249,6 +249,15 @@ export class OrderService {
         date: data.date as Date
       });
     }
+
+    this.eventEmitter.emit(
+      AssetProfileChangedEvent.getName(),
+      new AssetProfileChangedEvent({
+        currency: order.SymbolProfile.currency,
+        dataSource: order.SymbolProfile.dataSource,
+        symbol: order.SymbolProfile.symbol
+      })
+    );
 
     this.eventEmitter.emit(
       PortfolioChangedEvent.getName(),
@@ -350,7 +359,7 @@ export class OrderService {
     includeDrafts = false,
     skip,
     sortColumn,
-    sortDirection,
+    sortDirection = 'asc',
     startDate,
     take = Number.MAX_SAFE_INTEGER,
     types,
@@ -370,11 +379,11 @@ export class OrderService {
     userCurrency: string;
     userId: string;
     withExcludedAccountsAndActivities?: boolean;
-  }): Promise<Activities> {
+  }): Promise<ActivitiesResponse> {
     let orderBy: Prisma.Enumerable<Prisma.OrderOrderByWithRelationInput> = [
-      { date: 'asc' },
-      { id: 'asc' }
+      { date: 'asc' }
     ];
+
     const where: Prisma.OrderWhereInput = { userId };
 
     if (endDate || startDate) {
@@ -529,7 +538,7 @@ export class OrderService {
     }
 
     if (sortColumn) {
-      orderBy = [{ [sortColumn]: sortDirection }, { id: sortDirection }];
+      orderBy = [{ [sortColumn]: sortDirection }];
     }
 
     if (types) {
@@ -552,7 +561,6 @@ export class OrderService {
 
     const [orders, count] = await Promise.all([
       this.orders({
-        orderBy,
         skip,
         take,
         where,
@@ -569,7 +577,8 @@ export class OrderService {
             }
           },
           tags: true
-        }
+        },
+        orderBy: [...orderBy, { id: sortDirection }]
       }),
       this.prismaService.order.count({ where })
     ]);
