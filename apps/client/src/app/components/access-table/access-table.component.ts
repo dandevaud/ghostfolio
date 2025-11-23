@@ -1,5 +1,5 @@
-import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
 import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
+import { ConfirmationDialogType } from '@ghostfolio/common/enums';
 import { Access, User } from '@ghostfolio/common/interfaces';
 import { publicRoutes } from '@ghostfolio/common/routes/routes';
 
@@ -23,6 +23,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   copyOutline,
+  createOutline,
   ellipsisHorizontal,
   linkOutline,
   lockClosedOutline,
@@ -53,6 +54,7 @@ export class GfAccessTableComponent implements OnChanges {
   @Input() user: User;
 
   @Output() accessDeleted = new EventEmitter<string>();
+  @Output() accessToUpdate = new EventEmitter<string>();
 
   public baseUrl = window.location.origin;
   public dataSource: MatTableDataSource<Access>;
@@ -65,6 +67,7 @@ export class GfAccessTableComponent implements OnChanges {
   ) {
     addIcons({
       copyOutline,
+      createOutline,
       ellipsisHorizontal,
       linkOutline,
       lockClosedOutline,
@@ -111,5 +114,9 @@ export class GfAccessTableComponent implements OnChanges {
       confirmType: ConfirmationDialogType.Warn,
       title: $localize`Do you really want to revoke this granted access?`
     });
+  }
+
+  public onUpdateAccess(aId: string) {
+    this.accessToUpdate.emit(aId);
   }
 }

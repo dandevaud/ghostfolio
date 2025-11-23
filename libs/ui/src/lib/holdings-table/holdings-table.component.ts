@@ -1,4 +1,3 @@
-import { GfSymbolModule } from '@ghostfolio/client/pipes/symbol/symbol.module';
 import { getLocale } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
@@ -35,7 +34,6 @@ import { GfValueComponent } from '../value/value.component';
   imports: [
     CommonModule,
     GfEntityLogoComponent,
-    GfSymbolModule,
     GfValueComponent,
     MatButtonModule,
     MatDialogModule,

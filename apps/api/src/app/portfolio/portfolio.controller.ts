@@ -22,10 +22,10 @@ import {
 } from '@ghostfolio/common/config';
 import {
   PortfolioDetails,
-  PortfolioDividends,
+  PortfolioDividendsResponse,
   PortfolioHoldingResponse,
   PortfolioHoldingsResponse,
-  PortfolioInvestments,
+  PortfolioInvestmentsResponse,
   PortfolioPerformanceResponse,
   PortfolioReportResponse
 } from '@ghostfolio/common/interfaces';
@@ -215,10 +215,9 @@ export class PortfolioController {
         'excludedAccountsAndActivities',
         'fees',
         'filteredValueInBaseCurrency',
-        'fireWealth',
         'grossPerformance',
         'grossPerformanceWithCurrencyEffect',
-        'interest',
+        'interestInBaseCurrency',
         'items',
         'liabilities',
         'netPerformance',
@@ -327,7 +326,7 @@ export class PortfolioController {
     @Query('range') dateRange: DateRange = 'max',
     @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string
-  ): Promise<PortfolioDividends> {
+  ): Promise<PortfolioDividendsResponse> {
     const filters = this.apiService.buildFiltersFromQueryParams({
       filterByAccounts,
       filterByAssetClasses,
@@ -469,7 +468,7 @@ export class PortfolioController {
     @Query('range') dateRange: DateRange = 'max',
     @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string
-  ): Promise<PortfolioInvestments> {
+  ): Promise<PortfolioInvestmentsResponse> {
     const filters = this.apiService.buildFiltersFromQueryParams({
       filterByAccounts,
       filterByAssetClasses,

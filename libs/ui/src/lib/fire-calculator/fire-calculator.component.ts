@@ -44,6 +44,7 @@ import 'chartjs-adapter-date-fns';
 import Color from 'color';
 import {
   add,
+  addDays,
   addYears,
   getMonth,
   setMonth,
@@ -102,6 +103,7 @@ export class GfFireCalculatorComponent implements OnChanges, OnDestroy {
   });
   public chart: Chart<'bar'>;
   public isLoading = true;
+  public minDate = addDays(new Date(), 1);
   public periodsToRetire = 0;
 
   private readonly CONTRIBUTION_PERIOD = 12;
@@ -183,7 +185,7 @@ export class GfFireCalculatorComponent implements OnChanges, OnDestroy {
               'principalInvestmentAmount'
             ).value,
             projectedTotalAmount:
-              Number(this.getProjectedTotalAmount().toFixed(0)) ?? 0,
+              Math.round(this.getProjectedTotalAmount()) || 0,
             retirementDate:
               this.getRetirementDate() ?? this.DEFAULT_RETIREMENT_DATE
           },

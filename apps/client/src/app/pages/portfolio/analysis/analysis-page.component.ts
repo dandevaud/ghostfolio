@@ -1,12 +1,12 @@
 import { GfBenchmarkComparatorComponent } from '@ghostfolio/client/components/benchmark-comparator/benchmark-comparator.component';
-import { GfInvestmentChartModule } from '@ghostfolio/client/components/investment-chart/investment-chart.module';
+import { GfInvestmentChartComponent } from '@ghostfolio/client/components/investment-chart/investment-chart.component';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   HistoricalDataItem,
   InvestmentItem,
-  PortfolioInvestments,
+  PortfolioInvestmentsResponse,
   PortfolioPerformance,
   PortfolioPosition,
   ToggleOption,
@@ -52,7 +52,7 @@ import { takeUntil } from 'rxjs/operators';
 @Component({
   imports: [
     GfBenchmarkComparatorComponent,
-    GfInvestmentChartModule,
+    GfInvestmentChartComponent,
     GfPremiumIndicatorComponent,
     GfToggleComponent,
     GfValueComponent,
@@ -101,7 +101,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public performanceDataItemsTimeWeightedInPercentage: HistoricalDataItem[] =
     [];
   public portfolioEvolutionDataLabel = $localize`Investment`;
-  public streaks: PortfolioInvestments['streaks'];
+  public streaks: PortfolioInvestmentsResponse['streaks'];
   public top5: PortfolioPosition[];
   public unitCurrentStreak: string;
   public unitLongestStreak: string;
