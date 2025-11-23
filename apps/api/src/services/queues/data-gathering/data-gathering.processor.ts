@@ -1,9 +1,6 @@
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { AssetProfileDelistedError } from '@ghostfolio/api/services/data-provider/errors/asset-profile-delisted.error';
-import {
-  DataGatheringItem,
-  IDataProviderHistoricalResponse
-} from '@ghostfolio/api/services/interfaces/interfaces';
+import { DataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import {
@@ -15,7 +12,10 @@ import {
   GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
 } from '@ghostfolio/common/config';
 import { DATE_FORMAT, getStartOfUtcDate } from '@ghostfolio/common/helper';
-import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
+import {
+  AssetProfileIdentifier,
+  DataProviderHistoricalResponse
+} from '@ghostfolio/common/interfaces';
 
 import { Process, Processor } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
@@ -217,7 +217,7 @@ export class DataGatheringProcessor {
     ),
     name: GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
   })
-  public async gatherMissingHistoricalMarketData(job: Job<IDataGatheringItem>) {
+  public async gatherMissingHistoricalMarketData(job: Job<DataGatheringItem>) {
     const { dataSource, date, symbol } = job.data;
     try {
       Logger.log(
@@ -320,7 +320,7 @@ export class DataGatheringProcessor {
     missingMarketData: Date[],
     historicalData: Record<
       string,
-      Record<string, IDataProviderHistoricalResponse>
+      Record<string, DataProviderHistoricalResponse>
     >,
     symbol: string,
     dataSource: DataSource

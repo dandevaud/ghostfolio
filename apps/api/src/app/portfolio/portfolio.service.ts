@@ -88,7 +88,7 @@ import {
   parseISO,
   set
 } from 'date-fns';
-import { isEmpty, uniqBy } from 'lodash';
+import { uniqBy } from 'lodash';
 
 import { CashDetails } from '../account/interfaces/cash-details.interface';
 import { PortfolioCalculator } from './calculator/portfolio-calculator';

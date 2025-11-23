@@ -1310,7 +1310,7 @@ export abstract class PortfolioCalculator {
   @LogPerformance
   protected mapToDataGatheringItems(
     orders: PortfolioOrder[]
-  ): IDataGatheringItem[] {
+  ): DataGatheringItem[] {
     return orders
       .map((activity) => {
         return {

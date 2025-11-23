@@ -480,7 +480,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         }) ?? [];
 
     if (this.tags.length === 0) {
-      this.filterForm.get('tag').disable({ emitEvent: false });
+      this.portfolioFilterFormControl.get('tag').disable({ emitEvent: false });
     }
   }
 

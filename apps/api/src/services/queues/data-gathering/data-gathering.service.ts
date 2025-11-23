@@ -325,7 +325,7 @@ export class DataGatheringService {
     dataGatheringItems,
     priority
   }: {
-    dataGatheringItems: IDataGatheringItem[];
+    dataGatheringItems: DataGatheringItem[];
     priority: number;
   }) {
     await this.addJobsToQueue(

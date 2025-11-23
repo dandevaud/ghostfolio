@@ -613,7 +613,7 @@ export class DataProviderService implements OnModuleInit {
     return response;
   }
 
-  private getAppropriateCacheTTL(dataProviderResponse: IDataProviderResponse) {
+  private getAppropriateCacheTTL(dataProviderResponse: DataProviderResponse) {
     let quotesCacheTTL = this.configurationService.get('CACHE_QUOTES_TTL');
 
     if (dataProviderResponse.dataSource === 'MANUAL') {
