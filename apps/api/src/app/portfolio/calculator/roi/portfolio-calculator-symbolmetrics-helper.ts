@@ -409,30 +409,27 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     let transactionInvestment = new Big(0);
     let transactionInvestmentWithCurrencyEffect = new Big(0);
     if (symbolMetricsHelper.totalUnits.gt(0)) {
-      transactionInvestment = symbolMetricsHelper.symbolMetrics.totalInvestment
-        .div(symbolMetricsHelper.totalUnits)
-        .mul(order.quantity)
-        .mul(getFactor(order.type));
-      transactionInvestmentWithCurrencyEffect =
-        symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect
-          .div(symbolMetricsHelper.totalUnits)
-          .mul(order.quantity)
-          .mul(getFactor(order.type));
+      transactionInvestment = new Big(
+        Math.min(
+          symbolMetricsHelper.symbolMetrics.totalInvestment
+            .div(symbolMetricsHelper.totalUnits)
+            .mul(order.quantity)
+            .toNumber(),
+          order.quantity.mul(order.unitPriceInBaseCurrency).toNumber()
+        )
+      ).mul(getFactor(order.type));
+      transactionInvestmentWithCurrencyEffect = new Big(
+        Math.min(
+          symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect
+            .div(symbolMetricsHelper.totalUnits)
+            .mul(order.quantity)
+            .toNumber(),
+          order.quantity
+            .mul(order.unitPriceInBaseCurrencyWithCurrencyEffect)
+            .toNumber()
+        )
+      ).mul(getFactor(order.type));
     }
-    transactionInvestment = new Big(
-      Math.min(
-        transactionInvestment.toNumber(),
-        order.quantity.mul(order.unitPriceInBaseCurrency).toNumber()
-      )
-    );
-    transactionInvestmentWithCurrencyEffect = new Big(
-      Math.min(
-        transactionInvestmentWithCurrencyEffect.toNumber(),
-        order.quantity
-          .mul(order.unitPriceInBaseCurrencyWithCurrencyEffect)
-          .toNumber()
-      )
-    );
     return { transactionInvestment, transactionInvestmentWithCurrencyEffect };
   }
 
