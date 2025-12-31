@@ -21,7 +21,9 @@ export function IsCurrencyCode(validationOptions?: ValidationOptions) {
 }
 
 @ValidatorConstraint({ async: false })
-export class IsExtendedCurrencyConstraint implements ValidatorConstraintInterface {
+export class IsExtendedCurrencyConstraint
+  implements ValidatorConstraintInterface
+{
   public defaultMessage() {
     return '$property must be a valid ISO4217 currency code';
   }

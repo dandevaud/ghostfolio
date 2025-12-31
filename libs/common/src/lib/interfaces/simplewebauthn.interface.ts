@@ -3,7 +3,8 @@ export interface AuthenticatorAssertionResponse extends AuthenticatorResponse {
   readonly signature: ArrayBuffer;
   readonly userHandle: ArrayBuffer | null;
 }
-export interface AuthenticatorAttestationResponse extends AuthenticatorResponse {
+export interface AuthenticatorAttestationResponse
+  extends AuthenticatorResponse {
   readonly attestationObject: ArrayBuffer;
 }
 export interface AuthenticationExtensionsClientInputs {
@@ -56,7 +57,8 @@ export interface PublicKeyCredentialRequestOptions {
   timeout?: number;
   userVerification?: UserVerificationRequirement;
 }
-export interface PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity {
+export interface PublicKeyCredentialUserEntity
+  extends PublicKeyCredentialEntity {
   displayName: string;
   id: BufferSource;
 }
@@ -97,10 +99,11 @@ export declare type BufferSource = ArrayBufferView | ArrayBuffer;
 export declare type PublicKeyCredentialType = 'public-key';
 export declare type UvmEntry = number[];
 
-export interface PublicKeyCredentialCreationOptionsJSON extends Omit<
-  PublicKeyCredentialCreationOptions,
-  'challenge' | 'user' | 'excludeCredentials'
-> {
+export interface PublicKeyCredentialCreationOptionsJSON
+  extends Omit<
+    PublicKeyCredentialCreationOptions,
+    'challenge' | 'user' | 'excludeCredentials'
+  > {
   user: PublicKeyCredentialUserEntityJSON;
   challenge: Base64URLString;
   excludeCredentials: PublicKeyCredentialDescriptorJSON[];
@@ -110,24 +113,21 @@ export interface PublicKeyCredentialCreationOptionsJSON extends Omit<
  * A variant of PublicKeyCredentialRequestOptions suitable for JSON transmission to the browser to
  * (eventually) get passed into navigator.credentials.get(...) in the browser.
  */
-export interface PublicKeyCredentialRequestOptionsJSON extends Omit<
-  PublicKeyCredentialRequestOptions,
-  'challenge' | 'allowCredentials'
-> {
+export interface PublicKeyCredentialRequestOptionsJSON
+  extends Omit<
+    PublicKeyCredentialRequestOptions,
+    'challenge' | 'allowCredentials'
+  > {
   challenge: Base64URLString;
   allowCredentials?: PublicKeyCredentialDescriptorJSON[];
   extensions?: AuthenticationExtensionsClientInputs;
 }
-export interface PublicKeyCredentialDescriptorJSON extends Omit<
-  PublicKeyCredentialDescriptor,
-  'id'
-> {
+export interface PublicKeyCredentialDescriptorJSON
+  extends Omit<PublicKeyCredentialDescriptor, 'id'> {
   id: Base64URLString;
 }
-export interface PublicKeyCredentialUserEntityJSON extends Omit<
-  PublicKeyCredentialUserEntity,
-  'id'
-> {
+export interface PublicKeyCredentialUserEntityJSON
+  extends Omit<PublicKeyCredentialUserEntity, 'id'> {
   id: string;
 }
 /**
@@ -140,10 +140,11 @@ export interface AttestationCredential extends PublicKeyCredential {
  * A slightly-modified AttestationCredential to simplify working with ArrayBuffers that
  * are Base64URL-encoded in the browser so that they can be sent as JSON to the server.
  */
-export interface AttestationCredentialJSON extends Omit<
-  AttestationCredential,
-  'response' | 'rawId' | 'getClientExtensionResults'
-> {
+export interface AttestationCredentialJSON
+  extends Omit<
+    AttestationCredential,
+    'response' | 'rawId' | 'getClientExtensionResults'
+  > {
   rawId: Base64URLString;
   response: AuthenticatorAttestationResponseJSON;
   clientExtensionResults: AuthenticationExtensionsClientOutputs;
@@ -159,10 +160,11 @@ export interface AssertionCredential extends PublicKeyCredential {
  * A slightly-modified AssertionCredential to simplify working with ArrayBuffers that
  * are Base64URL-encoded in the browser so that they can be sent as JSON to the server.
  */
-export interface AssertionCredentialJSON extends Omit<
-  AssertionCredential,
-  'response' | 'rawId' | 'getClientExtensionResults'
-> {
+export interface AssertionCredentialJSON
+  extends Omit<
+    AssertionCredential,
+    'response' | 'rawId' | 'getClientExtensionResults'
+  > {
   rawId: Base64URLString;
   response: AuthenticatorAssertionResponseJSON;
   clientExtensionResults: AuthenticationExtensionsClientOutputs;
@@ -171,10 +173,11 @@ export interface AssertionCredentialJSON extends Omit<
  * A slightly-modified AuthenticatorAttestationResponse to simplify working with ArrayBuffers that
  * are Base64URL-encoded in the browser so that they can be sent as JSON to the server.
  */
-export interface AuthenticatorAttestationResponseJSON extends Omit<
-  AuthenticatorAttestationResponseFuture,
-  'clientDataJSON' | 'attestationObject'
-> {
+export interface AuthenticatorAttestationResponseJSON
+  extends Omit<
+    AuthenticatorAttestationResponseFuture,
+    'clientDataJSON' | 'attestationObject'
+  > {
   clientDataJSON: Base64URLString;
   attestationObject: Base64URLString;
 }
@@ -182,10 +185,11 @@ export interface AuthenticatorAttestationResponseJSON extends Omit<
  * A slightly-modified AuthenticatorAssertionResponse to simplify working with ArrayBuffers that
  * are Base64URL-encoded in the browser so that they can be sent as JSON to the server.
  */
-export interface AuthenticatorAssertionResponseJSON extends Omit<
-  AuthenticatorAssertionResponse,
-  'authenticatorData' | 'clientDataJSON' | 'signature' | 'userHandle'
-> {
+export interface AuthenticatorAssertionResponseJSON
+  extends Omit<
+    AuthenticatorAssertionResponse,
+    'authenticatorData' | 'clientDataJSON' | 'signature' | 'userHandle'
+  > {
   authenticatorData: Base64URLString;
   clientDataJSON: Base64URLString;
   signature: Base64URLString;
@@ -213,7 +217,8 @@ export declare type Base64URLString = string;
  *
  * Properties marked optional are not supported in all browsers.
  */
-export interface AuthenticatorAttestationResponseFuture extends AuthenticatorAttestationResponse {
+export interface AuthenticatorAttestationResponseFuture
+  extends AuthenticatorAttestationResponse {
   getTransports?: () => AuthenticatorTransport[];
   getAuthenticatorData?: () => ArrayBuffer;
   getPublicKey?: () => ArrayBuffer;

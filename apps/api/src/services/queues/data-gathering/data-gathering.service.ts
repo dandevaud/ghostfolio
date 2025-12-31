@@ -350,7 +350,7 @@ export class DataGatheringService {
     );
   }
 
-    /**
+  /**
    * Returns active asset profile identifiers
    *
    * @param {StringValue} maxAge - Optional. Specifies the maximum allowed age
