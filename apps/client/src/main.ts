@@ -1,13 +1,13 @@
-import { locale } from '@ghostfolio/common/config';
 import { InfoResponse } from '@ghostfolio/common/interfaces';
 import { filterGlobalPermissions } from '@ghostfolio/common/permissions';
+import { GfNotificationModule } from '@ghostfolio/ui/notifications';
 
 import { Platform } from '@angular/cdk/platform';
 import {
   provideHttpClient,
   withInterceptorsFromDi
 } from '@angular/common/http';
-import { enableProdMode, importProvidersFrom, LOCALE_ID } from '@angular/core';
+import { enableProdMode, importProvidersFrom } from '@angular/core';
 import {
   DateAdapter,
   MAT_DATE_FORMATS,
@@ -23,7 +23,6 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 import { provideMarkdown } from 'ngx-markdown';
 import { provideNgxSkeletonLoader } from 'ngx-skeleton-loader';
-import { NgxStripeModule, STRIPE_PUBLISHABLE_KEY } from 'ngx-stripe';
 
 import { CustomDateAdapter } from './app/adapter/custom-date-adapter';
 import { DateFormats } from './app/adapter/date-formats';
@@ -33,7 +32,6 @@ import { authInterceptorProviders } from './app/core/auth.interceptor';
 import { httpResponseInterceptorProviders } from './app/core/http-response.interceptor';
 import { LanguageService } from './app/core/language.service';
 import { ModulePreloadService } from './app/core/module-preload.service';
-import { GfNotificationModule } from './app/core/notification/notification.module';
 import { PageTitleStrategy } from './app/services/page-title.strategy';
 import { environment } from './environments/environment';
 
@@ -51,8 +49,6 @@ import { environment } from './environments/environment';
 
   (window as any).info = info;
 
-  environment.stripePublicKey = info.stripePublicKey;
-
   if (environment.production) {
     enableProdMode();
   }
@@ -66,7 +62,6 @@ import { environment } from './environments/environment';
         MatNativeDateModule,
         MatSnackBarModule,
         MatTooltipModule,
-        NgxStripeModule.forRoot(environment.stripePublicKey),
         RouterModule.forRoot(routes, {
           anchorScrolling: 'enabled',
           preloadingStrategy: ModulePreloadService,
@@ -90,16 +85,8 @@ import { environment } from './environments/environment';
         useClass: CustomDateAdapter
       },
       {
-        provide: LOCALE_ID,
-        useValue: locale
-      },
-      {
         provide: MAT_DATE_FORMATS,
         useValue: DateFormats
-      },
-      {
-        provide: STRIPE_PUBLISHABLE_KEY,
-        useFactory: () => environment.stripePublicKey
       },
       {
         provide: TitleStrategy,

@@ -5,6 +5,130 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added a new endpoint to get all platforms (`GET api/v1/platforms`)
+- Added the session url to the endpoint response of the _Stripe_ checkout
+
+### Changed
+
+- Improved the routing of the user detail dialog in the users section of the admin control panel
+- Lifted the asset profile identifier editing restriction for `MANUAL` data sources in the asset profile details dialog of the admin control panel
+- Deprecated the public _Stripe_ key
+- Improved the language localization for German (`de`)
+- Eliminated `ngx-stripe`
+- Upgraded `angular` from version `20.2.4` to `20.3.9`
+- Upgraded `marked` from version `15.0.4` to `16.4.2`
+- Upgraded `ng-extract-i18n-merge` from `3.1.0` to `3.2.1`
+- Upgraded `ngx-markdown` from version `20.0.0` to `20.1.0`
+- Upgraded `Nx` from version `21.5.1` to `22.1.3`
+- Upgraded `shx` from version `0.3.4` to `0.4.0`
+- Upgraded `storybook` from version `9.1.5` to `10.1.10`
+
+### Fixed
+
+- Added the missing currency suffix to the cash balance field in the create or update account dialog
+- Fixed the time in market display of the portfolio summary tab on the home page for the impersonation mode
+- Fixed the delete button in the asset profile details dialog of the admin control panel by providing the missing `watchedByCount` parameter
+
+## 2.224.2 - 2025-12-20
+
+### Added
+
+- Included the calendar year boundaries in the portfolio calculations
+- Added the ISIN number to the asset profile details dialog of the admin control panel
+
+### Changed
+
+- Restored the support for specific calendar year date ranges (`2024`, `2023`, `2022`, etc.) in the assistant (experimental)
+- Removed the deprecated _Angular CLI_ decorator (`decorate-angular-cli.js`)
+- Refreshed the cryptocurrencies list
+
+### Fixed
+
+- Localized date formatting across the _FIRE_ section
+
+## 2.223.0 - 2025-12-14
+
+### Added
+
+- Included wealth projection data calculated for the retirement date in the _FIRE_ section (experimental)
+
+### Changed
+
+- Moved the notification module to `@ghostfolio/ui`
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed a calculation issue that resulted in the incorrect assignment of unknown data in the portfolio proportion chart component
+
+## 2.222.0 - 2025-12-07
+
+### Added
+
+- Introduced data source transformation support in the import functionality for self-hosted environments
+- Added _OpenID Connect_ (`OIDC`) as a new login provider for self-hosted environments (experimental)
+- Added an optional 3D hover effect to the membership card component
+
+### Changed
+
+- Increased the numerical precision for cryptocurrency quantities in the holding detail dialog
+- Upgraded `envalid` from version `8.1.0` to `8.1.1`
+- Upgraded `prettier` from version `3.7.3` to `3.7.4`
+
+## 2.221.0 - 2025-12-01
+
+### Changed
+
+- Refactored the API query parameters in various data provider services
+- Extended the _Storybook_ stories of the portfolio proportion chart component by a story using percentage values
+- Upgraded `@internationalized/number` from version `3.6.3` to `3.6.5`
+- Upgraded `prettier` from version `3.7.2` to `3.7.3`
+
+### Fixed
+
+- Improved the country weightings in the _Financial Modeling Prep_ service
+- Improved the search functionality by name in the _Financial Modeling Prep_ service
+- Resolved an issue in the user endpoint where the list was returning empty in the admin control panel’s users section
+
+## 2.220.0 - 2025-11-29
+
+### Changed
+
+- Restricted the asset profile data gathering on Sundays to only process outdated asset profiles
+- Removed the _Cypress_ testing setup
+- Eliminated `uuid` in favor of using `randomUUID` from `node:crypto`
+- Upgraded `color` from version `5.0.0` to `5.0.3`
+- Upgraded `prettier` from version `3.6.2` to `3.7.2`
+
+### Fixed
+
+- Fixed an issue with the exchange rate calculation when converting between derived currencies and their root currencies
+
+## 2.219.0 - 2025-11-23
+
+### Added
+
+- Extended the user detail dialog of the admin control panel’s users section by the authentication method
+
+### Changed
+
+- Disabled the action to delete activities if the activities table is empty
+- Improved the validation of the currency management in the admin control panel
+- Improved the content of the pricing page
+- Resolved the data source of the `GHOSTFOLIO` data provider in the export functionality
+- Resolved the data source of the `GHOSTFOLIO` data provider in the import functionality
+- Refreshed the cryptocurrencies list
+- Improved the language localization for German (`de`)
+- Upgraded `yahoo-finance2` from version `3.10.1` to `3.10.2`
+
+### Fixed
+
+- Fixed an issue with the edit of future activities (drafts)
+
 ## 2.218.0 - 2025-11-20
 
 ### Added
@@ -2204,7 +2328,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed an issue in the portfolio summary with the currency conversion of fees
-- Fixed an issue in the the search for a holding
+- Fixed an issue in the search for a holding
 - Removed the show condition of the experimental features setting in the user settings
 
 ## 2.95.0 - 2024-07-12
