@@ -337,6 +337,7 @@ enum Provider {
   ANONYMOUS
   GOOGLE
   INTERNET_IDENTITY
+  OIDC
 }
 
 enum Role {

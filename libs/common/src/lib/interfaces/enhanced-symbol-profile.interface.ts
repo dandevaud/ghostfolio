@@ -34,4 +34,5 @@ export interface EnhancedSymbolProfile {
   url?: string;
   tags?: Tag[];
   userId?: string;
+  watchedByCount?: number;
 }

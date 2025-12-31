@@ -1,9 +1,9 @@
-import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { NUMERICAL_PRECISION_THRESHOLD_6_FIGURES } from '@ghostfolio/common/config';
 import { getDateFnsLocale, getLocale } from '@ghostfolio/common/helper';
 import { PortfolioSummary, User } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
+import { NotificationService } from '@ghostfolio/ui/notifications';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { CommonModule } from '@angular/common';
@@ -87,10 +87,13 @@ export class GfPortfolioSummaryComponent implements OnChanges {
         this.precision = 0;
       }
 
-      if (this.user.dateOfFirstActivity) {
-        this.timeInMarket = formatDistanceToNow(this.user.dateOfFirstActivity, {
-          locale: getDateFnsLocale(this.language)
-        });
+      if (this.summary.dateOfFirstActivity) {
+        this.timeInMarket = formatDistanceToNow(
+          this.summary.dateOfFirstActivity,
+          {
+            locale: getDateFnsLocale(this.language)
+          }
+        );
       } else {
         this.timeInMarket = '-';
       }
