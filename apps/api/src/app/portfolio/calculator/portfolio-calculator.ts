@@ -86,7 +86,6 @@ export abstract class PortfolioCalculator {
   private holdings: { [date: string]: { [symbol: string]: Big } } = {};
   private holdingCurrencies: { [symbol: string]: string } = {};
   private chartDateMap: { [date: string]: boolean } = {};
- 
 
   public constructor({
     accountBalanceItems,

@@ -516,7 +516,6 @@ export class ExchangeRateDataService {
     return undefined;
   }
 
-
   private async prepareCurrencies(): Promise<string[]> {
     let currencies: string[] = [DEFAULT_CURRENCY];
 
