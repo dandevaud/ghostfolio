@@ -32,6 +32,7 @@ import ms from 'ms';
 export class ExchangeRateDataService {
   private currencies: string[] = [];
   private currencyPairs: DataGatheringItem[] = [];
+  private derivedCurrencyFactors: { [currencyPair: string]: number } = {};
   private exchangeRates: { [currencyPair: string]: number } = {};
 
   public constructor(
@@ -301,7 +302,13 @@ export class ExchangeRateDataService {
   public async initialize() {
     this.currencies = await this.prepareCurrencies();
     this.currencyPairs = [];
+    this.derivedCurrencyFactors = {};
     this.exchangeRates = {};
+
+    for (const { currency, factor, rootCurrency } of DERIVED_CURRENCIES) {
+      this.derivedCurrencyFactors[`${currency}${rootCurrency}`] = 1 / factor;
+      this.derivedCurrencyFactors[`${rootCurrency}${currency}`] = factor;
+    }
 
     for (const {
       currency1,
@@ -432,10 +439,14 @@ export class ExchangeRateDataService {
       return this.toCurrency(aValue, aFromCurrency, aToCurrency);
     }
 
+    const derivedCurrencyFactor =
+      this.derivedCurrencyFactors[`${aFromCurrency}${aToCurrency}`];
     let factor: number;
 
     if (aFromCurrency === aToCurrency) {
       factor = 1;
+    } else if (derivedCurrencyFactor) {
+      factor = derivedCurrencyFactor;
     } else {
       const dataSource =
         this.dataProviderService.getDataSourceForExchangeRates();

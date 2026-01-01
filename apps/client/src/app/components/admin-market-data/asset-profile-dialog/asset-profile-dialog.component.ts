@@ -1,5 +1,4 @@
 import { AdminMarketDataService } from '@ghostfolio/client/components/admin-market-data/admin-market-data.service';
-import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { AdminService } from '@ghostfolio/client/services/admin.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
@@ -24,6 +23,7 @@ import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
 import { GfHistoricalMarketDataEditorComponent } from '@ghostfolio/ui/historical-market-data-editor';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
+import { NotificationService } from '@ghostfolio/ui/notifications';
 import { GfPortfolioProportionChartComponent } from '@ghostfolio/ui/portfolio-proportion-chart';
 import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
 import { GfValueComponent } from '@ghostfolio/ui/value';
@@ -273,13 +273,6 @@ export class GfAssetProfileDialogComponent implements OnDestroy, OnInit {
     private userService: UserService
   ) {
     addIcons({ createOutline, ellipsisVertical, readerOutline, serverOutline });
-  }
-
-  public get canEditAssetProfileIdentifier() {
-    return (
-      this.assetProfile?.assetClass &&
-      !['MANUAL'].includes(this.assetProfile?.dataSource)
-    );
   }
 
   public get canSaveAssetProfileIdentifier() {

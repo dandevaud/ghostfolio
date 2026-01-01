@@ -46,11 +46,15 @@ import {
   addDays,
   differenceInDays,
   eachDayOfInterval,
+  eachYearOfInterval,
   endOfDay,
+  endOfYear,
   format,
   isAfter,
   isBefore,
+  isWithinInterval,
   min,
+  startOfYear,
   subDays
 } from 'date-fns';
 import { isNumber, sortBy, sum, uniqBy } from 'lodash';
@@ -81,6 +85,7 @@ export abstract class PortfolioCalculator {
   private transactionPoints: TransactionPoint[];
   private holdings: { [date: string]: { [symbol: string]: Big } } = {};
   private holdingCurrencies: { [symbol: string]: string } = {};
+  private chartDateMap: { [date: string]: boolean } = {};
 
   public constructor({
     accountBalanceItems,
@@ -263,7 +268,7 @@ export abstract class PortfolioCalculator {
 
     const daysInMarket = differenceInDays(this.endDate, this.startDate);
 
-    const chartDateMap = this.getChartDateMap({
+    this.chartDateMap = this.getChartDateMap({
       endDate: this.endDate,
       startDate: this.startDate,
       step: Math.round(
@@ -276,10 +281,10 @@ export abstract class PortfolioCalculator {
     });
 
     for (const accountBalanceItem of this.accountBalanceItems) {
-      chartDateMap[accountBalanceItem.date] = true;
+      this.chartDateMap[accountBalanceItem.date] = true;
     }
 
-    const chartDates = sortBy(Object.keys(chartDateMap), (chartDate) => {
+    const chartDates = sortBy(Object.keys(this.chartDateMap), (chartDate) => {
       return chartDate;
     });
 
@@ -366,7 +371,7 @@ export abstract class PortfolioCalculator {
         totalInvestmentWithCurrencyEffect,
         totalLiabilitiesInBaseCurrency
       } = this.getSymbolMetrics({
-        chartDateMap,
+        chartDateMap: this.chartDateMap,
         marketSymbolMap,
         dataSource: item.dataSource,
         end: this.endDate,
@@ -946,6 +951,24 @@ export abstract class PortfolioCalculator {
       this.holdingCurrencies[symbol] = activities.find(
         (a) => a.SymbolProfile.symbol === symbol
       ).SymbolProfile.currency;
+    }
+
+    // Make sure the first and last date of each calendar year is present
+    const interval = { start: this.startDate, end: this.endDate };
+
+    for (const date of eachYearOfInterval(interval)) {
+      const yearStart = startOfYear(date);
+      const yearEnd = endOfYear(date);
+
+      if (isWithinInterval(yearStart, interval)) {
+        // Add start of year (YYYY-01-01)
+        this.chartDateMap[format(yearStart, DATE_FORMAT)] = true;
+      }
+
+      if (isWithinInterval(yearEnd, interval)) {
+        // Add end of year (YYYY-12-31)
+        this.chartDateMap[format(yearEnd, DATE_FORMAT)] = true;
+      }
     }
 
     return this.holdingCurrencies[symbol];
