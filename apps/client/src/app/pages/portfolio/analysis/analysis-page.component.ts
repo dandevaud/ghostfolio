@@ -355,7 +355,6 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
                 ? timeWeightedPerformanceInPercentageWithCurrencyEffect
                 : netPerformanceInPercentageWithCurrencyEffect
           });
-          
         }
 
         if (
