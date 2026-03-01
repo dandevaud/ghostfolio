@@ -1,5 +1,6 @@
 import { InfoResponse } from '@ghostfolio/common/interfaces';
 import { filterGlobalPermissions } from '@ghostfolio/common/permissions';
+import { GF_ENVIRONMENT } from '@ghostfolio/ui/environment';
 import { GfNotificationModule } from '@ghostfolio/ui/notifications';
 
 import { Platform } from '@angular/cdk/platform';
@@ -7,7 +8,11 @@ import {
   provideHttpClient,
   withInterceptorsFromDi
 } from '@angular/common/http';
-import { enableProdMode, importProvidersFrom } from '@angular/core';
+import {
+  enableProdMode,
+  importProvidersFrom,
+  provideZoneChangeDetection
+} from '@angular/core';
 import {
   DateAdapter,
   MAT_DATE_FORMATS,
@@ -79,10 +84,15 @@ import { environment } from './environments/environment';
       provideIonicAngular(),
       provideMarkdown(),
       provideNgxSkeletonLoader(),
+      provideZoneChangeDetection(),
       {
         deps: [LanguageService, MAT_DATE_LOCALE, Platform],
         provide: DateAdapter,
         useClass: CustomDateAdapter
+      },
+      {
+        provide: GF_ENVIRONMENT,
+        useValue: environment
       },
       {
         provide: MAT_DATE_FORMATS,

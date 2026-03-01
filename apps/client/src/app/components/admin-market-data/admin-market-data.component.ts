@@ -1,5 +1,3 @@
-import { AdminService } from '@ghostfolio/client/services/admin.service';
-import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   DEFAULT_PAGE_SIZE,
@@ -18,6 +16,7 @@ import { GfSymbolPipe } from '@ghostfolio/common/pipes';
 import { GfActivitiesFilterComponent } from '@ghostfolio/ui/activities-filter';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
+import { AdminService, DataService } from '@ghostfolio/ui/services';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { SelectionModel } from '@angular/cdk/collections';
@@ -64,7 +63,7 @@ import {
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { Subject } from 'rxjs';
-import { distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
+import { distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import { AdminMarketDataService } from './admin-market-data.service';
 import { GfAssetProfileDialogComponent } from './asset-profile-dialog/asset-profile-dialog.component';
@@ -140,6 +139,11 @@ export class GfAdminMarketDataComponent
     {
       id: 'ETF_WITHOUT_SECTORS',
       label: $localize`ETFs without Sectors`,
+      type: 'PRESET_ID' as Filter['type']
+    },
+    {
+      id: 'NO_ACTIVITIES',
+      label: $localize`No Activities`,
       type: 'PRESET_ID' as Filter['type']
     }
   ];
@@ -386,7 +390,7 @@ export class GfAdminMarketDataComponent
     this.pageSize =
       this.activeFilters.length === 1 &&
       this.activeFilters[0].type === 'PRESET_ID'
-        ? undefined
+        ? Number.MAX_SAFE_INTEGER
         : DEFAULT_PAGE_SIZE;
 
     if (pageIndex === 0 && this.paginator) {
@@ -494,32 +498,27 @@ export class GfAdminMarketDataComponent
         dialogRef
           .afterClosed()
           .pipe(takeUntil(this.unsubscribeSubject))
-          .subscribe(({ dataSource, symbol } = {}) => {
-            if (dataSource && symbol) {
-              this.adminService
-                .addAssetProfile({ dataSource, symbol })
-                .pipe(
-                  switchMap(() => {
-                    this.isLoading = true;
-                    this.changeDetectorRef.markForCheck();
+          .subscribe((result) => {
+            if (!result) {
+              this.router.navigate(['.'], { relativeTo: this.route });
 
-                    return this.adminService.fetchAdminMarketData({
-                      filters: this.activeFilters,
-                      take: this.pageSize
-                    });
-                  }),
-                  takeUntil(this.unsubscribeSubject)
-                )
-                .subscribe(({ marketData }) => {
-                  this.dataSource = new MatTableDataSource(marketData);
-                  this.dataSource.sort = this.sort;
-                  this.isLoading = false;
-
-                  this.changeDetectorRef.markForCheck();
-                });
+              return;
             }
 
-            this.router.navigate(['.'], { relativeTo: this.route });
+            const { addAssetProfile, dataSource, symbol } = result;
+
+            if (addAssetProfile && dataSource && symbol) {
+              this.adminService
+                .addAssetProfile({ dataSource, symbol })
+                .pipe(takeUntil(this.unsubscribeSubject))
+                .subscribe(() => {
+                  this.loadData();
+                });
+            } else {
+              this.loadData();
+            }
+
+            this.onOpenAssetProfileDialog({ dataSource, symbol });
           });
       });
   }

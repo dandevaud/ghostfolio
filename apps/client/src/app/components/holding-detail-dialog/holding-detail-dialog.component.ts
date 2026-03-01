@@ -1,4 +1,3 @@
-import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   NUMERICAL_PRECISION_THRESHOLD_3_FIGURES,
@@ -26,6 +25,7 @@ import { GfHistoricalMarketDataEditorComponent } from '@ghostfolio/ui/historical
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
 import { GfPortfolioProportionChartComponent } from '@ghostfolio/ui/portfolio-proportion-chart';
+import { DataService } from '@ghostfolio/ui/services';
 import { GfTagsSelectorComponent } from '@ghostfolio/ui/tags-selector';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
@@ -116,12 +116,12 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
   };
   public dataProviderInfo: DataProviderInfo;
   public dataSource: MatTableDataSource<Activity>;
+  public dateOfFirstActivity: string;
   public dividendInBaseCurrency: number;
   public stakeRewards: number;
   public dividendInBaseCurrencyPrecision = 2;
   public dividendYieldPercentWithCurrencyEffect: number;
   public feeInBaseCurrency: number;
-  public firstBuyDate: string;
   public hasPermissionToCreateOwnTag: boolean;
   public hasPermissionToReadMarketDataOfOwnAssetProfile: boolean;
   public historicalDataItems: LineChartItem[];
@@ -269,6 +269,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
           activitiesCount,
           averagePrice,
           dataProviderInfo,
+          dateOfFirstActivity,
           dividendInBaseCurrency,
           stakeRewards,
           investmentInBaseCurrencyWithCurrencyEffect,
@@ -301,6 +302,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
           this.benchmarkDataItems = [];
           this.countries = {};
           this.dataProviderInfo = dataProviderInfo;
+          this.dateOfFirstActivity = dateOfFirstActivity;
           this.dividendInBaseCurrency = dividendInBaseCurrency;
           this.stakeRewards = stakeRewards;
 
@@ -316,7 +318,6 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
             dividendYieldPercentWithCurrencyEffect;
 
           this.feeInBaseCurrency = feeInBaseCurrency;
-          this.firstBuyDate = firstBuyDate;
 
           this.hasPermissionToReadMarketDataOfOwnAssetProfile =
             hasPermission(
@@ -465,16 +466,16 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
             }
           }
 
-          if (this.firstBuyDate && isToday(parseISO(this.firstBuyDate))) {
+          if (isToday(parseISO(this.dateOfFirstActivity))) {
             // Add average price
             this.historicalDataItems.push({
-              date: this.firstBuyDate,
+              date: this.dateOfFirstActivity,
               value: this.averagePrice
             });
 
             // Add benchmark 1
             this.benchmarkDataItems.push({
-              date: this.firstBuyDate,
+              date: this.dateOfFirstActivity,
               value: averagePrice
             });
 
@@ -505,8 +506,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
 
           if (
             this.benchmarkDataItems[0]?.value === undefined &&
-            this.firstBuyDate &&
-            isSameMonth(parseISO(this.firstBuyDate), new Date())
+            isSameMonth(parseISO(this.dateOfFirstActivity), new Date())
           ) {
             this.benchmarkDataItems[0].value = this.averagePrice;
           }

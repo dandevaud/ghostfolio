@@ -63,7 +63,7 @@
         <div class="d-flex justify-content-end">
           <gf-value
             [isDate]="element.dateOfFirstActivity ? true : false"
-            [locale]="locale"
+            [locale]="locale()"
             [value]="element.dateOfFirstActivity ?? ''"
           />
         </div>
@@ -115,8 +115,8 @@
         <div class="d-flex justify-content-end">
           <gf-value
             [isCurrency]="true"
-            [locale]="locale"
-            [value]="isLoading ? undefined : element.quantity"
+            [locale]="locale()"
+            [value]="isLoading() ? undefined : element.quantity"
           />
         </div>
       </td>
@@ -142,8 +142,8 @@
         <div class="d-flex justify-content-end">
           <gf-value
             [isCurrency]="true"
-            [locale]="locale"
-            [value]="isLoading ? undefined : element.valueInBaseCurrency"
+            [locale]="locale()"
+            [value]="isLoading() ? undefined : element.valueInBaseCurrency"
           />
         </div>
       </td>
@@ -174,8 +174,8 @@
         <div class="d-flex justify-content-end">
           <gf-value
             [isPercent]="true"
-            [locale]="locale"
-            [value]="isLoading ? undefined : element.allocationInPercentage"
+            [locale]="locale()"
+            [value]="isLoading() ? undefined : element.allocationInPercentage"
           />
         </div>
       </td>
@@ -201,9 +201,9 @@
           <gf-value
             [colorizeSign]="true"
             [isCurrency]="true"
-            [locale]="locale"
+            [locale]="locale()"
             [value]="
-              isLoading ? undefined : element.netPerformanceWithCurrencyEffect
+              isLoading() ? undefined : element.netPerformanceWithCurrencyEffect
             "
           />
         </div>
@@ -235,9 +235,9 @@
           <gf-value
             [colorizeSign]="true"
             [isPercent]="true"
-            [locale]="locale"
+            [locale]="locale()"
             [value]="
-              isLoading
+              isLoading()
                 ? undefined
                 : element.netPerformancePercentWithCurrencyEffect
             "
@@ -256,17 +256,13 @@
       </td>
     </ng-container>
 
-    <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+    <tr *matHeaderRowDef="displayedColumns()" mat-header-row></tr>
     <tr
-      *matRowDef="let row; columns: displayedColumns"
+      *matRowDef="let row; columns: displayedColumns()"
       mat-row
-      [ngClass]="{
-        'cursor-pointer':
-          hasPermissionToOpenDetails &&
-          !ignoreAssetSubClasses.includes(row.assetSubClass)
-      }"
+      [class.cursor-pointer]="canShowDetails(row)"
       (click)="
-        !ignoreAssetSubClasses.includes(row.assetSubClass) &&
+        canShowDetails(row) &&
           onOpenHoldingDialog({
             dataSource: row.dataSource,
             symbol: row.symbol
@@ -283,7 +279,7 @@
 
 <mat-paginator class="d-none" [pageSize]="pageSize" />
 
-@if (isLoading) {
+@if (isLoading()) {
   <ngx-skeleton-loader
     animation="pulse"
     class="px-4 py-3"
@@ -294,7 +290,7 @@
   />
 }
 
-@if (dataSource.data.length > pageSize && !isLoading) {
+@if (dataSource.data.length > pageSize && !isLoading()) {
   <div class="my-3 text-center">
     <button mat-stroked-button (click)="onShowAllHoldings()">
       <ng-container i18n>Show all</ng-container>

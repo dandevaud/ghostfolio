@@ -138,11 +138,11 @@ export class AdminService {
   public async get(): Promise<AdminData> {
     const dataSources = Object.values(DataSource);
 
-    const [enabledDataSources, settings, transactionCount, userCount] =
+    const [activitiesCount, enabledDataSources, settings, userCount] =
       await Promise.all([
+        this.prismaService.order.count(),
         this.dataProviderService.getDataSources(),
         this.propertyService.get(),
-        this.prismaService.order.count(),
         this.countUsersWithAnalytics()
       ]);
 
@@ -182,9 +182,9 @@ export class AdminService {
     ).filter(Boolean);
 
     return {
+      activitiesCount,
       dataProviders,
       settings,
-      transactionCount,
       userCount,
       version: environment.version
     };
@@ -225,6 +225,10 @@ export class AdminService {
       presetId === 'ETF_WITHOUT_SECTORS'
     ) {
       filters = [{ id: 'ETF', type: 'ASSET_SUB_CLASS' }];
+    } else if (presetId === 'NO_ACTIVITIES') {
+      where.activities = {
+        none: {}
+      };
     }
 
     const searchQuery = filters.find(({ type }) => {
@@ -469,7 +473,9 @@ export class AdminService {
     let currency: EnhancedSymbolProfile['currency'] = '-';
     let dateOfFirstActivity: EnhancedSymbolProfile['dateOfFirstActivity'];
 
-    if (isCurrency(getCurrencyFromSymbol(symbol))) {
+    const isCurrencyAssetProfile = isCurrency(getCurrencyFromSymbol(symbol));
+
+    if (isCurrencyAssetProfile) {
       currency = getCurrencyFromSymbol(symbol);
       ({ activitiesCount, dateOfFirstActivity } =
         await this.orderService.getStatisticsByCurrency(currency));
@@ -507,6 +513,8 @@ export class AdminService {
         dataSource,
         dateOfFirstActivity,
         symbol,
+        assetClass: isCurrencyAssetProfile ? AssetClass.LIQUIDITY : undefined,
+        assetSubClass: isCurrencyAssetProfile ? AssetSubClass.CASH : undefined,
         isActive: true
       }
     };
