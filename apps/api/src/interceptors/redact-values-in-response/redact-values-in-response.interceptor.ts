@@ -1,5 +1,8 @@
-import { redactAttributes } from '@ghostfolio/api/helper/object.helper';
-import { HEADER_KEY_IMPERSONATION } from '@ghostfolio/common/config';
+import { redactPaths } from '@ghostfolio/api/helper/object.helper';
+import {
+  DEFAULT_REDACTED_PATHS,
+  HEADER_KEY_IMPERSONATION
+} from '@ghostfolio/common/config';
 import {
   hasReadRestrictedAccessPermission,
   isRestrictedView
@@ -16,9 +19,10 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 @Injectable()
-export class RedactValuesInResponseInterceptor<T>
-  implements NestInterceptor<T, any>
-{
+export class RedactValuesInResponseInterceptor<T> implements NestInterceptor<
+  T,
+  any
+> {
   public intercept(
     context: ExecutionContext,
     next: CallHandler<T>
@@ -38,39 +42,9 @@ export class RedactValuesInResponseInterceptor<T>
           }) ||
           isRestrictedView(user)
         ) {
-          data = redactAttributes({
+          data = redactPaths({
             object: data,
-            options: [
-              'balance',
-              'balanceInBaseCurrency',
-              'comment',
-              'convertedBalance',
-              'dividendInBaseCurrency',
-              'fee',
-              'feeInBaseCurrency',
-              'grossPerformance',
-              'grossPerformanceWithCurrencyEffect',
-              'interestInBaseCurrency',
-              'investment',
-              'netPerformance',
-              'netPerformanceWithCurrencyEffect',
-              'quantity',
-              'symbolMapping',
-              'totalBalanceInBaseCurrency',
-              'totalDividendInBaseCurrency',
-              'totalInterestInBaseCurrency',
-              'totalValueInBaseCurrency',
-              'unitPrice',
-              'value',
-              'valueInBaseCurrency'
-            ].map((attribute) => {
-              return {
-                attribute,
-                valueMap: {
-                  '*': null
-                }
-              };
-            })
+            paths: DEFAULT_REDACTED_PATHS
           });
         }
 

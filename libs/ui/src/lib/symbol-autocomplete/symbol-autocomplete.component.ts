@@ -1,6 +1,6 @@
-import { GfSymbolModule } from '@ghostfolio/client/pipes/symbol/symbol.module';
-import { DataService } from '@ghostfolio/client/services/data.service';
 import { LookupItem } from '@ghostfolio/common/interfaces';
+import { GfSymbolPipe } from '@ghostfolio/common/pipes';
+import { DataService } from '@ghostfolio/ui/services';
 
 import { FocusMonitor } from '@angular/cdk/a11y';
 import {
@@ -57,7 +57,7 @@ import { AbstractMatFormField } from '../shared/abstract-mat-form-field';
   imports: [
     FormsModule,
     GfPremiumIndicatorComponent,
-    GfSymbolModule,
+    GfSymbolPipe,
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
@@ -121,7 +121,7 @@ export class GfSymbolAutocompleteComponent
     this.control.valueChanges
       .pipe(
         filter((query) => {
-          if (query.length === 0) {
+          if (query?.length === 0) {
             this.showDefaultOptions();
 
             return false;

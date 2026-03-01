@@ -1,55 +1,46 @@
-import { DataService } from '@ghostfolio/client/services/data.service';
-import { InternetIdentityService } from '@ghostfolio/client/services/internet-identity.service';
 import { TokenStorageService } from '@ghostfolio/client/services/token-storage.service';
 import { InfoItem, LineChartItem } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { GfLogoComponent } from '@ghostfolio/ui/logo';
+import { DataService } from '@ghostfolio/ui/services';
 
 import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
-  OnDestroy,
+  DestroyRef,
   OnInit
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { Router, RouterModule } from '@angular/router';
 import { DeviceDetectorService } from 'ngx-device-detector';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
 
-import { ShowAccessTokenDialogParams } from './show-access-token-dialog/interfaces/interfaces';
-import { ShowAccessTokenDialog } from './show-access-token-dialog/show-access-token-dialog.component';
-import { ShowAccessTokenDialogModule } from './show-access-token-dialog/show-access-token-dialog.module';
+import { UserAccountRegistrationDialogParams } from './user-account-registration-dialog/interfaces/interfaces';
+import { GfUserAccountRegistrationDialogComponent } from './user-account-registration-dialog/user-account-registration-dialog.component';
 
 @Component({
   host: { class: 'page' },
-  imports: [
-    GfLogoComponent,
-    MatButtonModule,
-    RouterModule,
-    ShowAccessTokenDialogModule
-  ],
+  imports: [GfLogoComponent, MatButtonModule, RouterModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-register-page',
   styleUrls: ['./register-page.scss'],
   templateUrl: './register-page.html'
 })
-export class GfRegisterPageComponent implements OnDestroy, OnInit {
+export class GfRegisterPageComponent implements OnInit {
   public deviceType: string;
-  public hasPermissionForSocialLogin: boolean;
+  public hasPermissionForAuthGoogle: boolean;
+  public hasPermissionForAuthToken: boolean;
   public hasPermissionForSubscription: boolean;
   public hasPermissionToCreateUser: boolean;
   public historicalDataItems: LineChartItem[];
   public info: InfoItem;
 
-  private unsubscribeSubject = new Subject<void>();
-
   public constructor(
     private dataService: DataService,
+    private destroyRef: DestroyRef,
     private deviceService: DeviceDetectorService,
     private dialog: MatDialog,
-    private internetIdentityService: InternetIdentityService,
     private router: Router,
     private tokenStorageService: TokenStorageService
   ) {
@@ -63,9 +54,14 @@ export class GfRegisterPageComponent implements OnDestroy, OnInit {
 
     this.deviceType = this.deviceService.getDeviceInfo().deviceType;
 
-    this.hasPermissionForSocialLogin = hasPermission(
+    this.hasPermissionForAuthGoogle = hasPermission(
       globalPermissions,
-      permissions.enableSocialLogin
+      permissions.enableAuthGoogle
+    );
+
+    this.hasPermissionForAuthToken = hasPermission(
+      globalPermissions,
+      permissions.enableAuthToken
     );
 
     this.hasPermissionForSubscription = hasPermission(
@@ -79,22 +75,15 @@ export class GfRegisterPageComponent implements OnDestroy, OnInit {
     );
   }
 
-  public async onLoginWithInternetIdentity() {
-    try {
-      const { authToken } = await this.internetIdentityService.login();
-
-      this.tokenStorageService.saveToken(authToken);
-
-      await this.router.navigate(['/']);
-    } catch {}
-  }
-
   public openShowAccessTokenDialog() {
-    const dialogRef = this.dialog.open(ShowAccessTokenDialog, {
+    const dialogRef = this.dialog.open<
+      GfUserAccountRegistrationDialogComponent,
+      UserAccountRegistrationDialogParams
+    >(GfUserAccountRegistrationDialogComponent, {
       data: {
         deviceType: this.deviceType,
         needsToAcceptTermsOfService: this.hasPermissionForSubscription
-      } as ShowAccessTokenDialogParams,
+      },
       disableClose: true,
       height: this.deviceType === 'mobile' ? '98vh' : undefined,
       width: this.deviceType === 'mobile' ? '100vw' : '30rem'
@@ -102,7 +91,7 @@ export class GfRegisterPageComponent implements OnDestroy, OnInit {
 
     dialogRef
       .afterClosed()
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((authToken) => {
         if (authToken) {
           this.tokenStorageService.saveToken(authToken, true);
@@ -110,10 +99,5 @@ export class GfRegisterPageComponent implements OnDestroy, OnInit {
           this.router.navigate(['/']);
         }
       });
-  }
-
-  public ngOnDestroy() {
-    this.unsubscribeSubject.next();
-    this.unsubscribeSubject.complete();
   }
 }

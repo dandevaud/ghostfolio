@@ -23,7 +23,8 @@ import {
   AdminMarketData,
   AdminMarketDataDetails,
   AdminMarketDataItem,
-  AdminUsers,
+  AdminUserResponse,
+  AdminUsersResponse,
   AssetProfileIdentifier,
   EnhancedSymbolProfile,
   Filter
@@ -35,7 +36,8 @@ import {
   BadRequestException,
   HttpException,
   Injectable,
-  Logger
+  Logger,
+  NotFoundException
 } from '@nestjs/common';
 import {
   AssetClass,
@@ -136,11 +138,11 @@ export class AdminService {
   public async get(): Promise<AdminData> {
     const dataSources = Object.values(DataSource);
 
-    const [enabledDataSources, settings, transactionCount, userCount] =
+    const [activitiesCount, enabledDataSources, settings, userCount] =
       await Promise.all([
+        this.prismaService.order.count(),
         this.dataProviderService.getDataSources(),
         this.propertyService.get(),
-        this.prismaService.order.count(),
         this.countUsersWithAnalytics()
       ]);
 
@@ -180,9 +182,9 @@ export class AdminService {
     ).filter(Boolean);
 
     return {
+      activitiesCount,
       dataProviders,
       settings,
-      transactionCount,
       userCount,
       version: environment.version
     };
@@ -192,7 +194,7 @@ export class AdminService {
     filters,
     presetId,
     sortColumn,
-    sortDirection,
+    sortDirection = 'asc',
     skip,
     take = Number.MAX_SAFE_INTEGER
   }: {
@@ -223,6 +225,10 @@ export class AdminService {
       presetId === 'ETF_WITHOUT_SECTORS'
     ) {
       filters = [{ id: 'ETF', type: 'ASSET_SUB_CLASS' }];
+    } else if (presetId === 'NO_ACTIVITIES') {
+      where.activities = {
+        none: {}
+      };
     }
 
     const searchQuery = filters.find(({ type }) => {
@@ -262,11 +268,13 @@ export class AdminService {
       orderBy = [{ [sortColumn]: sortDirection }];
 
       if (sortColumn === 'activitiesCount') {
-        orderBy = {
-          activities: {
-            _count: sortDirection
+        orderBy = [
+          {
+            activities: {
+              _count: sortDirection
+            }
           }
-        };
+        ];
       }
     }
 
@@ -275,10 +283,10 @@ export class AdminService {
     try {
       const symbolProfileResult = await Promise.all([
         extendedPrismaClient.symbolProfile.findMany({
-          orderBy,
           skip,
           take,
           where,
+          orderBy: [...orderBy, { id: sortDirection }],
           select: {
             _count: {
               select: {
@@ -462,7 +470,9 @@ export class AdminService {
     let currency: EnhancedSymbolProfile['currency'] = '-';
     let dateOfFirstActivity: EnhancedSymbolProfile['dateOfFirstActivity'];
 
-    if (isCurrency(getCurrencyFromSymbol(symbol))) {
+    const isCurrencyAssetProfile = isCurrency(getCurrencyFromSymbol(symbol));
+
+    if (isCurrencyAssetProfile) {
       currency = getCurrencyFromSymbol(symbol);
       ({ activitiesCount, dateOfFirstActivity } =
         await this.orderService.getStatisticsByCurrency(currency));
@@ -500,9 +510,23 @@ export class AdminService {
         dataSource,
         dateOfFirstActivity,
         symbol,
+        assetClass: isCurrencyAssetProfile ? AssetClass.LIQUIDITY : undefined,
+        assetSubClass: isCurrencyAssetProfile ? AssetSubClass.CASH : undefined,
         isActive: true
       }
     };
+  }
+
+  public async getUser(id: string): Promise<AdminUserResponse> {
+    const [user] = await this.getUsersWithAnalytics({
+      where: { id }
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
   }
 
   public async getUsers({
@@ -511,10 +535,13 @@ export class AdminService {
   }: {
     skip?: number;
     take?: number;
-  }): Promise<AdminUsers> {
+  }): Promise<AdminUsersResponse> {
     const [count, users] = await Promise.all([
       this.countUsersWithAnalytics(),
-      this.getUsersWithAnalytics({ skip, take })
+      this.getUsersWithAnalytics({
+        skip,
+        take
+      })
     ]);
 
     return { count, users };
@@ -812,34 +839,46 @@ export class AdminService {
 
   private async getUsersWithAnalytics({
     skip,
-    take
+    take,
+    where
   }: {
     skip?: number;
     take?: number;
-  }): Promise<AdminUsers['users']> {
-    let orderBy: Prisma.UserOrderByWithRelationInput = {
-      createdAt: 'desc'
-    };
-    let where: Prisma.UserWhereInput;
+    where?: Prisma.UserWhereInput;
+  }): Promise<AdminUsersResponse['users']> {
+    let orderBy: Prisma.Enumerable<Prisma.UserOrderByWithRelationInput> = [
+      { createdAt: 'desc' }
+    ];
 
     if (this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION')) {
-      orderBy = {
-        analytics: {
-          lastRequestAt: 'desc'
+      orderBy = [
+        {
+          analytics: {
+            lastRequestAt: 'desc'
+          }
         }
+      ];
+
+      const noAnalyticsCondition: Prisma.UserWhereInput['NOT'] = {
+        analytics: null
       };
-      where = {
-        NOT: {
-          analytics: null
+
+      if (where) {
+        if (where.NOT) {
+          where.NOT = { ...where.NOT, ...noAnalyticsCondition };
+        } else {
+          where.NOT = noAnalyticsCondition;
         }
-      };
+      } else {
+        where = { NOT: noAnalyticsCondition };
+      }
     }
 
     const usersWithAnalytics = await this.prismaService.user.findMany({
-      orderBy,
       skip,
       take,
       where,
+      orderBy: [...orderBy, { id: 'desc' }],
       select: {
         _count: {
           select: { accounts: true, activities: true }
@@ -854,6 +893,7 @@ export class AdminService {
         },
         createdAt: true,
         id: true,
+        provider: true,
         role: true,
         subscriptions: {
           orderBy: {
@@ -870,7 +910,7 @@ export class AdminService {
     });
 
     return usersWithAnalytics.map(
-      ({ _count, analytics, createdAt, id, role, subscriptions }) => {
+      ({ _count, analytics, createdAt, id, provider, role, subscriptions }) => {
         const daysSinceRegistration =
           differenceInDays(new Date(), createdAt) + 1;
         const engagement = analytics
@@ -887,6 +927,7 @@ export class AdminService {
           createdAt,
           engagement,
           id,
+          provider,
           role,
           subscription,
           accountCount: _count.accounts || 0,

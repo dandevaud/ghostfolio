@@ -4,6 +4,7 @@ import { RedactValuesInResponseInterceptor } from '@ghostfolio/api/interceptors/
 import { TransformDataSourceInRequestInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-request/transform-data-source-in-request.interceptor';
 import { TransformDataSourceInResponseInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-response/transform-data-source-in-response.interceptor';
 import { ApiService } from '@ghostfolio/api/services/api/api.service';
+import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { ImpersonationService } from '@ghostfolio/api/services/impersonation/impersonation.service';
 import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
@@ -11,6 +12,11 @@ import {
   DATA_GATHERING_QUEUE_PRIORITY_HIGH,
   HEADER_KEY_IMPERSONATION
 } from '@ghostfolio/common/config';
+import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
+import {
+  ActivitiesResponse,
+  ActivityResponse
+} from '@ghostfolio/common/interfaces';
 import { permissions } from '@ghostfolio/common/permissions';
 import type { DateRange, RequestWithUser } from '@ghostfolio/common/types';
 
@@ -35,15 +41,13 @@ import { Order as OrderModel, Prisma } from '@prisma/client';
 import { parseISO } from 'date-fns';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
-import { CreateOrderDto } from './create-order.dto';
-import { Activities, Activity } from './interfaces/activities.interface';
 import { OrderService } from './order.service';
-import { UpdateOrderDto } from './update-order.dto';
 
 @Controller('order')
 export class OrderController {
   public constructor(
     private readonly apiService: ApiService,
+    private readonly dataProviderService: DataProviderService,
     private readonly dataGatheringService: DataGatheringService,
     private readonly impersonationService: ImpersonationService,
     private readonly orderService: OrderService,
@@ -113,7 +117,7 @@ export class OrderController {
     @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string,
     @Query('take') take?: number
-  ): Promise<Activities> {
+  ): Promise<ActivitiesResponse> {
     let endDate: Date;
     let startDate: Date;
 
@@ -157,13 +161,14 @@ export class OrderController {
   public async getOrderById(
     @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string,
     @Param('id') id: string
-  ): Promise<Activity> {
+  ): Promise<ActivityResponse> {
     const impersonationUserId =
       await this.impersonationService.validateImpersonationId(impersonationId);
     const userCurrency = this.request.user.settings.settings.baseCurrency;
 
     const { activities } = await this.orderService.getOrders({
       userCurrency,
+      includeDrafts: true,
       userId: impersonationUserId || this.request.user.id,
       withExcludedAccountsAndActivities: true
     });
@@ -187,6 +192,29 @@ export class OrderController {
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   @UseInterceptors(TransformDataSourceInRequestInterceptor)
   public async createOrder(@Body() data: CreateOrderDto): Promise<OrderModel> {
+    try {
+      await this.dataProviderService.validateActivities({
+        activitiesDto: [
+          {
+            currency: data.currency,
+            dataSource: data.dataSource,
+            symbol: data.symbol,
+            type: data.type
+          }
+        ],
+        maxActivitiesToImport: 1,
+        user: this.request.user
+      });
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: getReasonPhrase(StatusCodes.BAD_REQUEST),
+          message: [error.message]
+        },
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     const currency = data.currency;
     const customCurrency = data.customCurrency;
     const dataSource = data.dataSource;

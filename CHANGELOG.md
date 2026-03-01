@@ -5,11 +5,780 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 2.245.0 - 2026-03-01
 
 ### Changed
 
+- Excluded the scraper configuration from the import and export functionality
+- Excluded the symbol mapping from the import and export functionality
+- Improved the language localization for Dutch (`nl`)
+- Improved the language localization for Italian (`it`)
+- Improved the language localization for Spanish (`es`)
+
+### Fixed
+
+- Resolved the data source transformation in the errors of the performance endpoint
+- Resolved the data source transformation in the export functionality
+
+## 2.244.0 - 2026-02-28
+
+### Changed
+
+- Improved the usability of the asset profile details dialog in the admin control panel for currencies
+- Removed the deprecated static portfolio analysis rule: _Fees_ (Fee Ratio)
+- Refactored queries in the data provider service to use Prisma’s safe query methods
+
+### Fixed
+
+- Fixed an exception by adding a fallback for missing market price values on the _X-ray_ page
+
+## 2.243.0 - 2026-02-23
+
+### Changed
+
+- Improved the language localization for Chinese (`zh`)
+- Upgraded `nestjs` from version `11.1.8` to `11.1.14`
+
+### Fixed
+
+- Fixed an issue when creating activities of type `FEE`, `INTEREST` or `LIABILITY`
+
+## 2.242.0 - 2026-02-22
+
+### Changed
+
+- Changed the account field to optional in the create or update activity dialog
+
+### Fixed
+
+- Fixed a validation issue for valuables used in the create and import activity logic
+- Fixed the page size for presets in the historical market data table of the admin control panel
+
+## 2.241.0 - 2026-02-21
+
+### Changed
+
+- Improved the usability of the portfolio summary tab on the home page in the _Presenter View_
+- Refreshed the cryptocurrencies list
+- Improved the language localization for German (`de`)
+- Improved the language localization for Spanish (`es`)
+
+### Fixed
+
+- Fixed an issue with `balanceInBaseCurrency` of the accounts in the value redaction interceptor for the impersonation mode
+- Fixed an issue with `comment` of the accounts in the value redaction interceptor for the impersonation mode
+- Fixed an issue with `dividendInBaseCurrency` of the accounts in the value redaction interceptor for the impersonation mode
+- Fixed an issue with `interestInBaseCurrency` of the accounts in the value redaction interceptor for the impersonation mode
+- Fixed an issue with `value` of the accounts in the value redaction interceptor for the impersonation mode
+
+## 2.240.0 - 2026-02-18
+
+### Added
+
+- Added a _No Activities_ preset to the historical market data table of the admin control panel
+- Added support for custom cryptocurrencies defined in the database
+- Added support for the cryptocurrency _Sky_
+
+### Changed
+
+- Harmonized the validation for the create activity endpoint with the existing import activity logic
+- Upgraded `marked` from version `17.0.1` to `17.0.2`
+- Upgraded `ngx-markdown` from version `21.0.1` to `21.1.0`
+
+## 2.239.0 - 2026-02-15
+
+### Added
+
+- Added a new static portfolio analysis rule based on the total investment volume: _Fees_ (Fee Ratio)
+- Extended the content of the _Self-Hosting_ section on the Frequently Asked Questions (FAQ) page with information on derived currencies
+
+### Changed
+
+- Deprecated the existing static portfolio analysis rule: _Fees_ (Fee Ratio)
+- Ignored nested ETFs when fetching top holdings for ETF and mutual fund assets from _Yahoo Finance_
+- Improved the scraper configuration with more detailed error messages
+- Improved the language localization for German (`de`)
+- Upgraded `@simplewebauthn/browser` and `@simplewebauthn/server` from version `13.1.0` to `13.2.2`
+- Upgraded `cheerio` from version `1.0.0` to `1.2.0`
+
+### Fixed
+
+- Fixed the investment value by including currency effects in the portfolio summary tab on the home page
+- Added the missing `valueInBaseCurrency` to the response of the import activities endpoint
+
+## 2.238.0 - 2026-02-12
+
+### Changed
+
+- Upgraded `ngx-skeleton-loader` from version `11.3.0` to `12.0.0`
+- Upgraded `twitter-api-v2` from version `1.27.0` to `1.29.0`
+
+### Fixed
+
+- Fixed a performance calculation issue by resetting tracking variables when a holding is fully closed
+- Fixed an issue in the annualized performance calculation
+- Fixed an issue with the exchange rate calculation by expanding the date range to cover the full day (start to end of day)
+
+## 2.237.0 - 2026-02-08
+
+### Changed
+
+- Removed the deprecated `transactionCount` in the portfolio calculator and service
+- Refreshed the cryptocurrencies list
+- Upgraded `Nx` from version `22.4.1` to `22.4.5`
+
+### Fixed
+
+- Fixed the accounts of the assistant for the impersonation mode
+- Fixed the tags of the assistant for the impersonation mode
+
+## 2.236.0 - 2026-02-05
+
+### Changed
+
+- Removed the deprecated `transactionCount` in the endpoint `GET api/v1/admin`
+- Upgraded `stripe` from version `20.1.0` to `20.3.0`
+
+### Fixed
+
+- Fixed an exception when fetching the top holdings for ETF and mutual fund assets from _Yahoo Finance_
+
+## 2.235.0 - 2026-02-03
+
+### Added
+
+- Added the ability to fetch top holdings for ETF and mutual fund assets from _Yahoo Finance_
+- Added support for the impersonation mode in the endpoint `GET api/v1/account/:id/balances`
+- Added an action menu to the user detail dialog in the users section of the admin control panel
+
+### Changed
+
+- Optimized the value redaction interceptor for the impersonation mode by introducing `fast-redact`
+- Refactored `showTransactions` in favor of `showActivitiesCount` in the accounts table component
+- Refactored `transactionCount` in favor of `activitiesCount` in the accounts table component
+- Deprecated `transactionCount` in favor of `activitiesCount` in the endpoint `GET api/v1/admin`
+- Removed the deprecated `firstBuyDate` in the portfolio calculator
+- Upgraded `yahoo-finance2` from version `3.11.2` to `3.13.0`
+
+## 2.234.0 - 2026-01-30
+
+### Changed
+
+- Improved the usability of the create asset profile dialog in the market data section of the admin control panel
+- Improved the language localization for Chinese (`zh`)
+- Improved the language localization for German (`de`)
+- Improved the language localization for Spanish (`es`)
+- Upgraded `angular` from version `21.0.6` to `21.1.1`
+- Upgraded `lodash` from version `4.17.21` to `4.17.23`
+- Upgraded `Nx` from version `22.3.3` to `22.4.1`
+- Upgraded `prettier` from version `3.8.0` to `3.8.1`
+
+## 2.233.0 - 2026-01-23
+
+### Changed
+
+- Deprecated `firstBuyDate` in favor of `dateOfFirstActivity` in the portfolio calculator
+- Deprecated `transactionCount` in favor of `activitiesCount` in the portfolio calculator and service
+- Removed the deprecated `firstBuyDate` from the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+- Refreshed the cryptocurrencies list
+- Upgraded `prettier` from version `3.7.4` to `3.8.0`
+
+## 2.232.0 - 2026-01-19
+
+### Added
+
+- Extended the analysis page to include the total amount, change and performance with currency effects (experimental)
+
+### Changed
+
+- Deprecated `firstBuyDate` in favor of `dateOfFirstActivity` in the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+- Improved the language localization for German (`de`)
+- Upgraded `countries-list` from version `3.2.0` to `3.2.2`
+
+## 2.231.0 - 2026-01-17
+
+### Changed
+
+- Removed the deprecated platforms from the info service
+- Removed the deprecated activities from the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+
+### Fixed
+
+- Fixed a numeric parsing error related to cash positions on the _X-ray_ page
+- Fixed the total fee calculation in the holding detail dialog related to activities in a custom currency
+- Fixed the total fee calculation in the summary related to activities in a custom currency
+
+## 2.230.0 - 2026-01-14
+
+### Added
+
+- Set up the language localization for Korean (`ko`)
+
+### Changed
+
+- Restored the support for specific calendar year date ranges (`2024`, `2023`, `2022`, etc.) in the holdings table (experimental)
+
+### Fixed
+
+- Fixed the total fee calculation in the holding detail dialog related to activities in a custom currency
+- Fixed the total fee calculation in the summary related to activities in a custom currency
+
+## 2.229.0 - 2026-01-11
+
+### Changed
+
+- Set the active sort column in the accounts table component
+- Deprecated `activities` in the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+- Moved the admin service to `@ghostfolio/ui/services`
+- Moved the data service to `@ghostfolio/ui/services`
+- Refactored the dividend import
+- Refreshed the cryptocurrencies list
+
+### Fixed
+
+- Fixed the net worth calculation to prevent the double counting of cash positions
+- Fixed the filtering by asset class in the endpoint `GET api/v1/portfolio/holdings`
+- Fixed the case-insensitive sorting in the accounts table component
+- Fixed the case-insensitive sorting in the benchmark component
+- Fixed the case-insensitive sorting in the holdings table component
+
+## 2.228.0 - 2026-01-03
+
+### Added
+
+- Extended the portfolio holdings to include performance with currency effects for cash positions
+
+### Changed
+
+- Integrated the endpoint to get all platforms (`GET api/v1/platforms`) into the create or update account dialog
+- Extracted the scraper configuration to a dedicated tab in the asset profile details dialog of the admin control panel
+- Improved the language localization for German (`de`)
+- Upgraded `@date-fns/utc` from version `2.1.0` to `2.1.1`
+
+### Fixed
+
+- Improved the table headers’ alignment of the accounts table on mobile
+
+## 2.227.0 - 2026-01-02
+
+### Changed
+
+- Initialized the input properties in the _FIRE_ calculator
+- Removed the deprecated public _Stripe_ key
+- Upgraded `stripe` from version `18.5.0` to `20.1.0`
+
+### Fixed
+
+- Fixed the import of `jsonpath` to support REST APIs (`JSON`) via the scraper configuration
+
+## 2.226.0 - 2026-01-01
+
+### Added
+
+- Extended the content of the _Self-Hosting_ section by information about additional data providers on the Frequently Asked Questions (FAQ) page
+
+### Changed
+
+- Upgraded `class-validator` from version `0.14.2` to `0.14.3`
+- Upgraded `yahoo-finance2` from version `3.10.2` to `3.11.2`
+
+## 2.225.0 - 2025-12-31
+
+### Added
+
+- Added a new endpoint to get all platforms (`GET api/v1/platforms`)
+- Added the session url to the endpoint response of the _Stripe_ checkout
+
+### Changed
+
+- Improved the routing of the user detail dialog in the users section of the admin control panel
+- Lifted the asset profile identifier editing restriction for `MANUAL` data sources in the asset profile details dialog of the admin control panel
+- Deprecated the public _Stripe_ key
+- Improved the language localization for German (`de`)
+- Eliminated `ngx-stripe`
+- Upgraded `angular` from version `20.2.4` to `21.0.6`
+- Upgraded `marked` from version `15.0.4` to `17.0.1`
+- Upgraded `ngx-device-detector` from version `10.1.0` to `11.0.0`
+- Upgraded `ng-extract-i18n-merge` from `3.1.0` to `3.2.1`
+- Upgraded `ngx-markdown` from version `20.0.0` to `21.0.1`
+- Upgraded `Nx` from version `21.5.1` to `22.3.3`
+- Upgraded `shx` from version `0.3.4` to `0.4.0`
+- Upgraded `storybook` from version `9.1.5` to `10.1.10`
+- Upgraded `zone.js` from version `0.15.1` to `0.16.0`
+
+### Fixed
+
+- Added the missing currency suffix to the cash balance field in the create or update account dialog
+- Fixed the time in market display of the portfolio summary tab on the home page for the impersonation mode
+- Fixed the delete button in the asset profile details dialog of the admin control panel by providing the missing `watchedByCount` parameter
+
+## 2.224.2 - 2025-12-20
+
+### Added
+
+- Included the calendar year boundaries in the portfolio calculations
+- Added the ISIN number to the asset profile details dialog of the admin control panel
+
+### Changed
+
+- Restored the support for specific calendar year date ranges (`2024`, `2023`, `2022`, etc.) in the assistant (experimental)
+- Removed the deprecated _Angular CLI_ decorator (`decorate-angular-cli.js`)
+- Refreshed the cryptocurrencies list
+
+### Fixed
+
+- Localized date formatting across the _FIRE_ section
+
+## 2.223.0 - 2025-12-14
+
+### Added
+
+- Included wealth projection data calculated for the retirement date in the _FIRE_ section (experimental)
+
+### Changed
+
+- Moved the notification module to `@ghostfolio/ui`
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed a calculation issue that resulted in the incorrect assignment of unknown data in the portfolio proportion chart component
+
+## 2.222.0 - 2025-12-07
+
+### Added
+
+- Introduced data source transformation support in the import functionality for self-hosted environments
+- Added _OpenID Connect_ (`OIDC`) as a new login provider for self-hosted environments (experimental)
+- Added an optional 3D hover effect to the membership card component
+
+### Changed
+
+- Increased the numerical precision for cryptocurrency quantities in the holding detail dialog
+- Upgraded `envalid` from version `8.1.0` to `8.1.1`
+- Upgraded `prettier` from version `3.7.3` to `3.7.4`
+
+## 2.221.0 - 2025-12-01
+
+### Changed
+
+- Refactored the API query parameters in various data provider services
+- Extended the _Storybook_ stories of the portfolio proportion chart component by a story using percentage values
+- Upgraded `@internationalized/number` from version `3.6.3` to `3.6.5`
+- Upgraded `prettier` from version `3.7.2` to `3.7.3`
+
+### Fixed
+
+- Improved the country weightings in the _Financial Modeling Prep_ service
+- Improved the search functionality by name in the _Financial Modeling Prep_ service
+- Resolved an issue in the user endpoint where the list was returning empty in the admin control panel’s users section
+
+## 2.220.0 - 2025-11-29
+
+### Changed
+
+- Restricted the asset profile data gathering on Sundays to only process outdated asset profiles
+- Removed the _Cypress_ testing setup
+- Eliminated `uuid` in favor of using `randomUUID` from `node:crypto`
+- Upgraded `color` from version `5.0.0` to `5.0.3`
+- Upgraded `prettier` from version `3.6.2` to `3.7.2`
+
+### Fixed
+
+- Fixed an issue with the exchange rate calculation when converting between derived currencies and their root currencies
+
+## 2.219.0 - 2025-11-23
+
+### Added
+
+- Extended the user detail dialog of the admin control panel’s users section by the authentication method
+
+### Changed
+
+- Disabled the action to delete activities if the activities table is empty
+- Improved the validation of the currency management in the admin control panel
+- Improved the content of the pricing page
+- Resolved the data source of the `GHOSTFOLIO` data provider in the export functionality
+- Resolved the data source of the `GHOSTFOLIO` data provider in the import functionality
+- Refreshed the cryptocurrencies list
+- Improved the language localization for German (`de`)
+- Upgraded `yahoo-finance2` from version `3.10.1` to `3.10.2`
+
+### Fixed
+
+- Fixed an issue with the edit of future activities (drafts)
+
+## 2.218.0 - 2025-11-20
+
+### Added
+
+- Extended the accounts table menu with a _View Details_ item
+- Extended the portfolio summary tab on the home page by percentage values (experimental)
+- Added the _OSS Gallery_ logo to the logo carousel on the landing page
+
+### Changed
+
+- Improved the dynamic numerical precision for various values in the portfolio summary tab on the home page
+- Upgraded `yahoo-finance2` from version `3.10.0` to `3.10.1`
+
+## 2.217.1 - 2025-11-16
+
+### Added
+
+- Introduced support for automatically gathering required exchange rates, exposed as an environment variable (`ENABLE_FEATURE_GATHER_NEW_EXCHANGE_RATES`)
+- Added a blog post: _Black Weeks 2025_
+
+### Changed
+
+- Refactored the get holding functionality in the portfolio service
+- Changed the user data loading in the user detail dialog of the admin control panel’s users section to fetch data on demand
+- Exposed the authentication with access token as an environment variable (`ENABLE_FEATURE_AUTH_TOKEN`)
+- Improved the search functionality of the _Financial Modeling Prep_ service
+- Improved the language localization for German (`de`)
+- Upgraded `prisma` from version `6.18.0` to `6.19.0`
+
+### Todo
+
+- Rename the environment variable from `ENABLE_FEATURE_SOCIAL_LOGIN` to `ENABLE_FEATURE_AUTH_GOOGLE`
+
+## 2.216.0 - 2025-11-10
+
+### Changed
+
+- Improved the language localization for Chinese (`zh`)
+- Upgraded `chart.js` from version `4.5.0` to `4.5.1`
+- Upgraded `svgmap` from version `2.12.2` to `2.14.0`
+
+## 2.215.0 - 2025-11-06
+
+### Added
+
+- Added the endpoint `GET /api/v1/admin/user/:id`
+
+### Changed
+
+- Improved the _Self-Hosting_ section content for the _Compare with..._ concept on the Frequently Asked Questions (FAQ) page
+- Improved the _Self-Hosting_ section content for the _Markets_ concept on the Frequently Asked Questions (FAQ) page
+- Changed the build executor of the client from `@nx/angular:webpack-browser` to `@nx/angular:browser-esbuild`
+- Refactored the app component to standalone
+- Improved the language localization for German (`de`)
+- Upgraded `@ionic/angular` from version `8.7.3` to `8.7.8`
+
+### Fixed
+
+- Fixed the style of the safe withdrawal rate selector in the _FIRE_ section (experimental)
+- Assigned the `ADMIN` role to the first user signing up via a social login provider if no administrator existed
+- Improved the table headers’ alignment in the platform management of the admin control panel
+- Improved the table headers’ alignment in the tag management of the admin control panel
+
+## 2.214.0 - 2025-11-01
+
+### Changed
+
+- Improved the icon of the _View Holding_ menu item in the activities table
+- Ensured atomic data replacement during historical market data gathering
+- Removed _Internet Identity_ as a social login provider
+- Refreshed the cryptocurrencies list
+- Upgraded `countries-list` from version `3.1.1` to `3.2.0`
+- Upgraded `ng-extract-i18n-merge` from version `3.0.0` to `3.1.0`
+- Upgraded `twitter-api-v2` from version `1.23.0` to `1.27.0`
+
+## 2.213.0 - 2025-10-30
+
+### Added
+
+- Extended the activities table menu with a _View Holding_ item
+- Added the error logging to the symbol lookup in the _Trackinsight_ data enhancer
+
+### Changed
+
+- Improved the icon of the holdings tab on the home page
+- Improved the icon of the holdings tab on the home page for the _Zen Mode_
+- Improved the icon of the holdings tab in the account detail dialog
+- Migrated the tags selector component in the holding detail dialog to form control
+- Improved the language localization for German (`de`)
+- Upgraded `nestjs` from version `11.1.3` to `11.1.8`
+
+## 2.212.0 - 2025-10-29
+
+### Added
+
+- Added a close holding button to the holding detail dialog
+- Added the _Sponsors_ section to the about page
+- Extended the user detail dialog in the users section of the admin control panel
+
+### Changed
+
+- Refactored the generation of the holdings table in the _Copy AI prompt to clipboard for analysis_ action on the analysis page (experimental)
+- Refactored the generation of the holdings table in the _Copy portfolio data to clipboard for AI prompt_ action on the analysis page (experimental)
+- Improved the usability of the user detail dialog in the users section of the admin control panel
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Ensured the locale is available in the settings dialog to customize the rule thresholds of the _X-ray_ page
+
+## 2.211.0 - 2025-10-25
+
+### Added
+
+- Extended the export functionality by the user account’s performance calculation type
+- Added the _SelfhostedHub_ logo to the logo carousel on the landing page
+- Added a user detail dialog to the users section of the admin control panel
+
+### Changed
+
+- Localized the number formatting in the static portfolio analysis rule: _Liquidity_ (Buying Power)
+- Moved the _Prisma Configuration File_ from `prisma.config.ts` to `.config/prisma.ts`
+- Improved the language localization for German (`de`)
+- Upgraded `prisma` from version `6.17.1` to `6.18.0`
+- Upgraded `tablemark` from version `3.1.0` to `4.1.0`
+
+### Fixed
+
+- Fixed the style in the footer row of the accounts table
+- Fixed the rendering of names and symbols for custom assets in the import activities dialog
+- Fixed an issue with the market price in base currency during the portfolio snapshot calculation
+
+## 2.210.1 - 2025-10-22
+
+### Added
+
+- Added support for data gathering by date range in the asset profile details dialog of the admin control panel
+
+### Changed
+
+- Extracted the portfolio filter form of the assistant to a reusable component
+- Formatted the holdings table in the _Copy AI prompt to clipboard for analysis_ action on the analysis page (experimental)
+- Formatted the holdings table in the _Copy portfolio data to clipboard for AI prompt_ action on the analysis page (experimental)
+- Reverted the explicit configuration of the _Redis_ address family in the job queue module
+- Improved the language localization for German (`de`)
+- Upgraded `ioredis` from version `5.6.1` to `5.8.2`
+
+### Fixed
+
+- Fixed the enter key press to submit the form of the login with access token dialog
+- Fixed an issue in the database seeding process caused by unresolved environment variables in `DATABASE_URL`
+
+## 2.209.0 - 2025-10-18
+
+### Added
+
+- Extended the glossary of the resources page by _Stealth Wealth_
+- Extended the content of the pricing page
+- Added a _Storybook_ story for the holdings table component
+
+### Changed
+
+- Disabled the zoom functionality in the _Progressive Web App_ (PWA)
+- Improved the currency validation in the get asset profiles functionality of the data provider service
+- Improved the currency validation in the search functionality of the data provider service
+- Optimized the get quotes functionality by utilizing the asset profile resolutions in the _Financial Modeling Prep_ service
+- Extracted the footer to a component
+- Refactored the blog page component to standalone
+- Improved the portfolio calculator unit tests to load the user currency from the exported file
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed an issue in the `csv` file import where custom asset profiles failed due to validation errors
+- Fixed an issue with the total buy and sell calculation in the summary related to activities in a custom currency
+- Respected the include indices flag in the search functionality of the _Financial Modeling Prep_ service
+- Fixed an issue where the scroll position was not restored when changing pages
+- Fixed the word wrap in the menus of the activities table component
+- Fixed the dark mode in the _As seen in_ section on the landing page
+
+## 2.208.0 - 2025-10-11
+
+### Added
+
+- Added support for configuring the safe withdrawal rate in the _FIRE_ section (experimental)
+
+### Changed
+
+- Changed the _As seen in_ section on the landing page to an animated carousel
+- Refactored `transactionCount` to `activitiesCount` in the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+- Refactored various components to use self-closing tags
+- Removed the deprecated endpoint `GET api/v1/portfolio/position/:dataSource/:symbol`
+- Removed the deprecated endpoint `PUT api/v1/portfolio/position/:dataSource/:symbol/tags`
+- Improved the language localization for German (`de`)
+- Upgraded `prisma` from version `6.16.1` to `6.17.1`
+
+### Fixed
+
+- Fixed the server startup message to properly display IPv6 addresses
+- Enabled IPv6 connectivity for _Redis_ in the job queue module by setting the address family
+- Fixed an issue where importing custom asset profiles failed due to validation errors
+
+## 2.207.0 - 2025-10-08
+
+### Added
+
+- Added support to edit a granted access (experimental)
+- Introduced tabs to the asset profile details dialog in the admin control panel
+- Added support for a date range query parameter in the data gathering endpoint
+- Added a _Storybook_ story for the activities table component
+
+### Changed
+
+- Improved the spacing around the buttons in the holding detail dialog
+- Extended the _Storybook_ stories of the accounts table component by a loading state story
+- Refactored the auth page to standalone
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed the word wrap in the menu of the access table component
+- Fixed the word wrap in the menu of the activities table component
+- Fixed the word wrap in the menu of the asset profile details dialog in the admin control panel
+
+## 2.206.0 - 2025-10-04
+
+### Changed
+
+- Localized the number formatting in the settings dialog to customize the rule thresholds of the _X-ray_ page
+- Improved the usability of the assistant by preselecting the first search result
+- Improved the usability of the _Cancel_ / _Close_ buttons in the create watchlist item dialog
+- Refactored the `fireWealth` from `number` type to a structured object in the summary of the portfolio details endpoint
+- Refactored the _Open Startup_ (`/open`) page to standalone
+- Refactored the file drop directive to standalone
+- Refactored the symbol pipe to standalone
+
+### Fixed
+
+- Handled an exception in the get asset profile functionality of the _Financial Modeling Prep_ service
+- Added the missing `CommonModule` import in the import activities dialog
+
+## 2.205.0 - 2025-10-01
+
+### Changed
+
+- Restricted the selection of the retirement date picker in the _FIRE_ calculator to a future date
+- Improved the support for mutual funds in the _Financial Modeling Prep_ service (get asset profiles)
+- Improved the language localization for German (`de`)
+- Upgraded `prisma` from version `6.16.1` to `6.16.3`
+
+## 2.204.0 - 2025-09-30
+
+### Added
+
+- Added the safe withdrawal rate to the user settings (experimental)
+
+### Changed
+
+- Improved the number formatting of the y-axis labels in the investment chart component
+- Localized the number formatting of the y-axis labels in the line chart component
+- Improved the wording of the 4% rule in the _FIRE_ section
+- Improved the usability of the create asset profile dialog in the market data section of the admin control panel
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Improved the table headers’ alignment of the activities table
+
+## 2.203.0 - 2025-09-27
+
+### Added
+
+- Added support for column sorting to the queue jobs table in the admin control panel
+- Added a blog post: _Hacktoberfest 2025_
+
+### Changed
+
+- Removed the deprecated `ITEM` activity type
+
+## 2.202.0 - 2025-09-26
+
+### Added
+
+- Added `settings` to the `Access` model
+
+### Changed
+
+- Extended the tags selector component to support form control
+- Changed the deprecated `ITEM` activity type to `VALUABLE` in the create or update activity dialog
+
+### Fixed
+
+- Fixed an issue where the save button was not enabled after editing tags in the create or update activity dialog
+- Fixed an issue in the investment calculation when selling all units of a holding
+
+## 2.201.0 - 2025-09-24
+
+### Added
+
+- Added the symbol to the benchmark component
+- Added the latest activities to the public page (experimental)
+- Added pagination to the activities table of the activities import dialog
+- Added an option to configure the account column of the activities table component
+
+### Changed
+
+- Hid the account column from the activities table of the account detail dialog to avoid redundant information
+- Renamed the show access token dialog component to user account registration dialog component
+- Refreshed the cryptocurrencies list
+- Improved the language localization for German (`de`)
+- Upgraded `countup.js` from version `2.8.2` to `2.9.0`
+
+### Fixed
+
+- Fixed an issue with `unitPriceInAssetProfileCurrency` in the value redaction interceptor for the impersonation mode
+
+## 2.200.0 - 2025-09-17
+
+### Changed
+
+- Refactored the show access token dialog component to standalone
+- Upgraded `prisma` from version `6.15.0` to `6.16.1`
+
+### Fixed
+
+- Removed a temporary element from the activities table component
+
+## 2.199.0 - 2025-09-14
+
+### Added
+
+- Extended the content of the performance calculation method by dividends on the Frequently Asked Questions (FAQ) page
+- Added a _Storybook_ story for the entity logo image component
+
+### Changed
+
+- Improved the search in the _Yahoo Finance_ service
+- Moved the holdings table into the holdings section on the public page
+- Migrated to the _Prisma Configuration File_ approach (`prisma.config.ts`)
+- Refactored the login with access token dialog component to standalone
+- Prefixed the `crypto`, `fs` and `path` imports with `node:`
+- Upgraded `yahoo-finance2` from version `3.8.0` to `3.10.0`
+
+### Fixed
+
+- Fixed a pagination issue in the market data endpoint by adding `id` as a secondary sort criterion to ensure consistent ordering in the admin control panel
+- Fixed a pagination issue in the user endpoint by adding `id` as a secondary sort criterion to ensure consistent ordering in the admin control panel
+
+## 2.198.0 - 2025-09-11
+
+### Changed
+
+- Extended the variations of the interstitials for the subscription
+- Renamed the job identifier column in the jobs queue view of the admin control panel
+- Refactored the markets page to standalone
+- Refactored the fear and greed index component to standalone
 - Refactored the header component to standalone
+- Refactored the investment chart component to standalone
+- Refactored the rule component to standalone
+- Refactored the rules component to standalone
+- Refactored the subscription interstitial dialog component to standalone
+- Removed the `IonIcon` import from the landing page
+- Improved the language localization for German (`de`)
+- Upgraded `angular` from version `20.1.3` to `20.2.4`
+- Upgraded `eslint` dependencies
+- Upgraded `Nx` from version `21.3.9` to `21.5.1`
+- Upgraded `storybook` from version `9.0.17` to `9.1.5`
+
+### Fixed
+
+- Fixed the holdings table on the public page
 
 ## 2.197.0 - 2025-09-07
 
@@ -1838,7 +2607,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed an issue in the portfolio summary with the currency conversion of fees
-- Fixed an issue in the the search for a holding
+- Fixed an issue in the search for a holding
 - Removed the show condition of the experimental features setting in the user settings
 
 ## 2.95.0 - 2024-07-12

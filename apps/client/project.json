@@ -26,6 +26,10 @@
         "baseHref": "/it/",
         "translation": "apps/client/src/locales/messages.it.xlf"
       },
+      "ko": {
+        "baseHref": "/ko/",
+        "translation": "apps/client/src/locales/messages.ko.xlf"
+      },
       "nl": {
         "baseHref": "/nl/",
         "translation": "apps/client/src/locales/messages.nl.xlf"
@@ -61,30 +65,29 @@
   },
   "targets": {
     "build": {
-      "executor": "@nx/angular:webpack-browser",
+      "executor": "@nx/angular:browser-esbuild",
       "options": {
-        "deleteOutputPath": false,
-        "localize": true,
-        "outputPath": "dist/apps/client",
         "index": "apps/client/src/index.html",
         "main": "apps/client/src/main.ts",
-        "polyfills": "apps/client/src/polyfills.ts",
+        "outputPath": "dist/apps/client",
         "tsConfig": "apps/client/tsconfig.app.json",
+        "buildOptimizer": false,
+        "deleteOutputPath": false,
+        "extractLicenses": false,
+        "localize": true,
+        "namedChunks": true,
+        "ngswConfigPath": "apps/client/ngsw-config.json",
+        "optimization": false,
+        "polyfills": "apps/client/src/polyfills.ts",
+        "serviceWorker": true,
+        "sourceMap": true,
         "styles": [
           "apps/client/src/assets/fonts/inter.css",
           "apps/client/src/styles/theme.scss",
           "apps/client/src/styles.scss",
           "node_modules/open-color/open-color.css"
         ],
-        "scripts": ["node_modules/marked/marked.min.js"],
-        "vendorChunk": true,
-        "extractLicenses": false,
-        "buildOptimizer": false,
-        "sourceMap": true,
-        "optimization": false,
-        "namedChunks": true,
-        "serviceWorker": true,
-        "ngswConfigPath": "apps/client/ngsw-config.json"
+        "vendorChunk": true
       },
       "configurations": {
         "development-ca": {
@@ -111,6 +114,10 @@
           "baseHref": "/it/",
           "localize": ["it"]
         },
+        "development-ko": {
+          "baseHref": "/ko/",
+          "localize": ["ko"]
+        },
         "development-nl": {
           "baseHref": "/nl/",
           "localize": ["nl"]
@@ -136,19 +143,6 @@
           "localize": ["zh"]
         },
         "production": {
-          "fileReplacements": [
-            {
-              "replace": "apps/client/src/environments/environment.ts",
-              "with": "apps/client/src/environments/environment.prod.ts"
-            }
-          ],
-          "optimization": true,
-          "outputHashing": "all",
-          "sourceMap": false,
-          "namedChunks": false,
-          "extractLicenses": true,
-          "vendorChunk": false,
-          "buildOptimizer": true,
           "budgets": [
             {
               "type": "initial",
@@ -160,7 +154,20 @@
               "maximumWarning": "6kb",
               "maximumError": "10kb"
             }
-          ]
+          ],
+          "buildOptimizer": true,
+          "extractLicenses": true,
+          "fileReplacements": [
+            {
+              "replace": "apps/client/src/environments/environment.ts",
+              "with": "apps/client/src/environments/environment.prod.ts"
+            }
+          ],
+          "namedChunks": false,
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "vendorChunk": false
         }
       },
       "outputs": ["{options.outputPath}"],
@@ -214,6 +221,9 @@
         "sslKey": "apps/client/localhost.pem"
       },
       "configurations": {
+        "development-ca": {
+          "buildTarget": "client:build:development-ca"
+        },
         "development-de": {
           "buildTarget": "client:build:development-de"
         },
@@ -228,6 +238,9 @@
         },
         "development-it": {
           "buildTarget": "client:build:development-it"
+        },
+        "development-ko": {
+          "buildTarget": "client:build:development-ko"
         },
         "development-nl": {
           "buildTarget": "client:build:development-nl"
@@ -265,6 +278,7 @@
           "messages.es.xlf",
           "messages.fr.xlf",
           "messages.it.xlf",
+          "messages.ko.xlf",
           "messages.nl.xlf",
           "messages.pl.xlf",
           "messages.pt.xlf",
@@ -284,7 +298,8 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "apps/client/jest.config.ts"
+        "jestConfig": "apps/client/jest.config.ts",
+        "tsConfig": "apps/client/tsconfig.spec.json"
       },
       "outputs": ["{workspaceRoot}/coverage/apps/client"]
     }

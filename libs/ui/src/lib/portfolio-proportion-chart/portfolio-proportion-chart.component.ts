@@ -1,6 +1,6 @@
 import { getTooltipOptions } from '@ghostfolio/common/chart-helper';
 import { UNKNOWN_KEY } from '@ghostfolio/common/config';
-import { getLocale, getTextColor } from '@ghostfolio/common/helper';
+import { getLocale, getSum, getTextColor } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   PortfolioPosition
@@ -22,15 +22,21 @@ import {
 } from '@angular/core';
 import { DataSource } from '@prisma/client';
 import { Big } from 'big.js';
-import { ChartConfiguration, Tooltip } from 'chart.js';
-import { LinearScale } from 'chart.js';
-import { ArcElement } from 'chart.js';
-import { DoughnutController } from 'chart.js';
-import { Chart } from 'chart.js';
+import {
+  ArcElement,
+  Chart,
+  type ChartData,
+  type ChartDataset,
+  DoughnutController,
+  LinearScale,
+  Tooltip,
+  type TooltipOptions
+} from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { isUUID } from 'class-validator';
 import Color from 'color';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+import OpenColor from 'open-color';
 
 import { translate } from '../i18n';
 
@@ -47,7 +53,7 @@ const {
   teal,
   violet,
   yellow
-} = require('open-color');
+} = OpenColor;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -192,6 +198,30 @@ export class GfPortfolioProportionChartComponent
       });
     }
 
+    if (this.isInPercent) {
+      const totalValueInPercentage = getSum(
+        Object.values(chartData).map(({ value }) => {
+          return value;
+        })
+      );
+
+      const unknownValueInPercentage = new Big(1).minus(totalValueInPercentage);
+
+      if (unknownValueInPercentage.gt(0)) {
+        // If total is below 100%, allocate the remaining percentage to UNKNOWN_KEY
+        if (chartData[UNKNOWN_KEY]) {
+          chartData[UNKNOWN_KEY].value = chartData[UNKNOWN_KEY].value.plus(
+            unknownValueInPercentage
+          );
+        } else {
+          chartData[UNKNOWN_KEY] = {
+            name: UNKNOWN_KEY,
+            value: unknownValueInPercentage
+          };
+        }
+      }
+    }
+
     let chartDataSorted = Object.entries(chartData)
       .sort((a, b) => {
         return a[1].value.minus(b[1].value).toNumber();
@@ -261,7 +291,7 @@ export class GfPortfolioProportionChartComponent
       });
     });
 
-    const datasets: ChartConfiguration<'doughnut'>['data']['datasets'] = [
+    const datasets: ChartDataset<'doughnut'>[] = [
       {
         backgroundColor: chartDataSorted.map(([, item]) => {
           return item.color;
@@ -299,7 +329,7 @@ export class GfPortfolioProportionChartComponent
       datasets[1].data[1] = Number.MAX_SAFE_INTEGER;
     }
 
-    const data: ChartConfiguration<'doughnut'>['data'] = {
+    const data: ChartData<'doughnut'> = {
       datasets,
       labels
     };
@@ -307,9 +337,10 @@ export class GfPortfolioProportionChartComponent
     if (this.chartCanvas) {
       if (this.chart) {
         this.chart.data = data;
-        this.chart.options.plugins.tooltip = this.getTooltipPluginConfiguration(
-          data
-        ) as unknown;
+        this.chart.options.plugins ??= {};
+        this.chart.options.plugins.tooltip =
+          this.getTooltipPluginConfiguration(data);
+
         this.chart.update();
       } else {
         this.chart = new Chart<'doughnut'>(this.chartCanvas.nativeElement, {
@@ -320,21 +351,22 @@ export class GfPortfolioProportionChartComponent
             layout: {
               padding: this.showLabels === true ? 100 : 0
             },
-            onClick: (event, activeElements) => {
+            onClick: (_, activeElements, chart) => {
               try {
                 const dataIndex = activeElements[0].index;
-                const symbol: string = event.chart.data.labels[dataIndex];
+                const symbol = chart.data.labels?.[dataIndex] as string;
 
-                const dataSource = this.data[symbol]?.dataSource;
+                const dataSource = this.data[symbol].dataSource;
 
-                this.proportionChartClicked.emit({ dataSource, symbol });
+                if (dataSource) {
+                  this.proportionChartClicked.emit({ dataSource, symbol });
+                }
               } catch {}
             },
             onHover: (event, chartElement) => {
               if (this.cursor) {
-                event.native.target.style.cursor = chartElement[0]
-                  ? this.cursor
-                  : 'default';
+                (event.native?.target as HTMLElement).style.cursor =
+                  chartElement[0] ? this.cursor : 'default';
               }
             },
             plugins: {
@@ -367,7 +399,7 @@ export class GfPortfolioProportionChartComponent
               legend: { display: false },
               tooltip: this.getTooltipPluginConfiguration(data)
             }
-          } as unknown,
+          },
           plugins: [ChartDataLabels],
           type: 'doughnut'
         });
@@ -394,19 +426,24 @@ export class GfPortfolioProportionChartComponent
     ];
   }
 
-  private getTooltipPluginConfiguration(data: ChartConfiguration['data']) {
+  private getTooltipPluginConfiguration(
+    data: ChartData<'doughnut'>
+  ): Partial<TooltipOptions<'doughnut'>> {
     return {
       ...getTooltipOptions({
         colorScheme: this.colorScheme,
         currency: this.baseCurrency,
         locale: this.locale
       }),
+      // @ts-expect-error: no need to set all attributes in callbacks
       callbacks: {
         label: (context) => {
           const labelIndex =
             (data.datasets[context.datasetIndex - 1]?.data?.length ?? 0) +
             context.dataIndex;
-          let symbol = context.chart.data.labels?.[labelIndex] ?? '';
+
+          let symbol =
+            (context.chart.data.labels?.[labelIndex] as string) ?? '';
 
           if (symbol === this.OTHER_KEY) {
             symbol = $localize`Other`;
@@ -414,9 +451,10 @@ export class GfPortfolioProportionChartComponent
             symbol = $localize`No data available`;
           }
 
-          const name = translate(this.data[symbol as string]?.name);
+          const name = translate(this.data[symbol]?.name);
 
           let sum = 0;
+
           for (const item of context.dataset.data) {
             sum += item;
           }
@@ -429,6 +467,7 @@ export class GfPortfolioProportionChartComponent
             return [`${name ?? symbol}`, `${percentage.toFixed(2)}%`];
           } else {
             const value = context.raw as number;
+
             return [
               `${name ?? symbol}`,
               `${value.toLocaleString(this.locale, {

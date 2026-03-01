@@ -12,7 +12,7 @@ import { CurrencyClusterRiskCurrentInvestment } from '@ghostfolio/api/models/rul
 import { EconomicMarketClusterRiskDevelopedMarkets } from '@ghostfolio/api/models/rules/economic-market-cluster-risk/developed-markets';
 import { EconomicMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/economic-market-cluster-risk/emerging-markets';
 import { EmergencyFundSetup } from '@ghostfolio/api/models/rules/emergency-fund/emergency-fund-setup';
-import { FeeRatioInitialInvestment } from '@ghostfolio/api/models/rules/fees/fee-ratio-initial-investment';
+import { FeeRatioTotalInvestmentVolume } from '@ghostfolio/api/models/rules/fees/fee-ratio-total-investment-volume';
 import { BuyingPower } from '@ghostfolio/api/models/rules/liquidity/buying-power';
 import { RegionalMarketClusterRiskAsiaPacific } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/asia-pacific';
 import { RegionalMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/emerging-markets';
@@ -30,7 +30,7 @@ import {
   PROPERTY_IS_READ_ONLY_MODE,
   PROPERTY_SYSTEM_MESSAGE,
   TAG_ID_EXCLUDE_FROM_ANALYSIS,
-  locale
+  locale as defaultLocale
 } from '@ghostfolio/common/config';
 import {
   User as IUser,
@@ -48,9 +48,9 @@ import { PerformanceCalculationType } from '@ghostfolio/common/types/performance
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, Role, User } from '@prisma/client';
-import { createHmac } from 'crypto';
 import { differenceInDays, subDays } from 'date-fns';
-import { sortBy, without } from 'lodash';
+import { without } from 'lodash';
+import { createHmac } from 'node:crypto';
 
 @Injectable()
 export class UserService {
@@ -96,10 +96,17 @@ export class UserService {
     return { accessToken, hashedAccessToken };
   }
 
-  public async getUser(
-    { accounts, id, permissions, settings, subscription }: UserWithSettings,
-    aLocale = locale
-  ): Promise<IUser> {
+  public async getUser({
+    impersonationUserId,
+    locale = defaultLocale,
+    user
+  }: {
+    impersonationUserId: string;
+    locale?: string;
+    user: UserWithSettings;
+  }): Promise<IUser> {
+    const { id, permissions, settings, subscription } = user;
+
     const userData = await Promise.all([
       this.prismaService.access.findMany({
         include: {
@@ -108,22 +115,31 @@ export class UserService {
         orderBy: { alias: 'asc' },
         where: { granteeUserId: id }
       }),
+      this.prismaService.account.findMany({
+        orderBy: {
+          name: 'asc'
+        },
+        where: {
+          userId: impersonationUserId || user.id
+        }
+      }),
       this.prismaService.order.count({
-        where: { userId: id }
+        where: { userId: impersonationUserId || user.id }
       }),
       this.prismaService.order.findFirst({
         orderBy: {
           date: 'asc'
         },
-        where: { userId: id }
+        where: { userId: impersonationUserId || user.id }
       }),
-      this.tagService.getTagsForUser(id)
+      this.tagService.getTagsForUser(impersonationUserId || user.id)
     ]);
 
     const access = userData[0];
-    const activitiesCount = userData[1];
-    const firstActivity = userData[2];
-    let tags = userData[3].filter((tag) => {
+    const accounts = userData[1];
+    const activitiesCount = userData[2];
+    const firstActivity = userData[3];
+    let tags = userData[4].filter((tag) => {
       return tag.id !== TAG_ID_EXCLUDE_FROM_ANALYSIS;
     });
 
@@ -146,7 +162,6 @@ export class UserService {
     }
 
     return {
-      accounts,
       activitiesCount,
       id,
       permissions,
@@ -160,10 +175,13 @@ export class UserService {
           permissions: accessItem.permissions
         };
       }),
+      accounts: accounts.sort((a, b) => {
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      }),
       dateOfFirstActivity: firstActivity?.date ?? new Date(),
       settings: {
         ...(settings.settings as UserSettings),
-        locale: (settings.settings as UserSettings)?.locale ?? aLocale
+        locale: (settings.settings as UserSettings)?.locale ?? locale
       }
     };
   }
@@ -184,6 +202,7 @@ export class UserService {
     userWhereUniqueInput: Prisma.UserWhereUniqueInput
   ): Promise<UserWithSettings | null> {
     const {
+      _count,
       accessesGet,
       accessToken,
       accounts,
@@ -199,6 +218,11 @@ export class UserService {
       updatedAt
     } = await this.prismaService.user.findUnique({
       include: {
+        _count: {
+          select: {
+            activities: true
+          }
+        },
         accessesGet: true,
         accounts: {
           include: { platform: true }
@@ -209,6 +233,8 @@ export class UserService {
       },
       where: userWhereUniqueInput
     });
+
+    const activitiesCount = _count?.activities ?? 0;
 
     const user: UserWithSettings = {
       accessesGet,
@@ -240,6 +266,11 @@ export class UserService {
       };
     }
 
+    // Set default value for annual interest rate
+    if (!(user.settings.settings as UserSettings)?.annualInterestRate) {
+      (user.settings.settings as UserSettings).annualInterestRate = 5;
+    }
+
     // Set default value for base currency
     if (!(user.settings.settings as UserSettings)?.baseCurrency) {
       (user.settings.settings as UserSettings).baseCurrency = DEFAULT_CURRENCY;
@@ -255,6 +286,21 @@ export class UserService {
     if (!(user.settings.settings as UserSettings)?.performanceCalculationType) {
       (user.settings.settings as UserSettings).performanceCalculationType =
         PerformanceCalculationType.ROAI;
+    }
+
+    // Set default value for projected total amount
+    if (!(user.settings.settings as UserSettings)?.projectedTotalAmount) {
+      (user.settings.settings as UserSettings).projectedTotalAmount = 0;
+    }
+
+    // Set default value for safe withdrawal rate
+    if (!(user.settings.settings as UserSettings)?.safeWithdrawalRate) {
+      (user.settings.settings as UserSettings).safeWithdrawalRate = 0.04;
+    }
+
+    // Set default value for savings rate
+    if (!(user.settings.settings as UserSettings)?.savingsRate) {
+      (user.settings.settings as UserSettings).savingsRate = 0;
     }
 
     // Set default value for view mode
@@ -330,7 +376,7 @@ export class UserService {
         undefined,
         undefined
       ).getSettings(user.settings.settings),
-      FeeRatioInitialInvestment: new FeeRatioInitialInvestment(
+      FeeRatioTotalInvestmentVolume: new FeeRatioTotalInvestmentVolume(
         undefined,
         undefined,
         undefined,
@@ -404,13 +450,13 @@ export class UserService {
         );
         let frequency = 7;
 
-        if (daysSinceRegistration > 720) {
+        if (activitiesCount > 1000 || daysSinceRegistration > 720) {
           frequency = 1;
-        } else if (daysSinceRegistration > 360) {
+        } else if (activitiesCount > 750 || daysSinceRegistration > 360) {
           frequency = 2;
-        } else if (daysSinceRegistration > 180) {
+        } else if (activitiesCount > 500 || daysSinceRegistration > 180) {
           frequency = 3;
-        } else if (daysSinceRegistration > 60) {
+        } else if (activitiesCount > 250 || daysSinceRegistration > 60) {
           frequency = 4;
         } else if (daysSinceRegistration > 30) {
           frequency = 5;
@@ -488,9 +534,10 @@ export class UserService {
       currentPermissions.push(permissions.impersonateAllUsers);
     }
 
-    user.accounts = sortBy(user.accounts, ({ name }) => {
-      return name.toLowerCase();
+    user.accounts = user.accounts.sort((a, b) => {
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     });
+
     user.permissions = currentPermissions.sort();
 
     return user;
@@ -513,13 +560,21 @@ export class UserService {
     });
   }
 
-  public async createUser({
-    data
-  }: {
-    data: Prisma.UserCreateInput;
-  }): Promise<User> {
-    if (!data?.provider) {
+  public async createUser(
+    {
+      data
+    }: {
+      data: Prisma.UserCreateInput;
+    } = { data: {} }
+  ): Promise<User> {
+    if (!data.provider) {
       data.provider = 'ANONYMOUS';
+    }
+
+    if (!data.role) {
+      const hasAdmin = await this.hasAdmin();
+
+      data.role = hasAdmin ? 'USER' : 'ADMIN';
     }
 
     const user = await this.prismaService.user.create({

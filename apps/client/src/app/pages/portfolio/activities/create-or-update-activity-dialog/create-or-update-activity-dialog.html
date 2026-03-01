@@ -65,9 +65,9 @@
               >Stocks, ETFs, bonds, cryptocurrencies, commodities</small
             >
           </mat-option>
-          <mat-option value="ITEM">
+          <mat-option value="VALUABLE">
             <span
-              ><b>{{ typesTranslationMap['ITEM'] }}</b></span
+              ><b>{{ typesTranslationMap['VALUABLE'] }}</b></span
             >
             <small class="d-block line-height-1 text-muted text-nowrap" i18n
               >Luxury items, real estate, private companies</small
@@ -84,12 +84,8 @@
       >
         <mat-label i18n>Account</mat-label>
         <mat-select formControlName="accountId">
-          @if (
-            !activityForm.get('accountId').hasValidator(Validators.required) ||
-            (!activityForm.get('accountId').value && mode === 'update')
-          ) {
-            <mat-option [value]="null" />
-          }
+          <mat-option [value]="null" />
+
           @for (account of data.accounts; track account) {
             <mat-option [value]="account.id">
               <div class="d-flex">
@@ -322,10 +318,9 @@
     </div>
     <div class="mb-3">
       <gf-tags-selector
+        formControlName="tags"
         [hasPermissionToCreateTag]="hasPermissionToCreateOwnTag"
-        [tags]="activityForm.get('tags')?.value"
         [tagsAvailable]="tagsAvailable"
-        (tagsChanged)="onTagsChanged($event)"
       />
     </div>
   </div>

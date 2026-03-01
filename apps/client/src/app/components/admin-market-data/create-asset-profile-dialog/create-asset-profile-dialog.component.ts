@@ -1,10 +1,9 @@
-import { AdminService } from '@ghostfolio/client/services/admin.service';
-import { DataService } from '@ghostfolio/client/services/data.service';
 import {
   DEFAULT_CURRENCY,
   ghostfolioPrefix,
   PROPERTY_CURRENCIES
 } from '@ghostfolio/common/config';
+import { AdminService, DataService } from '@ghostfolio/ui/services';
 import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
 
 import {
@@ -53,8 +52,9 @@ import { CreateAssetProfileDialogMode } from './interfaces/interfaces';
   styleUrls: ['./create-asset-profile-dialog.component.scss'],
   templateUrl: 'create-asset-profile-dialog.html'
 })
-export class GfCreateAssetProfileDialogComponent implements OnInit, OnDestroy {
+export class GfCreateAssetProfileDialogComponent implements OnDestroy, OnInit {
   public createAssetProfileForm: FormGroup;
+  public ghostfolioPrefix = `${ghostfolioPrefix}_`;
   public mode: CreateAssetProfileDialogMode;
 
   private customCurrencies: string[];
@@ -77,9 +77,7 @@ export class GfCreateAssetProfileDialogComponent implements OnInit, OnDestroy {
         addCurrency: new FormControl(null, [
           this.iso4217CurrencyCodeValidator()
         ]),
-        addSymbol: new FormControl(`${ghostfolioPrefix}_`, [
-          Validators.required
-        ]),
+        addSymbol: new FormControl(null, [Validators.required]),
         searchSymbol: new FormControl(null, [Validators.required])
       },
       {
@@ -95,20 +93,22 @@ export class GfCreateAssetProfileDialogComponent implements OnInit, OnDestroy {
   }
 
   public onRadioChange(mode: CreateAssetProfileDialogMode) {
+    this.createAssetProfileForm.reset();
+
     this.mode = mode;
   }
 
   public onSubmit() {
     if (this.mode === 'auto') {
       this.dialogRef.close({
+        addAssetProfile: true,
         dataSource:
           this.createAssetProfileForm.get('searchSymbol').value.dataSource,
         symbol: this.createAssetProfileForm.get('searchSymbol').value.symbol
       });
     } else if (this.mode === 'currency') {
-      const currency = (
-        this.createAssetProfileForm.get('addCurrency').value as string
-      ).toUpperCase();
+      const currency = this.createAssetProfileForm.get('addCurrency')
+        .value as string;
 
       const currencies = Array.from(
         new Set([...this.customCurrencies, currency])
@@ -128,12 +128,17 @@ export class GfCreateAssetProfileDialogComponent implements OnInit, OnDestroy {
           takeUntil(this.unsubscribeSubject)
         )
         .subscribe(() => {
-          this.dialogRef.close();
+          this.dialogRef.close({
+            addAssetProfile: false,
+            dataSource: this.dataSourceForExchangeRates,
+            symbol: `${DEFAULT_CURRENCY}${currency}`
+          });
         });
     } else if (this.mode === 'manual') {
       this.dialogRef.close({
+        addAssetProfile: true,
         dataSource: 'MANUAL',
-        symbol: this.createAssetProfileForm.get('addSymbol').value
+        symbol: `${this.ghostfolioPrefix}${this.createAssetProfileForm.get('addSymbol').value}`
       });
     }
   }
@@ -200,7 +205,10 @@ export class GfCreateAssetProfileDialogComponent implements OnInit, OnDestroy {
 
   private iso4217CurrencyCodeValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
-      if (!isISO4217CurrencyCode(control.value?.toUpperCase())) {
+      if (
+        control.value !== control.value?.toUpperCase() ||
+        !isISO4217CurrencyCode(control.value)
+      ) {
         return { invalidCurrency: true };
       }
 

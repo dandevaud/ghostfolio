@@ -1,12 +1,13 @@
-import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
+import { Activity } from '@ghostfolio/common/interfaces';
 
 export interface PortfolioOrder extends Pick<Activity, 'tags' | 'type'> {
   date: string;
   fee: Big;
+  feeInBaseCurrency: Big;
   quantity: Big;
   SymbolProfile: Pick<
     Activity['SymbolProfile'],
-    'currency' | 'dataSource' | 'name' | 'symbol' | 'userId'
+    'assetSubClass' | 'currency' | 'dataSource' | 'name' | 'symbol' | 'userId'
   >;
   unitPrice: Big;
 }

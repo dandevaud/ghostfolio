@@ -1,11 +1,15 @@
-import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
-import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
-import { getLocale, resolveMarketCondition } from '@ghostfolio/common/helper';
+import { ConfirmationDialogType } from '@ghostfolio/common/enums';
+import {
+  getLocale,
+  getLowercase,
+  resolveMarketCondition
+} from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   Benchmark,
   User
 } from '@ghostfolio/common/interfaces';
+import { NotificationService } from '@ghostfolio/ui/notifications';
 
 import { CommonModule } from '@angular/common';
 import {
@@ -28,7 +32,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { ellipsisHorizontal, trashOutline } from 'ionicons/icons';
-import { get, isNumber } from 'lodash';
+import { isNumber } from 'lodash';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -62,6 +66,7 @@ export class GfBenchmarkComponent implements OnChanges, OnDestroy {
   @Input() deviceType: string;
   @Input() hasPermissionToDeleteItem: boolean;
   @Input() locale = getLocale();
+  @Input() showSymbol = true;
   @Input() user: User;
 
   @Output() itemDeleted = new EventEmitter<AssetProfileIdentifier>();
@@ -110,8 +115,9 @@ export class GfBenchmarkComponent implements OnChanges, OnDestroy {
   public ngOnChanges() {
     if (this.benchmarks) {
       this.dataSource.data = this.benchmarks;
+      this.dataSource.sortingDataAccessor = getLowercase;
+
       this.dataSource.sort = this.sort;
-      this.dataSource.sortingDataAccessor = get;
 
       this.isLoading = false;
     }
@@ -154,14 +160,17 @@ export class GfBenchmarkComponent implements OnChanges, OnDestroy {
     dataSource,
     symbol
   }: AssetProfileIdentifier) {
-    const dialogRef = this.dialog.open(GfBenchmarkDetailDialogComponent, {
+    const dialogRef = this.dialog.open<
+      GfBenchmarkDetailDialogComponent,
+      BenchmarkDetailDialogParams
+    >(GfBenchmarkDetailDialogComponent, {
       data: {
         dataSource,
         symbol,
         colorScheme: this.user?.settings?.colorScheme,
         deviceType: this.deviceType,
         locale: this.locale
-      } as BenchmarkDetailDialogParams,
+      },
       height: this.deviceType === 'mobile' ? '98vh' : undefined,
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });

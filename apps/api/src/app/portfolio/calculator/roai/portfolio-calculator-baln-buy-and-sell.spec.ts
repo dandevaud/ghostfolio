@@ -1,4 +1,3 @@
-import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import {
   activityDummyData,
   symbolProfileDummyData,
@@ -14,13 +13,13 @@ import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
+import { Activity } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
 import { Big } from 'big.js';
 
 jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
   return {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     CurrentRateService: jest.fn().mockImplementation(() => {
       return CurrentRateServiceMock;
     })
@@ -31,7 +30,6 @@ jest.mock(
   '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service',
   () => {
     return {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       PortfolioSnapshotService: jest.fn().mockImplementation(() => {
         return PortfolioSnapshotServiceMock;
       })
@@ -41,7 +39,6 @@ jest.mock(
 
 jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   return {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
     })
@@ -90,6 +87,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-11-22'),
           feeInAssetProfileCurrency: 1.55,
+          feeInBaseCurrency: 1.55,
           quantity: 2,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -105,6 +103,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-11-30'),
           feeInAssetProfileCurrency: 1.65,
+          feeInBaseCurrency: 1.65,
           quantity: 2,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -134,20 +133,26 @@ describe('PortfolioCalculator', () => {
         groupBy: 'month'
       });
 
+      const investmentsByYear = portfolioCalculator.getInvestmentsByGroup({
+        data: portfolioSnapshot.historicalData,
+        groupBy: 'year'
+      });
+
       expect(portfolioSnapshot).toMatchObject({
         currentValueInBaseCurrency: new Big('0'),
         errors: [],
         hasErrors: false,
         positions: [
           {
+            activitiesCount: 2,
             averagePrice: new Big('0'),
             currency: 'CHF',
             dataSource: 'YAHOO',
+            dateOfFirstActivity: '2021-11-22',
             dividend: new Big('0'),
             dividendInBaseCurrency: new Big('0'),
             fee: new Big('3.2'),
             feeInBaseCurrency: new Big('3.2'),
-            firstBuyDate: '2021-11-22',
             grossPerformance: new Big('-12.6'),
             grossPerformancePercentage: new Big('-0.0440867739678096571'),
             grossPerformancePercentageWithCurrencyEffect: new Big(
@@ -171,7 +176,6 @@ describe('PortfolioCalculator', () => {
             tags: [],
             timeWeightedInvestment: new Big('285.8'),
             timeWeightedInvestmentWithCurrencyEffect: new Big('285.8'),
-            transactionCount: 2,
             valueInBaseCurrency: new Big('0')
           }
         ],
@@ -188,6 +192,7 @@ describe('PortfolioCalculator', () => {
           netPerformanceInPercentage: -0.05528341497550734703,
           netPerformanceInPercentageWithCurrencyEffect: -0.05528341497550734703,
           netPerformanceWithCurrencyEffect: -15.8,
+          totalInvestment: 0,
           totalInvestmentValueWithCurrencyEffect: 0
         })
       );
@@ -200,6 +205,10 @@ describe('PortfolioCalculator', () => {
       expect(investmentsByMonth).toEqual([
         { date: '2021-11-01', investment: 0 },
         { date: '2021-12-01', investment: 0 }
+      ]);
+
+      expect(investmentsByYear).toEqual([
+        { date: '2021-01-01', investment: 0 }
       ]);
     });
   });

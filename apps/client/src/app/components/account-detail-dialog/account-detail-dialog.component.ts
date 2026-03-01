@@ -1,14 +1,11 @@
-import { CreateAccountBalanceDto } from '@ghostfolio/api/app/account-balance/create-account-balance.dto';
-import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
-import { GfDialogFooterComponent } from '@ghostfolio/client/components/dialog-footer/dialog-footer.component';
-import { GfDialogHeaderComponent } from '@ghostfolio/client/components/dialog-header/dialog-header.component';
-import { GfInvestmentChartModule } from '@ghostfolio/client/components/investment-chart/investment-chart.module';
-import { DataService } from '@ghostfolio/client/services/data.service';
+import { GfInvestmentChartComponent } from '@ghostfolio/client/components/investment-chart/investment-chart.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { NUMERICAL_PRECISION_THRESHOLD_6_FIGURES } from '@ghostfolio/common/config';
+import { CreateAccountBalanceDto } from '@ghostfolio/common/dtos';
 import { DATE_FORMAT, downloadAsFile } from '@ghostfolio/common/helper';
 import {
   AccountBalancesResponse,
+  Activity,
   HistoricalDataItem,
   PortfolioPosition,
   User
@@ -18,7 +15,10 @@ import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { OrderWithAccount } from '@ghostfolio/common/types';
 import { GfAccountBalancesComponent } from '@ghostfolio/ui/account-balances';
 import { GfActivitiesTableComponent } from '@ghostfolio/ui/activities-table';
+import { GfDialogFooterComponent } from '@ghostfolio/ui/dialog-footer';
+import { GfDialogHeaderComponent } from '@ghostfolio/ui/dialog-header';
 import { GfHoldingsTableComponent } from '@ghostfolio/ui/holdings-table';
+import { DataService } from '@ghostfolio/ui/services';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { CommonModule } from '@angular/common';
@@ -43,9 +43,9 @@ import { Big } from 'big.js';
 import { format, parseISO } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
+  albumsOutline,
   cashOutline,
-  swapVerticalOutline,
-  walletOutline
+  swapVerticalOutline
 } from 'ionicons/icons';
 import { isNumber } from 'lodash';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -64,7 +64,7 @@ import { AccountDetailDialogParams } from './interfaces/interfaces';
     GfDialogFooterComponent,
     GfDialogHeaderComponent,
     GfHoldingsTableComponent,
-    GfInvestmentChartModule,
+    GfInvestmentChartComponent,
     GfValueComponent,
     IonIcon,
     MatButtonModule,
@@ -80,6 +80,7 @@ import { AccountDetailDialogParams } from './interfaces/interfaces';
 export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
   public accountBalances: AccountBalancesResponse['balances'];
   public activities: OrderWithAccount[];
+  public activitiesCount: number;
   public balance: number;
   public balancePrecision = 2;
   public currency: string;
@@ -100,7 +101,6 @@ export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
   public sortColumn = 'date';
   public sortDirection: SortDirection = 'desc';
   public totalItems: number;
-  public transactionCount: number;
   public user: User;
   public valueInBaseCurrency: number;
 
@@ -129,7 +129,7 @@ export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
         }
       });
 
-    addIcons({ cashOutline, swapVerticalOutline, walletOutline });
+    addIcons({ albumsOutline, cashOutline, swapVerticalOutline });
   }
 
   public ngOnInit() {
@@ -215,16 +215,17 @@ export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe(
         ({
+          activitiesCount,
           balance,
           currency,
           dividendInBaseCurrency,
           interestInBaseCurrency,
           name,
           platform,
-          transactionCount,
           value,
           valueInBaseCurrency
         }) => {
+          this.activitiesCount = activitiesCount;
           this.balance = balance;
 
           if (
@@ -270,7 +271,6 @@ export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
 
           this.name = name;
           this.platformName = platform?.name ?? '-';
-          this.transactionCount = transactionCount;
           this.valueInBaseCurrency = valueInBaseCurrency;
 
           this.changeDetectorRef.markForCheck();

@@ -1,4 +1,3 @@
-import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import {
   activityDummyData,
   symbolProfileDummyData,
@@ -14,13 +13,13 @@ import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
+import { Activity } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
 import { Big } from 'big.js';
 
 jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
   return {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     CurrentRateService: jest.fn().mockImplementation(() => {
       return CurrentRateServiceMock;
     })
@@ -31,7 +30,6 @@ jest.mock(
   '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service',
   () => {
     return {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       PortfolioSnapshotService: jest.fn().mockImplementation(() => {
         return PortfolioSnapshotServiceMock;
       })
@@ -41,7 +39,6 @@ jest.mock(
 
 jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   return {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
     })
@@ -90,6 +87,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-09-16'),
           feeInAssetProfileCurrency: 19,
+          feeInBaseCurrency: 19,
           quantity: 1,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -105,6 +103,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-11-16'),
           feeInAssetProfileCurrency: 0,
+          feeInBaseCurrency: 0,
           quantity: 1,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -132,13 +131,14 @@ describe('PortfolioCalculator', () => {
         hasErrors: false,
         positions: [
           {
+            activitiesCount: 2,
             averagePrice: new Big('298.58'),
             currency: 'USD',
             dataSource: 'YAHOO',
+            dateOfFirstActivity: '2021-09-16',
             dividend: new Big('0.62'),
             dividendInBaseCurrency: new Big('0.62'),
             fee: new Big('19'),
-            firstBuyDate: '2021-09-16',
             grossPerformance: new Big('33.25'),
             grossPerformancePercentage: new Big('0.11136043941322258691'),
             grossPerformancePercentageWithCurrencyEffect: new Big(
@@ -162,8 +162,7 @@ describe('PortfolioCalculator', () => {
             },
             quantity: new Big('1'),
             symbol: 'MSFT',
-            tags: [],
-            transactionCount: 2
+            tags: []
           }
         ],
         totalFeesWithCurrencyEffect: new Big('19'),
@@ -175,6 +174,7 @@ describe('PortfolioCalculator', () => {
 
       expect(portfolioSnapshot.historicalData.at(-1)).toMatchObject(
         expect.objectContaining({
+          totalInvestment: 298.58,
           totalInvestmentValueWithCurrencyEffect: 298.58
         })
       );
