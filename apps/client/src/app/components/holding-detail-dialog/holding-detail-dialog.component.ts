@@ -286,7 +286,6 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
           value,
           dividendYieldPercentWithCurrencyEffect,
           feeInBaseCurrency,
-          firstBuyDate,
           historicalData
         }) => {
           this.activitiesCount = activitiesCount;

@@ -755,6 +755,7 @@ export abstract class PortfolioCalculator {
     netPerformanceInPercentageWithCurrencyEffect: number;
     netWorth: number;
     totalInvestment: number;
+    totalInvestmentValueWithCurrencyEffect: number;
     valueWithCurrencyEffect: number;
   }> {
     await this.snapshotPromise;
@@ -852,7 +853,8 @@ export abstract class PortfolioCalculator {
         last?.netPerformanceInPercentageWithCurrencyEffect ?? 0,
       netWorth: last?.netWorth ?? 0,
       totalInvestment: last?.totalInvestment ?? 0,
-      valueWithCurrencyEffect: last?.valueWithCurrencyEffect ?? 0
+      valueWithCurrencyEffect: last?.valueWithCurrencyEffect ?? 0,
+      totalInvestmentValueWithCurrencyEffect: last?.totalInvestmentValueWithCurrencyEffect ?? 0
     };
   }
 
@@ -1247,6 +1249,7 @@ export abstract class PortfolioCalculator {
           SymbolProfile,
           tags = [],
           type,
+          feeInBaseCurrency,
           unitPrice
         }) => {
           if (isAfter(date, new Date(Date.now()))) {
@@ -1262,7 +1265,8 @@ export abstract class PortfolioCalculator {
             date: format(date, DATE_FORMAT),
             fee: new Big(fee),
             quantity: new Big(quantity),
-            unitPrice: new Big(unitPrice)
+            unitPrice: new Big(unitPrice),
+            feeInBaseCurrency: new Big(feeInBaseCurrency)
           };
         }
       )

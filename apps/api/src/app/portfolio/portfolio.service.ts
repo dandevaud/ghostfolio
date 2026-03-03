@@ -1603,128 +1603,7 @@ export class PortfolioService {
     return valueInBaseCurrencyOfEmergencyFundHoldings.toNumber();
   }
 
-  private getInitialCashPosition({
-    balance,
-    currency
-  }: {
-    balance: number;
-    currency: string;
-  }): PortfolioPosition {
-    return {
-      currency,
-      activitiesCount: 0,
-      allocationInPercentage: 0,
-      assetClass: AssetClass.LIQUIDITY,
-      assetSubClass: AssetSubClass.CASH,
-      countries: [],
-      dataSource: undefined,
-      dateOfFirstActivity: undefined,
-      dividend: 0,
-      grossPerformance: 0,
-      grossPerformancePercent: 0,
-      grossPerformancePercentWithCurrencyEffect: 0,
-      grossPerformanceWithCurrencyEffect: 0,
-      holdings: [],
-      investment: balance,
-      marketPrice: 0,
-      name: currency,
-      netPerformance: 0,
-      netPerformancePercent: 0,
-      netPerformancePercentWithCurrencyEffect: 0,
-      netPerformanceWithCurrencyEffect: 0,
-      quantity: 0,
-      sectors: [],
-      symbol: currency,
-      tags: [],
-      valueInBaseCurrency: balance
-    };
-  }
-
-  private getMarkets({
-    assetProfile
-  }: {
-    assetProfile: EnhancedSymbolProfile;
-  }) {
-    const markets = {
-      [UNKNOWN_KEY]: 0,
-      developedMarkets: 0,
-      emergingMarkets: 0,
-      otherMarkets: 0
-    };
-    const marketsAdvanced = {
-      [UNKNOWN_KEY]: 0,
-      asiaPacific: 0,
-      emergingMarkets: 0,
-      europe: 0,
-      japan: 0,
-      northAmerica: 0,
-      otherMarkets: 0
-    };
-
-    if (assetProfile.countries.length > 0) {
-      for (const country of assetProfile.countries) {
-        if (developedMarkets.includes(country.code)) {
-          markets.developedMarkets = new Big(markets.developedMarkets)
-            .plus(country.weight)
-            .toNumber();
-        } else if (emergingMarkets.includes(country.code)) {
-          markets.emergingMarkets = new Big(markets.emergingMarkets)
-            .plus(country.weight)
-            .toNumber();
-        } else {
-          markets.otherMarkets = new Big(markets.otherMarkets)
-            .plus(country.weight)
-            .toNumber();
-        }
-
-        if (country.code === 'JP') {
-          marketsAdvanced.japan = new Big(marketsAdvanced.japan)
-            .plus(country.weight)
-            .toNumber();
-        } else if (country.code === 'CA' || country.code === 'US') {
-          marketsAdvanced.northAmerica = new Big(marketsAdvanced.northAmerica)
-            .plus(country.weight)
-            .toNumber();
-        } else if (asiaPacificMarkets.includes(country.code)) {
-          marketsAdvanced.asiaPacific = new Big(marketsAdvanced.asiaPacific)
-            .plus(country.weight)
-            .toNumber();
-        } else if (emergingMarkets.includes(country.code)) {
-          marketsAdvanced.emergingMarkets = new Big(
-            marketsAdvanced.emergingMarkets
-          )
-            .plus(country.weight)
-            .toNumber();
-        } else if (europeMarkets.includes(country.code)) {
-          marketsAdvanced.europe = new Big(marketsAdvanced.europe)
-            .plus(country.weight)
-            .toNumber();
-        } else {
-          marketsAdvanced.otherMarkets = new Big(marketsAdvanced.otherMarkets)
-            .plus(country.weight)
-            .toNumber();
-        }
-      }
-    }
-
-    markets[UNKNOWN_KEY] = new Big(1)
-      .minus(markets.developedMarkets)
-      .minus(markets.emergingMarkets)
-      .minus(markets.otherMarkets)
-      .toNumber();
-
-    marketsAdvanced[UNKNOWN_KEY] = new Big(1)
-      .minus(marketsAdvanced.asiaPacific)
-      .minus(marketsAdvanced.emergingMarkets)
-      .minus(marketsAdvanced.europe)
-      .minus(marketsAdvanced.japan)
-      .minus(marketsAdvanced.northAmerica)
-      .minus(marketsAdvanced.otherMarkets)
-      .toNumber();
-
-    return { markets, marketsAdvanced };
-  }
-
+  @LogPerformance
   private getReportStatistics(
     evaluatedRules: PortfolioReportRule[]
   ): PortfolioReportResponse['xRay']['statistics'] {
@@ -1742,6 +1621,8 @@ export class PortfolioService {
 
     return { rulesActiveCount, rulesFulfilledCount };
   }
+
+  
 
   @LogPerformance
   private getStreaks({
@@ -2152,7 +2033,7 @@ export class PortfolioService {
       sectors: [],
       symbol: currency,
       tags: [],
-      transactionCount: 0,
+      activitiesCount: 0,
       valueInBaseCurrency: balance
     };
   }
@@ -2338,137 +2219,5 @@ export class PortfolioService {
     aUser: UserWithSettings
   ): PerformanceCalculationType {
     return aUser?.settings?.settings.performanceCalculationType;
-  }
-
-  private async getValueOfAccountsAndPlatforms({
-    activities,
-    filters = [],
-    portfolioItemsNow,
-    userCurrency,
-    userId,
-    withExcludedAccounts = false
-  }: {
-    activities: Activity[];
-    filters?: Filter[];
-    portfolioItemsNow: Record<string, TimelinePosition>;
-    userCurrency: string;
-    userId: string;
-    withExcludedAccounts?: boolean;
-  }) {
-    const accounts: PortfolioDetails['accounts'] = {};
-    const platforms: PortfolioDetails['platforms'] = {};
-
-    let currentAccounts: (Account & {
-      Order?: Order[];
-      platform?: Platform;
-    })[] = [];
-
-    if (filters.length === 0) {
-      currentAccounts = await this.accountService.getAccounts(userId);
-    } else if (filters.length === 1 && filters[0].type === 'ACCOUNT') {
-      currentAccounts = await this.accountService.accounts({
-        include: { platform: true },
-        where: { id: filters[0].id }
-      });
-    } else {
-      const accountIds = Array.from(
-        new Set(
-          activities
-            .filter(({ accountId }) => {
-              return accountId;
-            })
-            .map(({ accountId }) => {
-              return accountId;
-            })
-        )
-      );
-
-      currentAccounts = await this.accountService.accounts({
-        include: { platform: true },
-        where: { id: { in: accountIds } }
-      });
-    }
-
-    currentAccounts = currentAccounts.filter((account) => {
-      return withExcludedAccounts || account.isExcluded === false;
-    });
-
-    for (const account of currentAccounts) {
-      const ordersByAccount = activities.filter(({ accountId }) => {
-        return accountId === account.id;
-      });
-
-      accounts[account.id] = {
-        balance: account.balance,
-        currency: account.currency,
-        name: account.name,
-        valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
-          account.balance,
-          account.currency,
-          userCurrency
-        )
-      };
-
-      if (platforms[account.platformId || UNKNOWN_KEY]?.valueInBaseCurrency) {
-        platforms[account.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
-          this.exchangeRateDataService.toCurrency(
-            account.balance,
-            account.currency,
-            userCurrency
-          );
-      } else {
-        platforms[account.platformId || UNKNOWN_KEY] = {
-          balance: account.balance,
-          currency: account.currency,
-          name: account.platform?.name,
-          valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
-            account.balance,
-            account.currency,
-            userCurrency
-          )
-        };
-      }
-
-      for (const {
-        account,
-        quantity,
-        SymbolProfile,
-        type
-      } of ordersByAccount) {
-        const currentValueOfSymbolInBaseCurrency =
-          getFactor(type) *
-          quantity *
-          (portfolioItemsNow[SymbolProfile.symbol]?.marketPriceInBaseCurrency ??
-            0);
-
-        if (accounts[account?.id || UNKNOWN_KEY]?.valueInBaseCurrency) {
-          accounts[account?.id || UNKNOWN_KEY].valueInBaseCurrency +=
-            currentValueOfSymbolInBaseCurrency;
-        } else {
-          accounts[account?.id || UNKNOWN_KEY] = {
-            balance: 0,
-            currency: account?.currency,
-            name: account?.name,
-            valueInBaseCurrency: currentValueOfSymbolInBaseCurrency
-          };
-        }
-
-        if (
-          platforms[account?.platformId || UNKNOWN_KEY]?.valueInBaseCurrency
-        ) {
-          platforms[account?.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
-            currentValueOfSymbolInBaseCurrency;
-        } else {
-          platforms[account?.platformId || UNKNOWN_KEY] = {
-            balance: 0,
-            currency: account?.currency,
-            name: account?.platform?.name,
-            valueInBaseCurrency: currentValueOfSymbolInBaseCurrency
-          };
-        }
-      }
-    }
-
-    return { accounts, platforms };
   }
 }

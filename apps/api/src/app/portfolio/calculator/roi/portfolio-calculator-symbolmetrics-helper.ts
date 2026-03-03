@@ -719,7 +719,9 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
             dataSource,
             symbol,
             marketSymbolMap,
-            lastUnitPrice
+            lastUnitPrice,
+            orders.some(order => order.SymbolProfile.assetSubClass === 'CASH')
+
           )
         );
       }
@@ -736,7 +738,8 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     dataSource: DataSource,
     symbol: string,
     marketSymbolMap: { [date: string]: { [symbol: string]: Big.Big } },
-    lastUnitPrice: Big.Big
+    lastUnitPrice: Big.Big,
+    isCash: boolean
   ): PortfolioOrderItem {
     return {
       date: dateString,
@@ -745,7 +748,8 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       quantity: new Big(0),
       SymbolProfile: {
         dataSource,
-        symbol
+        symbol,
+        assetSubClass: isCash ? 'CASH' : undefined
       },
       type: 'BUY',
       unitPrice: marketSymbolMap[dateString]?.[symbol] ?? lastUnitPrice,
@@ -768,7 +772,8 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     orders: PortfolioOrderItem[],
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
     dataSource: DataSource,
-    symbol: string
+    symbol: string,
+    isCash: boolean
   ) {
     orders.push({
       date: symbolMetricsHelper.startDateString,
@@ -778,7 +783,8 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       quantity: new Big(0),
       SymbolProfile: {
         dataSource,
-        symbol
+        symbol,
+        assetSubClass: isCash ? 'CASH' : undefined
       },
       type: 'BUY',
       unitPrice: symbolMetricsHelper.unitPriceAtStartDate
@@ -791,7 +797,8 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       itemType: 'end',
       SymbolProfile: {
         dataSource,
-        symbol
+        symbol,
+        assetSubClass: isCash ? 'CASH' : undefined
       },
       quantity: new Big(0),
       type: 'BUY',

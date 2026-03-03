@@ -10,26 +10,29 @@
     stake: activityType === 'STAKE'
   }"
 >
+  @if(activityType === 'BUY') { 
   <ion-icon
-    *ngIf="activityType === 'BUY'"
     name="arrow-up-circle-outline"
   ></ion-icon>
-  <ion-icon
-    *ngIf="
-      activityType === 'DIVIDEND' ||
-      activityType === 'INTEREST' ||
-      activityType === 'STAKE'
-    "
-    name="add-circle-outline"
-  ></ion-icon>
-  <ion-icon *ngIf="activityType === 'FEE'" name="hammer-outline"></ion-icon>
-  <ion-icon
-    *ngIf="activityType === 'LIABILITY'"
-    name="flame-outline"
-  ></ion-icon>
-  <ion-icon
-    *ngIf="activityType === 'SELL'"
-    name="arrow-down-circle-outline"
-  ></ion-icon>
+  }
+  @if(activityType === 'DIVIDEND' || activityType === 'INTEREST' || activityType === 'STAKE') {
+    <ion-icon
+      name="add-circle-outline"
+    ></ion-icon>
+  }
+
+  @if(activityType === 'FEE') {
+    <ion-icon name="hammer-outline"></ion-icon>
+  }
+  @if(activityType === 'LIABILITY') {
+    <ion-icon
+      name="flame-outline"
+    ></ion-icon>
+  }
+   @if(activityType === 'SELL') {
+    <ion-icon
+      name="arrow-down-circle-outline"
+    ></ion-icon>
+   }
   <span class="d-none d-lg-block mx-1">{{ activityTypeLabel }}</span>
 </div>
