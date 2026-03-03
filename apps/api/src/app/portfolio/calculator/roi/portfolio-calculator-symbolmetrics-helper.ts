@@ -720,8 +720,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
             symbol,
             marketSymbolMap,
             lastUnitPrice,
-            orders.some(order => order.SymbolProfile.assetSubClass === 'CASH')
-
+            orders.some((order) => order.SymbolProfile.assetSubClass === 'CASH')
           )
         );
       }

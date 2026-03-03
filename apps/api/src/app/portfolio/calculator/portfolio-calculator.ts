@@ -854,7 +854,8 @@ export abstract class PortfolioCalculator {
       netWorth: last?.netWorth ?? 0,
       totalInvestment: last?.totalInvestment ?? 0,
       valueWithCurrencyEffect: last?.valueWithCurrencyEffect ?? 0,
-      totalInvestmentValueWithCurrencyEffect: last?.totalInvestmentValueWithCurrencyEffect ?? 0
+      totalInvestmentValueWithCurrencyEffect:
+        last?.totalInvestmentValueWithCurrencyEffect ?? 0
     };
   }
 

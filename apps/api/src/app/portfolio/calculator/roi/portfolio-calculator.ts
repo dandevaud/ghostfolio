@@ -140,7 +140,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       symbolMetricsHelper,
       dataSource,
       symbol,
-      orders.some(order => order.SymbolProfile.assetSubClass === 'CASH')
+      orders.some((order) => order.SymbolProfile.assetSubClass === 'CASH')
     );
 
     orders = symbolMetricsHelperClass.fillOrdersAndSortByTime(

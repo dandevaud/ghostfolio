@@ -1622,8 +1622,6 @@ export class PortfolioService {
     return { rulesActiveCount, rulesFulfilledCount };
   }
 
-  
-
   @LogPerformance
   private getStreaks({
     investments,
