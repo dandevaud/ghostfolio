@@ -1,3 +1,4 @@
+import { query } from '@ghostfolio/api/helper/object.helper';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import {
   DataProviderInterface,
@@ -27,7 +28,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, SymbolProfile } from '@prisma/client';
 import * as cheerio from 'cheerio';
 import { addDays, format, isBefore } from 'date-fns';
-import * as jsonpath from 'jsonpath';
 
 @Injectable()
 export class ManualService implements DataProviderInterface {
@@ -106,7 +106,10 @@ export class ManualService implements DataProviderInterface {
         return {};
       }
 
-      const value = await this.scrape(symbolProfile.scraperConfiguration);
+      const value = await this.scrape({
+        symbol,
+        scraperConfiguration: symbolProfile.scraperConfiguration
+      });
 
       return {
         [symbol]: {
@@ -178,7 +181,10 @@ export class ManualService implements DataProviderInterface {
         symbolProfilesWithScraperConfigurationAndInstantMode.map(
           async ({ scraperConfiguration, symbol }) => {
             try {
-              const marketPrice = await this.scrape(scraperConfiguration);
+              const marketPrice = await this.scrape({
+                scraperConfiguration,
+                symbol
+              });
               return { marketPrice, symbol };
             } catch (error) {
               Logger.error(
@@ -275,13 +281,23 @@ export class ManualService implements DataProviderInterface {
     };
   }
 
-  public async test(scraperConfiguration: ScraperConfiguration) {
-    return this.scrape(scraperConfiguration);
+  public async test({
+    scraperConfiguration,
+    symbol
+  }: {
+    scraperConfiguration: ScraperConfiguration;
+    symbol: string;
+  }) {
+    return this.scrape({ scraperConfiguration, symbol });
   }
 
-  private async scrape(
-    scraperConfiguration: ScraperConfiguration
-  ): Promise<number> {
+  private async scrape({
+    scraperConfiguration,
+    symbol
+  }: {
+    scraperConfiguration: ScraperConfiguration;
+    symbol: string;
+  }): Promise<number> {
     let locale = scraperConfiguration.locale;
 
     const response = await fetch(scraperConfiguration.url, {
@@ -291,12 +307,23 @@ export class ManualService implements DataProviderInterface {
       )
     });
 
+    if (!response.ok) {
+      throw new Error(
+        `Failed to scrape the market price for ${symbol} (${this.getName()}): ${response.status} ${response.statusText} at ${scraperConfiguration.url}`
+      );
+    }
+
     let value: string;
 
     if (response.headers.get('content-type')?.includes('application/json')) {
-      const data = await response.json();
+      const object = await response.json();
 
-      value = String(jsonpath.query(data, scraperConfiguration.selector)[0]);
+      value = String(
+        query({
+          object,
+          pathExpression: scraperConfiguration.selector
+        })[0]
+      );
     } else {
       const $ = cheerio.load(await response.text());
 

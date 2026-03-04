@@ -78,12 +78,12 @@
             [showLabels]="deviceType !== 'mobile'"
           />
           <gf-holdings-table
-            [deviceType]="deviceType"
             [hasPermissionToOpenDetails]="false"
             [hasPermissionToShowQuantities]="false"
             [hasPermissionToShowValues]="false"
             [holdings]="holdings"
             [pageSize]="7"
+            [showPerformance]="false"
           />
         </mat-card-content>
       </mat-card>

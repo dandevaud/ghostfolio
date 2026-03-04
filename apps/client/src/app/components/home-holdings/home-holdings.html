@@ -46,10 +46,9 @@
       }
       <div [ngClass]="{ 'd-none': viewModeFormControl.value !== 'TABLE' }">
         <gf-holdings-table
-          [baseCurrency]="user?.settings?.baseCurrency"
-          [deviceType]="deviceType"
           [hasPermissionToShowQuantities]="false"
           [holdings]="holdings"
+          [isInDialog]="false"
           [locale]="user?.settings?.locale"
           [performance]="performance"
           (holdingClicked)="onHoldingClicked($event)"

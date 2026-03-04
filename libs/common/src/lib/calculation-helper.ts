@@ -10,7 +10,7 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { isNumber } from 'lodash';
+import { isFinite, isNumber } from 'lodash';
 
 import { resetHours } from './helper';
 import { DateRange } from './types';
@@ -29,7 +29,7 @@ export function getAnnualizedPerformancePercent({
       exponent
     );
 
-    if (!isNaN(growthFactor)) {
+    if (isFinite(growthFactor)) {
       return new Big(growthFactor).minus(1);
     }
   }

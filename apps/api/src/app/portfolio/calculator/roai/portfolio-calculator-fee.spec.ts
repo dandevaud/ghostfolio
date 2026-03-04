@@ -101,6 +101,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-09-01'),
           feeInAssetProfileCurrency: 49,
+          feeInBaseCurrency: 49,
           quantity: 0,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -141,6 +142,7 @@ describe('PortfolioCalculator', () => {
           netPerformanceInPercentage: 0,
           netPerformanceInPercentageWithCurrencyEffect: 0,
           netPerformanceWithCurrencyEffect: 0,
+          totalInvestment: 0,
           totalInvestmentValueWithCurrencyEffect: 0
         })
       );

@@ -84,7 +84,16 @@ describe('PortfolioCalculator', () => {
 
     redisCacheService = new RedisCacheService(null, null);
 
-    orderServiceMock = new OrderService(null, null, null, null, null, null);
+    orderServiceMock = new OrderService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
@@ -105,6 +114,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2023-01-01'), // Date in future
           feeInAssetProfileCurrency: 0,
+          feeInBaseCurrency: 0,
           quantity: 1,
           SymbolProfile: {
             ...symbolProfileDummyData,

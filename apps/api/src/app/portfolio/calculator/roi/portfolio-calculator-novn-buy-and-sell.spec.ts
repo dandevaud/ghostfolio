@@ -119,6 +119,7 @@ describe('PortfolioCalculator', () => {
         ...activity,
         date: parseDate(activity.date),
         feeInAssetProfileCurrency: activity.fee,
+        feeInBaseCurrency: activity.fee,
         SymbolProfile: {
           ...symbolProfileDummyData,
           currency: activity.currency,
@@ -216,7 +217,6 @@ describe('PortfolioCalculator', () => {
             dividendInBaseCurrency: new Big('0'),
             fee: new Big('0'),
             feeInBaseCurrency: new Big('0'),
-            firstBuyDate: '2022-03-07',
             grossPerformance: new Big('19.86'),
             grossPerformancePercentage: new Big('0.13100263852242744063'),
             grossPerformancePercentageWithCurrencyEffect: new Big(
@@ -240,7 +240,6 @@ describe('PortfolioCalculator', () => {
             tags: [],
             timeWeightedInvestment: new Big('151.6'),
             timeWeightedInvestmentWithCurrencyEffect: new Big('151.6'),
-            transactionCount: 2,
             valueInBaseCurrency: new Big('0')
           }
         ],
