@@ -80,7 +80,7 @@
     "@nestjs/event-emitter": "3.0.1",
     "@nestjs/jwt": "11.0.2",
     "@nestjs/passport": "11.0.5",
-    "@nestjs/platform-express": "11.1.14",
+    "@nestjs/platform-express": "11.1.15",
     "@nestjs/schedule": "6.1.1",
     "@nestjs/serve-static": "5.0.4",
     "@openrouter/ai-sdk-provider": "0.7.2",
