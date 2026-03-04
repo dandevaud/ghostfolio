@@ -1871,10 +1871,6 @@ export class PortfolioService {
       .plus(emergencyFundHoldingsValueInBaseCurrency)
       .toNumber();
 
-    const committedFunds = new Big(totalBuy)
-      .minus(totalSell)
-      .minus(dividendInBaseCurrency);
-
     const totalOfExcludedActivities = this.getSumOfActivityType({
       userCurrency,
       activities: excludedActivities,
@@ -1935,7 +1931,6 @@ export class PortfolioService {
       activityCount: activities.filter(({ type }) => {
         return ['BUY', 'SELL'].includes(type);
       }).length,
-      committedFunds: committedFunds.toNumber(),
       currentValueInBaseCurrency: currentValueInBaseCurrency.toNumber(),
       dividendInBaseCurrency: dividendInBaseCurrency.toNumber(),
       emergencyFund: {
