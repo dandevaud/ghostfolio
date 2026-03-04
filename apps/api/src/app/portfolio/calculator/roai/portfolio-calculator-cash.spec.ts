@@ -130,7 +130,8 @@ describe('PortfolioCalculator', () => {
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService
+      redisCacheService,
+      orderService
     );
   });
 
@@ -242,7 +243,7 @@ describe('PortfolioCalculator', () => {
         grossPerformance: new Big(0),
         grossPerformancePercentage: new Big(0),
         grossPerformancePercentageWithCurrencyEffect: new Big(
-          '0.08211603004634809014'
+          '0.08211538461538461533'
         ),
         grossPerformanceWithCurrencyEffect: new Big(70),
         includeInTotalAssetValue: false,
@@ -272,9 +273,9 @@ describe('PortfolioCalculator', () => {
         },
         quantity: new Big(2000),
         symbol: 'USD',
-        timeWeightedInvestment: new Big('912.47956403269754768392'),
+        timeWeightedInvestment: new Big('912.48633879781420820235'),
         timeWeightedInvestmentWithCurrencyEffect: new Big(
-          '852.45231607629427792916'
+          '852.4590163934426234665'
         ),
         valueInBaseCurrency: new Big(1820)
       });

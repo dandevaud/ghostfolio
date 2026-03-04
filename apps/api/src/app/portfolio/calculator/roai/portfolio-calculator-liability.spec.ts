@@ -84,7 +84,16 @@ describe('PortfolioCalculator', () => {
 
     redisCacheService = new RedisCacheService(null, null);
 
-    orderServiceMock = new OrderService(null, null, null, null, null, null);
+    orderServiceMock = new OrderService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,

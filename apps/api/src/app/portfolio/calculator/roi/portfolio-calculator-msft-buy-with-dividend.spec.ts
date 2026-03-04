@@ -104,6 +104,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-09-16'),
           feeInAssetProfileCurrency: 19,
+          feeInBaseCurrency: 19,
           quantity: 1,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -119,6 +120,7 @@ describe('PortfolioCalculator', () => {
           ...activityDummyData,
           date: new Date('2021-11-16'),
           feeInAssetProfileCurrency: 0,
+          feeInBaseCurrency: 0,
           quantity: 1,
           SymbolProfile: {
             ...symbolProfileDummyData,
@@ -152,7 +154,6 @@ describe('PortfolioCalculator', () => {
             dividend: new Big('0.62'),
             dividendInBaseCurrency: new Big('0.62'),
             fee: new Big('19'),
-            firstBuyDate: '2021-09-16',
             grossPerformance: new Big('33.87'),
             grossPerformancePercentage: new Big('0.11343693482483756447'),
             grossPerformancePercentageWithCurrencyEffect: new Big(
@@ -176,8 +177,7 @@ describe('PortfolioCalculator', () => {
             },
             quantity: new Big('1'),
             symbol: 'MSFT',
-            tags: [],
-            transactionCount: 2
+            tags: []
           }
         ],
         totalFeesWithCurrencyEffect: new Big('19'),
