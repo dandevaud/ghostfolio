@@ -1871,7 +1871,6 @@ export class PortfolioService {
       .plus(emergencyFundHoldingsValueInBaseCurrency)
       .toNumber();
 
-
     const totalOfExcludedActivities = this.getSumOfActivityType({
       userCurrency,
       activities: excludedActivities,
