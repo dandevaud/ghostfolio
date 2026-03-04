@@ -49,7 +49,6 @@ import { GfValueComponent } from '../value/value.component';
 })
 export class GfHoldingsTableComponent {
   @Input() pageSize = Number.MAX_SAFE_INTEGER;
-  @Input() performance: PortfolioPerformance;
 
   @Output() holdingClicked = new EventEmitter<AssetProfileIdentifier>();
 
@@ -60,6 +59,7 @@ export class GfHoldingsTableComponent {
   public readonly locale = input(getLocale());
   public readonly paginator = viewChild.required(MatPaginator);
   public readonly sort = viewChild.required(MatSort);
+  public readonly performance = input<PortfolioPerformance>(null);
 
   protected totalValue = 0;
   protected totalChange = 0;
@@ -81,11 +81,11 @@ export class GfHoldingsTableComponent {
     columns.push('allocationInPercentage');
     columns.push('marketPrice');
 
-    if (this.hasPermissionToShowValues()) {
-      columns.push('performance');
-    }
+      if (this.hasPermissionToShowValues()) {
+        columns.push('performance');
+      }
 
-    columns.push('performanceInPercentage');
+      columns.push('performanceInPercentage');
     return columns;
   });
 

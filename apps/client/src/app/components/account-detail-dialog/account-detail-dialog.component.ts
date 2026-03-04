@@ -7,6 +7,7 @@ import {
   AccountBalancesResponse,
   Activity,
   HistoricalDataItem,
+  PortfolioPerformance,
   PortfolioPosition,
   User
 } from '@ghostfolio/common/interfaces';
@@ -98,6 +99,7 @@ export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
   public isLoadingChart: boolean;
   public name: string;
   public platformName: string;
+  public performance: PortfolioPerformance;
   public sortColumn = 'date';
   public sortDirection: SortDirection = 'desc';
   public totalItems: number;
@@ -361,8 +363,9 @@ export class GfAccountDetailDialogComponent implements OnDestroy, OnInit {
         ]
       })
       .pipe(takeUntil(this.unsubscribeSubject))
-      .subscribe(({ holdings }) => {
+      .subscribe(({ holdings, performance }) => {
         this.holdings = holdings;
+        this.performance = performance;
 
         this.changeDetectorRef.markForCheck();
       });
