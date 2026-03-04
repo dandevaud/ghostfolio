@@ -16,7 +16,7 @@
           [tooltip]="element.name"
         />
       </td>
-      @if(showPerformance()) {
+      @if (showPerformance()) {
         <td *matFooterCellDef class="px-1" mat-footer-cell></td>
       }
     </ng-container>
@@ -45,11 +45,11 @@
           <small class="text-muted">{{ element.symbol }}</small>
         </div>
       </td>
-      @if(showPerformance()) {
-      <td *matFooterCellDef class="px-1" mat-footer-cell>Total</td>
+      @if (showPerformance()) {
+        <td *matFooterCellDef class="px-1" mat-footer-cell>Total</td>
       }
     </ng-container>
-    @if(!isInDialog()) { 
+    @if (!isInDialog()) {
       <ng-container matColumnDef="dateOfFirstActivity">
         <th
           *matHeaderCellDef
@@ -72,7 +72,7 @@
             />
           </div>
         </td>
-        @if(showPerformance()) {            
+        @if (showPerformance()) {
           <td
             *matFooterCellDef
             class="d-none d-lg-table-cell justify-content-end px-1"
@@ -93,7 +93,11 @@
       >
         <ng-container i18n>Price</ng-container>
       </th>
-      <td *matCellDef="let element" class="d-none d-lg-table-cell px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
         <div class="d-flex justify-content-end">
           <gf-value
             [isCurrency]="true"
@@ -102,7 +106,7 @@
           />
         </div>
       </td>
-      @if(showPerformance()) {          
+      @if (showPerformance()) {
         <td *matFooterCellDef class="px-1" mat-footer-cell></td>
       }
     </ng-container>
@@ -156,8 +160,12 @@
           />
         </div>
       </td>
-      @if(showPerformance()) {
-        <td *matFooterCellDef class="d-none d-lg-table-cell px-1" mat-footer-cell>
+      @if (showPerformance()) {
+        <td
+          *matFooterCellDef
+          class="d-none d-lg-table-cell px-1"
+          mat-footer-cell
+        >
           <gf-value
             [isCurrency]="true"
             [locale]="locale()"
@@ -189,7 +197,7 @@
           />
         </div>
       </td>
-      @if(showPerformance()) {
+      @if (showPerformance()) {
         <td *matFooterCellDef class="px-1" mat-footer-cell></td>
       }
     </ng-container>
@@ -220,7 +228,7 @@
           />
         </div>
       </td>
-      @if(showPerformance()) {
+      @if (showPerformance()) {
         <td *matFooterCellDef class="px-1" mat-footer-cell>
           <div class="d-flex justify-content-end">
             <gf-value
@@ -258,7 +266,7 @@
           />
         </div>
       </td>
-      @if(showPerformance()) {
+      @if (showPerformance()) {
         <td *matFooterCellDef class="px-1" mat-footer-cell>
           <div class="d-flex justify-content-end">
             <gf-value
@@ -285,7 +293,7 @@
           })
       "
     ></tr>
-    @if(showPerformance()) {
+    @if (showPerformance()) {
       <tr
         *matFooterRowDef="displayedColumns()"
         mat-footer-row

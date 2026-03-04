@@ -48,9 +48,9 @@
         <gf-holdings-table
           [hasPermissionToShowQuantities]="false"
           [holdings]="holdings"
+          [isInDialog]="false"
           [locale]="user?.settings?.locale"
           [performance]="performance"
-          [isInDialog]="false"
           (holdingClicked)="onHoldingClicked($event)"
         />
         @if (
