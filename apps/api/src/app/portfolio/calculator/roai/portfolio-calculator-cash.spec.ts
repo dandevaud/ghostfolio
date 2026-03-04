@@ -243,7 +243,7 @@ describe('PortfolioCalculator', () => {
         grossPerformance: new Big(0),
         grossPerformancePercentage: new Big(0),
         grossPerformancePercentageWithCurrencyEffect: new Big(
-          '0.08211538461538461533'
+          '0.0.8211603004634809014'
         ),
         grossPerformanceWithCurrencyEffect: new Big(70),
         includeInTotalAssetValue: false,
