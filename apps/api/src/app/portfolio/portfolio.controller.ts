@@ -207,7 +207,6 @@ export class PortfolioController {
 
       portfolioSummary = nullifyValuesInObject(summary, [
         'cash',
-        'committedFunds',
         'currentNetWorth',
         'currentValueInBaseCurrency',
         'dividendInBaseCurrency',
