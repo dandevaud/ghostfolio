@@ -3376,6 +3376,11 @@
   resolved "https://registry.npmjs.org/@nx/nx-linux-x64-gnu/-/nx-linux-x64-gnu-22.5.3.tgz"
   integrity sha512-AgXCsPCzC0sAu2VRclMjs7LrvPQfqS3sFiehlXWTbNHQitPZLuAmQGb2l4T8lbMOs0Xn3EIrg6BF6/ntTTp6Xg==
 
+"@nx/nx-linux-x64-musl@22.5.3":
+  version "22.5.3"
+  resolved "https://registry.npmjs.org/@nx/nx-linux-x64-musl/-/nx-linux-x64-musl-22.5.3.tgz"
+  integrity sha512-sKs4bFQRu8Btxf5rMYKPsRVNxkQ2ey8sqoCyhJj8fwJF05DayK2ErJAR/rhtBK0c1NV7kQiKJA8nWBV3jnCdsg==
+
 "@nx/rspack@22.5.3":
   version "22.5.3"
   resolved "https://registry.npmjs.org/@nx/rspack/-/rspack-22.5.3.tgz"
