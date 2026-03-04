@@ -55,6 +55,8 @@ export class GfHoldingsTableComponent {
   public readonly hasPermissionToOpenDetails = input(true);
   public readonly hasPermissionToShowQuantities = input(true);
   public readonly hasPermissionToShowValues = input(true);
+  public readonly showPerformance = input(true);
+  public readonly isInDialog = input(true);
   public readonly holdings = input.required<PortfolioPosition[]>();
   public readonly locale = input(getLocale());
   public readonly paginator = viewChild.required(MatPaginator);
@@ -68,7 +70,11 @@ export class GfHoldingsTableComponent {
   protected readonly dataSource = new MatTableDataSource<PortfolioPosition>([]);
 
   protected readonly displayedColumns = computed(() => {
-    const columns = ['icon', 'nameWithSymbol', 'dateOfFirstActivity'];
+    const columns = ['icon', 'nameWithSymbol'];
+
+    if (!this.isInDialog()) {
+      columns.push('dateOfFirstActivity');
+    }
 
     if (this.hasPermissionToShowQuantities()) {
       columns.push('quantity');
@@ -81,11 +87,11 @@ export class GfHoldingsTableComponent {
     columns.push('allocationInPercentage');
     columns.push('marketPrice');
 
-      if (this.hasPermissionToShowValues()) {
-        columns.push('performance');
-      }
+    if (this.hasPermissionToShowValues()) {
+      columns.push('performance');
+    }
 
-      columns.push('performanceInPercentage');
+    columns.push('performanceInPercentage');
     return columns;
   });
 

@@ -50,6 +50,7 @@
           [holdings]="holdings"
           [locale]="user?.settings?.locale"
           [performance]="performance"
+          [isInDialog]="false"
           (holdingClicked)="onHoldingClicked($event)"
         />
         @if (
