@@ -169,7 +169,7 @@
           <gf-value
             [isCurrency]="true"
             [locale]="locale()"
-            [value]="totalValue"
+            [value]="performanceProtected.currentValueInBaseCurrency"
           ></gf-value>
         </td>
       }
@@ -235,7 +235,7 @@
               [colorizeSign]="true"
               [isCurrency]="true"
               [locale]="locale()"
-              [value]="totalChange"
+              [value]="performanceProtected.netPerformanceWithCurrencyEffect"
             ></gf-value>
           </div>
         </td>
@@ -273,7 +273,9 @@
               [colorizeSign]="true"
               [isPercent]="true"
               [locale]="locale()"
-              [value]="totalChangePercentage"
+              [value]="
+                performanceProtected.netPerformancePercentageWithCurrencyEffect
+              "
             ></gf-value>
           </div>
         </td>

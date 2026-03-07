@@ -66,6 +66,7 @@ export class GfHoldingsTableComponent {
   protected totalValue = 0;
   protected totalChange = 0;
   protected totalChangePercentage = 0;
+  protected performanceProtected: PortfolioPerformance = null;
 
   protected readonly dataSource = new MatTableDataSource<PortfolioPosition>([]);
 
@@ -107,6 +108,7 @@ export class GfHoldingsTableComponent {
     // Reactive data update
     effect(() => {
       this.dataSource.data = this.holdings();
+      this.performanceProtected = this.performance();
     });
 
     // Reactive view connection
