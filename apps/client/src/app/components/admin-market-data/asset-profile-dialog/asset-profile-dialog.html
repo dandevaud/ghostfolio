@@ -355,19 +355,23 @@
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label i18n>Tags</mat-label>
                 <mat-chip-grid #tagsChipList>
-                  <mat-chip-row
-                    *ngFor="let tag of assetProfileForm.controls['tags']?.value"
-                    matChipRemove
-                    [removable]="true"
-                    (removed)="onRemoveTag(tag)"
-                  >
-                    {{ tag.name }}
-                    <ion-icon
-                      class="ml-2"
-                      matPrefix
-                      name="close-outline"
-                    ></ion-icon>
-                  </mat-chip-row>
+                  @for (
+                    tag of assetProfileForm.controls['tags']?.value ?? [];
+                    track tag.id
+                  ) {
+                    <mat-chip-row
+                      matChipRemove
+                      [removable]="true"
+                      (removed)="onRemoveTag(tag)"
+                    >
+                      {{ tag.name }}
+                      <ion-icon
+                        class="ml-2"
+                        matPrefix
+                        name="close-outline"
+                      ></ion-icon>
+                    </mat-chip-row>
+                  }
                   <input
                     #tagInput
                     name="close-outline"
@@ -377,12 +381,14 @@
                   />
                 </mat-chip-grid>
                 <mat-autocomplete
-                  #autocompleteTags="matAutocomplete"
+                  #autocompleteTags
                   (optionSelected)="onAddTag($event)"
                 >
-                  <mat-option *ngFor="let tag of HoldingTags" [value]="tag.id">
-                    {{ tag.name }}
-                  </mat-option>
+                  @for (tag of HoldingTags; track tag.id) {
+                    <mat-option [value]="tag.id">
+                      {{ tag.name }}
+                    </mat-option>
+                  }
                 </mat-autocomplete>
               </mat-form-field>
             </div>
