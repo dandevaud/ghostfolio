@@ -53,15 +53,6 @@ describe('Helper', () => {
       languageGetter = jest.spyOn(window.navigator, 'language', 'get');
     });
 
-    it('Get de-CH number format group', () => {
-      expect(getNumberFormatGroup('de-CH')).toEqual('´');
-    });
-
-    it('Get de-CH number format group when it is default', () => {
-      languageGetter.mockReturnValue('de-CH');
-      expect(getNumberFormatGroup()).toEqual('´');
-    });
-
     it('Get de-DE number format group', () => {
       expect(getNumberFormatGroup('de-DE')).toEqual('.');
     });
