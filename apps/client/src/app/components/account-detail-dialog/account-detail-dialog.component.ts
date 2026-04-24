@@ -75,7 +75,7 @@ import { AccountDetailDialogParams } from './interfaces/interfaces';
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-account-detail-dialog',
   styleUrls: ['./account-detail-dialog.component.scss'],
-  templateUrl: 'account-detail-dialog.html'
+  templateUrl: './account-detail-dialog.html'
 })
 export class GfAccountDetailDialogComponent implements OnInit {
   protected accountBalances: AccountBalancesResponse['balances'];
@@ -102,6 +102,7 @@ export class GfAccountDetailDialogComponent implements OnInit {
   protected totalItems: number;
   protected user: User;
   protected valueInBaseCurrency: number;
+  protected performance: PortfolioPerformance;
 
   protected readonly data = inject<AccountDetailDialogParams>(MAT_DIALOG_DATA);
 

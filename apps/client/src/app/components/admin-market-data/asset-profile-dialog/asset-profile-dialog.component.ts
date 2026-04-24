@@ -257,7 +257,6 @@ export class GfAssetProfileDialogComponent implements OnInit {
     [name: string]: { name: string; value: number };
   };
 
-
   protected HoldingTags: { id: string; name: string; userId: string }[];
 
   protected user: User;
@@ -302,7 +301,7 @@ export class GfAssetProfileDialogComponent implements OnInit {
   protected initialize() {
     this.dataService
       .fetchTags()
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((tags) => {
         this.HoldingTags = tags.map(({ id, name, userId }) => {
           return { id, name, userId };
@@ -505,7 +504,6 @@ export class GfAssetProfileDialogComponent implements OnInit {
       .subscribe();
   }
 
-  
   public onGatherSymbolMissingOnly({
     dataSource,
     symbol
@@ -617,7 +615,7 @@ export class GfAssetProfileDialogComponent implements OnInit {
       assetSubClass:
         this.assetProfileForm.controls.assetSubClass.value ?? undefined,
       comment: this.assetProfileForm.controls.comment.value ?? undefined,
-       tags: this.assetProfileForm.get('tags').value,
+      tags: this.assetProfileForm.get('tags').value,
       tagsDisconnected: this.assetProfileForm.get('tagsDisconnected').value,
       currency: this.assetProfileForm.controls.currency.value ?? undefined,
       isActive: isBoolean(this.assetProfileForm.controls.isActive.value)
@@ -842,7 +840,6 @@ export class GfAssetProfileDialogComponent implements OnInit {
     this.tagInput.nativeElement.value = '';
     this.assetProfileForm.markAsDirty();
   }
-
 
   protected onTriggerSubmitAssetProfileForm() {
     if (this.assetProfileForm.valid) {

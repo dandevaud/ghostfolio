@@ -91,7 +91,6 @@ import {
 } from 'date-fns';
 import { uniqBy } from 'lodash';
 
-import { CashDetails } from '../account/interfaces/cash-details.interface';
 import { PortfolioCalculator } from './calculator/portfolio-calculator';
 import { PortfolioCalculatorFactory } from './calculator/portfolio-calculator.factory';
 import { RulesService } from './rules.service';
@@ -1067,15 +1066,14 @@ export class PortfolioService {
       currency: userCurrency
     });
 
-    const { errors, hasErrors, historicalData } =
-      await portfolioCalculator.getSnapshot();
+    await portfolioCalculator.getSnapshot();
 
     const { endDate, startDate } = getIntervalFromDateRange({ dateRange });
 
-    const { chart } = await portfolioCalculator.getPerformance({
+    const range = {
       end: endDate,
       start: startDate
-    });
+    };
 
     const {
       chart,
@@ -2162,43 +2160,6 @@ export class PortfolioService {
     );
   }
 
-  private getInitialCashPosition({
-    balance,
-    currency
-  }: {
-    balance: number;
-    currency: string;
-  }): PortfolioPosition {
-    return {
-      currency,
-      allocationInPercentage: 0,
-      assetClass: AssetClass.LIQUIDITY,
-      assetSubClass: AssetSubClass.CASH,
-      countries: [],
-      dataSource: undefined,
-      dateOfFirstActivity: undefined,
-      dividend: 0,
-      grossPerformance: 0,
-      grossPerformancePercent: 0,
-      grossPerformancePercentWithCurrencyEffect: 0,
-      grossPerformanceWithCurrencyEffect: 0,
-      holdings: [],
-      investment: balance,
-      marketPrice: 0,
-      name: currency,
-      netPerformance: 0,
-      netPerformancePercent: 0,
-      netPerformancePercentWithCurrencyEffect: 0,
-      netPerformanceWithCurrencyEffect: 0,
-      quantity: 0,
-      sectors: [],
-      symbol: currency,
-      tags: [],
-      activitiesCount: 0,
-      valueInBaseCurrency: balance
-    };
-  }
-
   private getDividendsByGroup({
     dividends,
     groupBy
@@ -2259,91 +2220,6 @@ export class PortfolioService {
     }
 
     return dividendsByGroup;
-  }
-
-  private getMarkets({
-    assetProfile
-  }: {
-    assetProfile: EnhancedSymbolProfile;
-  }) {
-    const markets = {
-      [UNKNOWN_KEY]: 0,
-      developedMarkets: 0,
-      emergingMarkets: 0,
-      otherMarkets: 0
-    };
-    const marketsAdvanced = {
-      [UNKNOWN_KEY]: 0,
-      asiaPacific: 0,
-      emergingMarkets: 0,
-      europe: 0,
-      japan: 0,
-      northAmerica: 0,
-      otherMarkets: 0
-    };
-
-    if (assetProfile.countries.length > 0) {
-      for (const country of assetProfile.countries) {
-        if (developedMarkets.includes(country.code)) {
-          markets.developedMarkets = new Big(markets.developedMarkets)
-            .plus(country.weight)
-            .toNumber();
-        } else if (emergingMarkets.includes(country.code)) {
-          markets.emergingMarkets = new Big(markets.emergingMarkets)
-            .plus(country.weight)
-            .toNumber();
-        } else {
-          markets.otherMarkets = new Big(markets.otherMarkets)
-            .plus(country.weight)
-            .toNumber();
-        }
-
-        if (country.code === 'JP') {
-          marketsAdvanced.japan = new Big(marketsAdvanced.japan)
-            .plus(country.weight)
-            .toNumber();
-        } else if (country.code === 'CA' || country.code === 'US') {
-          marketsAdvanced.northAmerica = new Big(marketsAdvanced.northAmerica)
-            .plus(country.weight)
-            .toNumber();
-        } else if (asiaPacificMarkets.includes(country.code)) {
-          marketsAdvanced.asiaPacific = new Big(marketsAdvanced.asiaPacific)
-            .plus(country.weight)
-            .toNumber();
-        } else if (emergingMarkets.includes(country.code)) {
-          marketsAdvanced.emergingMarkets = new Big(
-            marketsAdvanced.emergingMarkets
-          )
-            .plus(country.weight)
-            .toNumber();
-        } else if (europeMarkets.includes(country.code)) {
-          marketsAdvanced.europe = new Big(marketsAdvanced.europe)
-            .plus(country.weight)
-            .toNumber();
-        } else {
-          marketsAdvanced.otherMarkets = new Big(marketsAdvanced.otherMarkets)
-            .plus(country.weight)
-            .toNumber();
-        }
-      }
-    }
-
-    markets[UNKNOWN_KEY] = new Big(1)
-      .minus(markets.developedMarkets)
-      .minus(markets.emergingMarkets)
-      .minus(markets.otherMarkets)
-      .toNumber();
-
-    marketsAdvanced[UNKNOWN_KEY] = new Big(1)
-      .minus(marketsAdvanced.asiaPacific)
-      .minus(marketsAdvanced.emergingMarkets)
-      .minus(marketsAdvanced.europe)
-      .minus(marketsAdvanced.japan)
-      .minus(marketsAdvanced.northAmerica)
-      .minus(marketsAdvanced.otherMarkets)
-      .toNumber();
-
-    return { markets, marketsAdvanced };
   }
 
   private getTotalEmergencyFund({

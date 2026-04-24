@@ -58,12 +58,12 @@ export class GfHoldingsTableComponent {
 
   protected readonly paginator = viewChild.required(MatPaginator);
   protected readonly sort = viewChild.required(MatSort);
-  public readonly performance = input<PortfolioPerformance>(null);
+  public readonly performance = input<PortfolioPerformance>();
 
   protected totalValue = 0;
   protected totalChange = 0;
   protected totalChangePercentage = 0;
-  protected performanceProtected: PortfolioPerformance = null;
+  protected performanceProtected: PortfolioPerformance;
 
   protected readonly dataSource = new MatTableDataSource<PortfolioPosition>([]);
 
@@ -105,7 +105,8 @@ export class GfHoldingsTableComponent {
     // Reactive data update
     effect(() => {
       this.dataSource.data = this.holdings();
-      this.performanceProtected = this.performance();
+      this.performanceProtected =
+        this.performance() ?? ({} as PortfolioPerformance);
     });
 
     // Reactive view connection

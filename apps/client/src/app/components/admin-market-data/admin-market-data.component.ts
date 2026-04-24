@@ -322,7 +322,7 @@ export class GfAdminMarketDataComponent implements AfterViewInit, OnInit {
   public onGatherMissing() {
     this.adminService
       .gatherMissingOnly()
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         setTimeout(() => {
           window.location.reload();

@@ -739,7 +739,7 @@ export class PortfolioController {
   /**
    * @deprecated
    */
-  @HasPermission(permissions.updateOrder)
+  @HasPermission(permissions.updateActivity)
   @Put('position/:dataSource/:symbol/tags')
   @UseInterceptors(TransformDataSourceInRequestInterceptor)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)

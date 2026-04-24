@@ -133,6 +133,13 @@
           />
         </div>
       </td>
+      @if (showPerformance()) {
+        <td
+          *matFooterCellDef
+          class="d-none d-lg-table-cell justify-content-end px-1"
+          mat-footer-cell
+        ></td>
+      }
     </ng-container>
 
     <ng-container

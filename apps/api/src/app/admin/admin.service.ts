@@ -310,7 +310,7 @@ export class AdminService {
           sectors: true,
           symbol: true,
           SymbolProfileOverrides: true,
-            tags: true
+          tags: true
         }
       }),
       this.prismaService.symbolProfile.count({ where })
@@ -349,27 +349,27 @@ export class AdminService {
       );
     }
 
-      let marketData: AdminMarketDataItem[] = await Promise.all(
-        assetProfiles.map(
-          async ({
-            _count,
-            activities,
-            assetClass,
-            assetSubClass,
-            comment,
-            countries,
-            currency,
-            dataSource,
-            id,
-            isActive,
-            isUsedByUsersWithSubscription,
-            name,
-            sectors,
-            symbol,
-            SymbolProfileOverrides,
-            tags
-          }) => {
-            let countriesCount = countries ? Object.keys(countries).length : 0;
+    let marketData: AdminMarketDataItem[] = await Promise.all(
+      assetProfiles.map(
+        async ({
+          _count,
+          activities,
+          assetClass,
+          assetSubClass,
+          comment,
+          countries,
+          currency,
+          dataSource,
+          id,
+          isActive,
+          isUsedByUsersWithSubscription,
+          name,
+          sectors,
+          symbol,
+          SymbolProfileOverrides,
+          tags
+        }) => {
+          let countriesCount = countries ? Object.keys(countries).length : 0;
 
           const lastMarketPrice = lastMarketPriceMap.get(
             getAssetProfileIdentifier({ dataSource, symbol })
@@ -429,7 +429,7 @@ export class AdminService {
             date: activities?.[0]?.date,
             isUsedByUsersWithSubscription: await isUsedByUsersWithSubscription,
             watchedByCount: _count.watchedBy,
-              tags
+            tags
           };
         }
       )

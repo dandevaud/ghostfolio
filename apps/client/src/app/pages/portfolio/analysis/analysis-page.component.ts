@@ -13,11 +13,7 @@ import {
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import type {
-  AiPromptMode,
-  DateRange,
-  GroupBy
-} from '@ghostfolio/common/types';
+import type { AiPromptMode, GroupBy } from '@ghostfolio/common/types';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
@@ -172,25 +168,6 @@ export class GfAnalysisPageComponent implements OnInit {
       .subscribe(() => {
         this.userService
           .get(true)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe((user) => {
-            this.user = user;
-
-            this.changeDetectorRef.markForCheck();
-          });
-      });
-  }
-
- 
-  public onChangeDateRange(dateRange: DateRange) {
-    this.dataService
-      .putUserSetting({ dateRange })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.userService.remove();
-
-        this.userService
-          .get()
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe((user) => {
             this.user = user;
