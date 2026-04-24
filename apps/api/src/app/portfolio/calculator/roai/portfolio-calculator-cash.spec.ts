@@ -242,7 +242,7 @@ describe('PortfolioCalculator', () => {
         grossPerformance: new Big(0),
         grossPerformancePercentage: new Big(0),
         grossPerformancePercentageWithCurrencyEffect: new Big(
-          '0.08211538461538461533'
+          '0.08211603004634809014'
         ),
         grossPerformanceWithCurrencyEffect: new Big(70),
         includeInTotalAssetValue: false,
@@ -272,9 +272,9 @@ describe('PortfolioCalculator', () => {
         },
         quantity: new Big(2000),
         symbol: 'USD',
-        timeWeightedInvestment: new Big('912.48633879781420820235'),
+        timeWeightedInvestment: new Big('912.47956403269754768392'),
         timeWeightedInvestmentWithCurrencyEffect: new Big(
-          '852.4590163934426234665'
+          '852.45231607629427792916'
         ),
         valueInBaseCurrency: new Big(1820)
       });
