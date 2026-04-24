@@ -54,12 +54,12 @@ describe('Helper', () => {
     });
 
     it('Get de-CH number format group', () => {
-      expect(getNumberFormatGroup('de-CH')).toEqual(`'`);
+      expect(getNumberFormatGroup('de-CH')).toEqual(`´`);
     });
 
     it('Get de-CH number format group when it is default', () => {
       languageGetter.mockReturnValue('de-CH');
-      expect(getNumberFormatGroup()).toEqual(`'`);
+      expect(getNumberFormatGroup()).toEqual(`´`);
     });
 
     it('Get de-DE number format group', () => {
