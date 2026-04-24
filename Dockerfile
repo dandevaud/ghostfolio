@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM node:22-slim AS builder
+FROM --platform=$BUILDPLATFORM node:24-slim AS builder
 
 # Build application and add additional files
 WORKDIR /ghostfolio
