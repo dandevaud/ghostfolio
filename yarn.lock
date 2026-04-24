@@ -3932,6 +3932,11 @@
   resolved "https://registry.npmjs.org/@rspack/binding-linux-x64-musl/-/binding-linux-x64-musl-1.6.8.tgz"
   integrity sha512-DCGgZ5/in1O3FjHWqXnDsncRy+48cMhfuUAAUyl0yDj1NpsZu9pP+xfGLvGcQTiYrVl7IH9Aojf1eShP/77WGA==
 
+"@rspack/binding-linux-x64-musl@1.7.11":
+  version "1.7.11"
+  resolved "https://registry.npmjs.org/@rspack/binding-linux-x64-musl/-/binding-linux-x64-musl-1.7.11.tgz"
+  integrity sha512-CoK37hva4AmHGh3VCsQXmGr40L36m1/AdnN5LEjUX6kx5rEH7/1nEBN6Ii72pejqDVvk9anEROmPDiPw10tpFg==
+
 "@rspack/binding@1.6.8":
   version "1.6.8"
   resolved "https://registry.npmjs.org/@rspack/binding/-/binding-1.6.8.tgz"
