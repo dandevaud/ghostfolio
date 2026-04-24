@@ -46,11 +46,11 @@
       }
       <div [ngClass]="{ 'd-none': viewModeFormControl.value !== 'TABLE' }">
         <gf-holdings-table
-          [hasPermissionToShowQuantities]="false"
           [holdings]="holdings"
           [isInDialog]="false"
           [locale]="user?.settings?.locale"
           [performance]="performance"
+          [showPerformance]="true"
           (holdingClicked)="onHoldingClicked($event)"
         />
         @if (

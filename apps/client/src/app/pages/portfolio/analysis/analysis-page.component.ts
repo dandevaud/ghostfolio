@@ -13,11 +13,7 @@ import {
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import type {
-  AiPromptMode,
-  DateRange,
-  GroupBy
-} from '@ghostfolio/common/types';
+import type { AiPromptMode, GroupBy } from '@ghostfolio/common/types';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
@@ -29,10 +25,11 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import {
   ChangeDetectorRef,
   Component,
-  OnDestroy,
+  DestroyRef,
   OnInit,
   ViewChild
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
@@ -47,8 +44,6 @@ import { isNumber, sortBy } from 'lodash';
 import ms from 'ms';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
 
 @Component({
   imports: [
@@ -69,7 +64,7 @@ import { takeUntil } from 'rxjs/operators';
   styleUrls: ['./analysis-page.scss'],
   templateUrl: './analysis-page.html'
 })
-export class GfAnalysisPageComponent implements OnDestroy, OnInit {
+export class GfAnalysisPageComponent implements OnInit {
   @ViewChild(MatMenuTrigger) actionsMenuButton!: MatMenuTrigger;
 
   public benchmark: Partial<SymbolProfile>;
@@ -109,12 +104,11 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public unitLongestStreak: string;
   public user: User;
 
-  private unsubscribeSubject = new Subject<void>();
-
   public constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private clipboard: Clipboard,
     private dataService: DataService,
+    private destroyRef: DestroyRef,
     private deviceService: DeviceDetectorService,
     private impersonationStorageService: ImpersonationStorageService,
     private snackBar: MatSnackBar,
@@ -142,13 +136,13 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
 
     this.impersonationStorageService
       .onChangeHasImpersonation()
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((impersonationId) => {
         this.hasImpersonationId = !!impersonationId;
       });
 
     this.userService.stateChanged
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         if (state?.user) {
           this.user = state.user;
@@ -170,29 +164,11 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
   public onChangeBenchmark(symbolProfileId: string) {
     this.dataService
       .putUserSetting({ benchmark: symbolProfileId })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.userService
           .get(true)
-          .pipe(takeUntil(this.unsubscribeSubject))
-          .subscribe((user) => {
-            this.user = user;
-
-            this.changeDetectorRef.markForCheck();
-          });
-      });
-  }
-
-  public onChangeDateRange(dateRange: DateRange) {
-    this.dataService
-      .putUserSetting({ dateRange })
-      .pipe(takeUntil(this.unsubscribeSubject))
-      .subscribe(() => {
-        this.userService.remove();
-
-        this.userService
-          .get()
-          .pipe(takeUntil(this.unsubscribeSubject))
+          .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe((user) => {
             this.user = user;
 
@@ -218,7 +194,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
         mode,
         filters: this.userService.getFilters()
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ prompt }) => {
         this.clipboard.copy(prompt);
 
@@ -232,7 +208,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
 
         snackBarRef
           .onAction()
-          .pipe(takeUntil(this.unsubscribeSubject))
+          .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(() => {
             window.open('https://duck.ai', '_blank');
           });
@@ -247,11 +223,6 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
       });
   }
 
-  public ngOnDestroy() {
-    this.unsubscribeSubject.next();
-    this.unsubscribeSubject.complete();
-  }
-
   private fetchDividendsAndInvestments() {
     this.isLoadingDividendTimelineChart = true;
     this.isLoadingInvestmentTimelineChart = true;
@@ -262,7 +233,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
         groupBy: this.mode,
         range: this.user?.settings?.dateRange
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ dividends }) => {
         this.dividendsByGroup = dividends;
 
@@ -277,7 +248,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
         groupBy: this.mode,
         range: this.user?.settings?.dateRange
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ investments, streaks }) => {
         this.investmentsByGroup = investments;
         this.streaks = streaks;
@@ -312,7 +283,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
         filters: this.userService.getFilters(),
         range: this.user?.settings?.dateRange
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ chart, firstOrderDate, performance }) => {
         this.firstOrderDate = firstOrderDate ?? new Date();
 
@@ -385,7 +356,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
         filters: this.userService.getFilters(),
         range: this.user?.settings?.dateRange
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ holdings }) => {
         const holdingsSorted = sortBy(
           holdings.filter(({ netPerformancePercentWithCurrencyEffect }) => {
@@ -429,7 +400,7 @@ export class GfAnalysisPageComponent implements OnDestroy, OnInit {
             range: this.user?.settings?.dateRange,
             startDate: this.firstOrderDate
           })
-          .pipe(takeUntil(this.unsubscribeSubject))
+          .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(({ marketData }) => {
             this.benchmarkDataItems = marketData.map(({ date, value }) => {
               return {

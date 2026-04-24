@@ -61,7 +61,7 @@ import {
 } from 'date-fns';
 import { isNumber, sortBy, sum, uniqBy } from 'lodash';
 
-import { OrderService } from '../../order/order.service';
+import { ActivitiesService } from '../../activities/activities.service';
 
 export abstract class PortfolioCalculator {
   protected static readonly ENABLE_LOGGING = false;
@@ -73,7 +73,7 @@ export abstract class PortfolioCalculator {
   protected currency: string;
   protected currentRateService: CurrentRateService;
   protected exchangeRateDataService: ExchangeRateDataService;
-  protected orderService: OrderService;
+  protected activitiesService: ActivitiesService;
   protected snapshot: PortfolioSnapshot;
   protected snapshotPromise: Promise<void>;
   protected userId: string;
@@ -100,7 +100,7 @@ export abstract class PortfolioCalculator {
     portfolioSnapshotService,
     redisCacheService,
     userId,
-    orderService
+    activitiesService
   }: {
     accountBalanceItems: HistoricalDataItem[];
     activities: Activity[];
@@ -112,7 +112,7 @@ export abstract class PortfolioCalculator {
     portfolioSnapshotService: PortfolioSnapshotService;
     redisCacheService: RedisCacheService;
     userId: string;
-    orderService: OrderService;
+    activitiesService: ActivitiesService;
   }) {
     this.accountBalanceItems = accountBalanceItems;
     this.configurationService = configurationService;
@@ -120,7 +120,7 @@ export abstract class PortfolioCalculator {
     this.currentRateService = currentRateService;
     this.exchangeRateDataService = exchangeRateDataService;
     this.filters = filters;
-    this.orderService = orderService;
+    this.activitiesService = activitiesService;
 
     let dateOfFirstActivity = new Date();
 
@@ -170,10 +170,10 @@ export abstract class PortfolioCalculator {
     this.redisCacheService = redisCacheService;
     this.userId = userId;
 
-    const { endDate, startDate } = getIntervalFromDateRange(
-      'max',
-      subDays(dateOfFirstActivity, 1)
-    );
+    const { endDate, startDate } = getIntervalFromDateRange({
+      dateRange: 'max',
+      startDate: subDays(dateOfFirstActivity, 1)
+    });
 
     this.endDate = endOfDay(endDate);
     this.startDate = startOfDay(startDate);
@@ -601,7 +601,7 @@ export abstract class PortfolioCalculator {
 
   @LogPerformance
   public async getUnfilteredNetWorth(currency: string): Promise<Big> {
-    const activities = await this.orderService.getOrders({
+    const activities = await this.activitiesService.getActivities({
       userId: this.userId,
       userCurrency: currency,
       types: ['BUY', 'SELL', 'STAKE'],
@@ -1521,7 +1521,7 @@ export abstract class PortfolioCalculator {
     // Make sure some key dates are present
     for (const dateRange of DateRangeTypes) {
       const { endDate: dateRangeEnd, startDate: dateRangeStart } =
-        getIntervalFromDateRange(dateRange);
+        getIntervalFromDateRange({ dateRange, startDate });
 
       if (
         !isBefore(dateRangeStart, startDate) &&

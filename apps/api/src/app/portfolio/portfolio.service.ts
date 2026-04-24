@@ -1,6 +1,7 @@
 import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/account-balance.service';
 import { AccountService } from '@ghostfolio/api/app/account/account.service';
-import { OrderService } from '@ghostfolio/api/app/order/order.service';
+import { CashDetails } from '@ghostfolio/api/app/account/interfaces/cash-details.interface';
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { getFactor } from '@ghostfolio/api/helper/portfolio.helper';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
@@ -90,7 +91,6 @@ import {
 } from 'date-fns';
 import { uniqBy } from 'lodash';
 
-import { CashDetails } from '../account/interfaces/cash-details.interface';
 import { PortfolioCalculator } from './calculator/portfolio-calculator';
 import { PortfolioCalculatorFactory } from './calculator/portfolio-calculator.factory';
 import { RulesService } from './rules.service';
@@ -107,13 +107,13 @@ export class PortfolioService {
   public constructor(
     private readonly accountBalanceService: AccountBalanceService,
     private readonly accountService: AccountService,
+    private readonly activitiesService: ActivitiesService,
     private readonly benchmarkService: BenchmarkService,
     private readonly calculatorFactory: PortfolioCalculatorFactory,
     private readonly dataProviderService: DataProviderService,
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly i18nService: I18nService,
     private readonly impersonationService: ImpersonationService,
-    private readonly orderService: OrderService,
     @Inject(REQUEST) private readonly request: RequestWithUser,
     private readonly rulesService: RulesService,
     private readonly symbolProfileService: SymbolProfileService,
@@ -412,10 +412,10 @@ export class PortfolioService {
     const user = await this.userService.user({ id: userId });
     const userCurrency = this.getUserCurrency(user);
 
-    const { endDate, startDate } = getIntervalFromDateRange(dateRange);
+    const { endDate, startDate } = getIntervalFromDateRange({ dateRange });
 
     const { activities } =
-      await this.orderService.getOrdersForPortfolioCalculator({
+      await this.activitiesService.getActivitiesForPortfolioCalculator({
         filters,
         userCurrency,
         userId
@@ -500,7 +500,7 @@ export class PortfolioService {
     );
 
     const { activities } =
-      await this.orderService.getOrdersForPortfolioCalculator({
+      await this.activitiesService.getActivitiesForPortfolioCalculator({
         filters,
         userCurrency,
         userId
@@ -637,6 +637,28 @@ export class PortfolioService {
           ? 0
           : valueInBaseCurrency.div(filteredValueInBaseCurrency).toNumber(),
         assetClass: assetProfile.assetClass,
+        assetProfile: {
+          assetClass: assetProfile.assetClass,
+          assetSubClass: assetProfile.assetSubClass,
+          countries: assetProfile.countries,
+          currency: assetProfile.currency,
+          dataSource: assetProfile.dataSource,
+          holdings: assetProfile.holdings.map(
+            ({ allocationInPercentage, name }) => {
+              return {
+                allocationInPercentage,
+                name,
+                valueInBaseCurrency: valueInBaseCurrency
+                  .mul(allocationInPercentage)
+                  .toNumber()
+              };
+            }
+          ),
+          name: assetProfile.name,
+          sectors: assetProfile.sectors,
+          symbol: assetProfile.symbol,
+          url: assetProfile.url
+        },
         assetSubClass: assetProfile.assetSubClass,
         countries: assetProfile.countries,
         dataSource: assetProfile.dataSource,
@@ -768,7 +790,7 @@ export class PortfolioService {
     const userCurrency = this.getUserCurrency(user);
 
     const { activities } =
-      await this.orderService.getOrdersForPortfolioCalculator({
+      await this.activitiesService.getActivitiesForPortfolioCalculator({
         userCurrency,
         userId
       });
@@ -1010,7 +1032,7 @@ export class PortfolioService {
         userId,
         userCurrency
       }),
-      this.orderService.getOrdersForPortfolioCalculator({
+      this.activitiesService.getActivitiesForPortfolioCalculator({
         filters,
         userCurrency,
         userId
@@ -1044,8 +1066,14 @@ export class PortfolioService {
       currency: userCurrency
     });
 
-    const { endDate, startDate } = getIntervalFromDateRange(dateRange);
-    const range = { end: endDate, start: startDate };
+    await portfolioCalculator.getSnapshot();
+
+    const { endDate, startDate } = getIntervalFromDateRange({ dateRange });
+
+    const range = {
+      end: endDate,
+      start: startDate
+    };
 
     const {
       chart,
@@ -1354,7 +1382,13 @@ export class PortfolioService {
     userId: string;
   }) {
     userId = await this.getUserId(impersonationId, userId);
-    await this.orderService.assignTags({ dataSource, symbol, tags, userId });
+
+    await this.activitiesService.assignTags({
+      dataSource,
+      symbol,
+      tags,
+      userId
+    });
   }
 
   private getAggregatedMarkets(holdings: Record<string, PortfolioPosition>): {
@@ -1603,7 +1637,139 @@ export class PortfolioService {
     return valueInBaseCurrencyOfEmergencyFundHoldings.toNumber();
   }
 
-  @LogPerformance
+  private getInitialCashPosition({
+    balance,
+    currency
+  }: {
+    balance: number;
+    currency: string;
+  }): PortfolioPosition {
+    return {
+      currency,
+      activitiesCount: 0,
+      allocationInPercentage: 0,
+      assetClass: AssetClass.LIQUIDITY,
+      assetSubClass: AssetSubClass.CASH,
+      assetProfile: {
+        currency,
+        assetClass: AssetClass.LIQUIDITY,
+        assetSubClass: AssetSubClass.CASH,
+        countries: [],
+        dataSource: undefined,
+        holdings: [],
+        name: currency,
+        sectors: [],
+        symbol: currency
+      },
+      countries: [],
+      dataSource: undefined,
+      dateOfFirstActivity: undefined,
+      dividend: 0,
+      grossPerformance: 0,
+      grossPerformancePercent: 0,
+      grossPerformancePercentWithCurrencyEffect: 0,
+      grossPerformanceWithCurrencyEffect: 0,
+      holdings: [],
+      investment: balance,
+      marketPrice: 0,
+      name: currency,
+      netPerformance: 0,
+      netPerformancePercent: 0,
+      netPerformancePercentWithCurrencyEffect: 0,
+      netPerformanceWithCurrencyEffect: 0,
+      quantity: 0,
+      sectors: [],
+      symbol: currency,
+      tags: [],
+      valueInBaseCurrency: balance
+    };
+  }
+
+  private getMarkets({
+    assetProfile
+  }: {
+    assetProfile: EnhancedSymbolProfile;
+  }) {
+    const markets = {
+      [UNKNOWN_KEY]: 0,
+      developedMarkets: 0,
+      emergingMarkets: 0,
+      otherMarkets: 0
+    };
+    const marketsAdvanced = {
+      [UNKNOWN_KEY]: 0,
+      asiaPacific: 0,
+      emergingMarkets: 0,
+      europe: 0,
+      japan: 0,
+      northAmerica: 0,
+      otherMarkets: 0
+    };
+
+    if (assetProfile.countries.length > 0) {
+      for (const country of assetProfile.countries) {
+        if (developedMarkets.includes(country.code)) {
+          markets.developedMarkets = new Big(markets.developedMarkets)
+            .plus(country.weight)
+            .toNumber();
+        } else if (emergingMarkets.includes(country.code)) {
+          markets.emergingMarkets = new Big(markets.emergingMarkets)
+            .plus(country.weight)
+            .toNumber();
+        } else {
+          markets.otherMarkets = new Big(markets.otherMarkets)
+            .plus(country.weight)
+            .toNumber();
+        }
+
+        if (country.code === 'JP') {
+          marketsAdvanced.japan = new Big(marketsAdvanced.japan)
+            .plus(country.weight)
+            .toNumber();
+        } else if (country.code === 'CA' || country.code === 'US') {
+          marketsAdvanced.northAmerica = new Big(marketsAdvanced.northAmerica)
+            .plus(country.weight)
+            .toNumber();
+        } else if (asiaPacificMarkets.includes(country.code)) {
+          marketsAdvanced.asiaPacific = new Big(marketsAdvanced.asiaPacific)
+            .plus(country.weight)
+            .toNumber();
+        } else if (emergingMarkets.includes(country.code)) {
+          marketsAdvanced.emergingMarkets = new Big(
+            marketsAdvanced.emergingMarkets
+          )
+            .plus(country.weight)
+            .toNumber();
+        } else if (europeMarkets.includes(country.code)) {
+          marketsAdvanced.europe = new Big(marketsAdvanced.europe)
+            .plus(country.weight)
+            .toNumber();
+        } else {
+          marketsAdvanced.otherMarkets = new Big(marketsAdvanced.otherMarkets)
+            .plus(country.weight)
+            .toNumber();
+        }
+      }
+    }
+
+    markets[UNKNOWN_KEY] = new Big(1)
+      .minus(markets.developedMarkets)
+      .minus(markets.emergingMarkets)
+      .minus(markets.otherMarkets)
+      .toNumber();
+
+    marketsAdvanced[UNKNOWN_KEY] = new Big(1)
+      .minus(marketsAdvanced.asiaPacific)
+      .minus(marketsAdvanced.emergingMarkets)
+      .minus(marketsAdvanced.europe)
+      .minus(marketsAdvanced.japan)
+      .minus(marketsAdvanced.northAmerica)
+      .minus(marketsAdvanced.otherMarkets)
+      .toNumber();
+
+    return { markets, marketsAdvanced };
+  }
+
   private getReportStatistics(
     evaluatedRules: PortfolioReportRule[]
   ): PortfolioReportResponse['xRay']['statistics'] {
@@ -1799,7 +1965,7 @@ export class PortfolioService {
     userId = await this.getUserId(impersonationId, userId);
     const user = await this.userService.user({ id: userId });
 
-    const { activities } = await this.orderService.getOrders({
+    const { activities } = await this.activitiesService.getActivities({
       userCurrency,
       userId,
       withExcludedAccountsAndActivities: true
@@ -1994,43 +2160,6 @@ export class PortfolioService {
     );
   }
 
-  private getInitialCashPosition({
-    balance,
-    currency
-  }: {
-    balance: number;
-    currency: string;
-  }): PortfolioPosition {
-    return {
-      currency,
-      allocationInPercentage: 0,
-      assetClass: AssetClass.LIQUIDITY,
-      assetSubClass: AssetSubClass.CASH,
-      countries: [],
-      dataSource: undefined,
-      dateOfFirstActivity: undefined,
-      dividend: 0,
-      grossPerformance: 0,
-      grossPerformancePercent: 0,
-      grossPerformancePercentWithCurrencyEffect: 0,
-      grossPerformanceWithCurrencyEffect: 0,
-      holdings: [],
-      investment: balance,
-      marketPrice: 0,
-      name: currency,
-      netPerformance: 0,
-      netPerformancePercent: 0,
-      netPerformancePercentWithCurrencyEffect: 0,
-      netPerformanceWithCurrencyEffect: 0,
-      quantity: 0,
-      sectors: [],
-      symbol: currency,
-      tags: [],
-      activitiesCount: 0,
-      valueInBaseCurrency: balance
-    };
-  }
-
   private getDividendsByGroup({
     dividends,
     groupBy
@@ -2091,91 +2220,6 @@ export class PortfolioService {
     }
 
     return dividendsByGroup;
-  }
-
-  private getMarkets({
-    assetProfile
-  }: {
-    assetProfile: EnhancedSymbolProfile;
-  }) {
-    const markets = {
-      [UNKNOWN_KEY]: 0,
-      developedMarkets: 0,
-      emergingMarkets: 0,
-      otherMarkets: 0
-    };
-    const marketsAdvanced = {
-      [UNKNOWN_KEY]: 0,
-      asiaPacific: 0,
-      emergingMarkets: 0,
-      europe: 0,
-      japan: 0,
-      northAmerica: 0,
-      otherMarkets: 0
-    };
-
-    if (assetProfile.countries.length > 0) {
-      for (const country of assetProfile.countries) {
-        if (developedMarkets.includes(country.code)) {
-          markets.developedMarkets = new Big(markets.developedMarkets)
-            .plus(country.weight)
-            .toNumber();
-        } else if (emergingMarkets.includes(country.code)) {
-          markets.emergingMarkets = new Big(markets.emergingMarkets)
-            .plus(country.weight)
-            .toNumber();
-        } else {
-          markets.otherMarkets = new Big(markets.otherMarkets)
-            .plus(country.weight)
-            .toNumber();
-        }
-
-        if (country.code === 'JP') {
-          marketsAdvanced.japan = new Big(marketsAdvanced.japan)
-            .plus(country.weight)
-            .toNumber();
-        } else if (country.code === 'CA' || country.code === 'US') {
-          marketsAdvanced.northAmerica = new Big(marketsAdvanced.northAmerica)
-            .plus(country.weight)
-            .toNumber();
-        } else if (asiaPacificMarkets.includes(country.code)) {
-          marketsAdvanced.asiaPacific = new Big(marketsAdvanced.asiaPacific)
-            .plus(country.weight)
-            .toNumber();
-        } else if (emergingMarkets.includes(country.code)) {
-          marketsAdvanced.emergingMarkets = new Big(
-            marketsAdvanced.emergingMarkets
-          )
-            .plus(country.weight)
-            .toNumber();
-        } else if (europeMarkets.includes(country.code)) {
-          marketsAdvanced.europe = new Big(marketsAdvanced.europe)
-            .plus(country.weight)
-            .toNumber();
-        } else {
-          marketsAdvanced.otherMarkets = new Big(marketsAdvanced.otherMarkets)
-            .plus(country.weight)
-            .toNumber();
-        }
-      }
-    }
-
-    markets[UNKNOWN_KEY] = new Big(1)
-      .minus(markets.developedMarkets)
-      .minus(markets.emergingMarkets)
-      .minus(markets.otherMarkets)
-      .toNumber();
-
-    marketsAdvanced[UNKNOWN_KEY] = new Big(1)
-      .minus(marketsAdvanced.asiaPacific)
-      .minus(marketsAdvanced.emergingMarkets)
-      .minus(marketsAdvanced.europe)
-      .minus(marketsAdvanced.japan)
-      .minus(marketsAdvanced.northAmerica)
-      .minus(marketsAdvanced.otherMarkets)
-      .toNumber();
-
-    return { markets, marketsAdvanced };
   }
 
   private getTotalEmergencyFund({

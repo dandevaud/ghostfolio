@@ -32,7 +32,10 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     for (const dateRange of DateRangeTypes) {
-      const dateInterval = getIntervalFromDateRange(dateRange);
+      const dateInterval = getIntervalFromDateRange({
+        dateRange,
+        startDate: start
+      });
       const endDate = dateInterval.endDate;
       let startDate = dateInterval.startDate;
 

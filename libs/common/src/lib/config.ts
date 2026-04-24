@@ -46,10 +46,18 @@ export const ASSET_CLASS_MAPPING = new Map<AssetClass, AssetSubClass[]>([
       AssetSubClass.STOCK
     ]
   ],
-  [AssetClass.FIXED_INCOME, [AssetSubClass.BOND]],
+  [AssetClass.FIXED_INCOME, [AssetSubClass.BOND, AssetSubClass.LOAN]],
   [AssetClass.LIQUIDITY, [AssetSubClass.CRYPTOCURRENCY]],
   [AssetClass.REAL_ESTATE, []]
 ]);
+
+export const BULL_BOARD_COOKIE_NAME = 'bull_board_token';
+
+/**
+ * WARNING: This route is mirrored in `apps/client/proxy.conf.json`.
+ * If you update this value, you must also update the proxy configuration.
+ */
+export const BULL_BOARD_ROUTE = '/admin/queues';
 
 export const CACHE_TTL_NO_CACHE = 1;
 export const CACHE_TTL_INFINITE = 0;
@@ -66,6 +74,8 @@ export const PORTFOLIO_SNAPSHOT_COMPUTATION_QUEUE =
 export const PORTFOLIO_SNAPSHOT_COMPUTATION_QUEUE_PRIORITY_HIGH = 1;
 export const PORTFOLIO_SNAPSHOT_COMPUTATION_QUEUE_PRIORITY_LOW =
   Number.MAX_SAFE_INTEGER;
+
+export const STATISTICS_GATHERING_QUEUE = 'STATISTICS_GATHERING_QUEUE';
 
 export const DEFAULT_CURRENCY = 'USD';
 export const DEFAULT_DATE_FORMAT_MONTH_YEAR = 'MMM yyyy';
@@ -175,6 +185,27 @@ export const GATHER_HISTORICAL_MARKET_DATA_PROCESS_JOB_OPTIONS: JobOptions = {
   removeOnComplete: true
 };
 
+export const GATHER_STATISTICS_PROCESS_JOB_OPTIONS: JobOptions = {
+  attempts: 5,
+  backoff: {
+    delay: ms('1 minute'),
+    type: 'exponential'
+  },
+  removeOnComplete: true
+};
+
+export const GATHER_STATISTICS_DOCKER_HUB_PULLS_PROCESS_JOB_NAME =
+  'GATHER_STATISTICS_DOCKER_HUB_PULLS';
+
+export const GATHER_STATISTICS_GITHUB_CONTRIBUTORS_PROCESS_JOB_NAME =
+  'GATHER_STATISTICS_GITHUB_CONTRIBUTORS';
+
+export const GATHER_STATISTICS_GITHUB_STARGAZERS_PROCESS_JOB_NAME =
+  'GATHER_STATISTICS_GITHUB_STARGAZERS';
+
+export const GATHER_STATISTICS_UPTIME_PROCESS_JOB_NAME =
+  'GATHER_STATISTICS_UPTIME';
+
 export const INVESTMENT_ACTIVITY_TYPES = [
   Type.BUY,
   Type.DIVIDEND,
@@ -214,6 +245,9 @@ export const PROPERTY_API_KEY_GHOSTFOLIO = 'API_KEY_GHOSTFOLIO';
 export const PROPERTY_API_KEY_OPENROUTER = 'API_KEY_OPENROUTER';
 export const PROPERTY_BENCHMARKS = 'BENCHMARKS';
 export const PROPERTY_BETTER_UPTIME_MONITOR_ID = 'BETTER_UPTIME_MONITOR_ID';
+export const PROPERTY_DOCKER_HUB_PULLS = 'DOCKER_HUB_PULLS';
+export const PROPERTY_GITHUB_CONTRIBUTORS = 'GITHUB_CONTRIBUTORS';
+export const PROPERTY_GITHUB_STARGAZERS = 'GITHUB_STARGAZERS';
 export const PROPERTY_COUNTRIES_OF_SUBSCRIBERS = 'COUNTRIES_OF_SUBSCRIBERS';
 export const PROPERTY_COUPONS = 'COUPONS';
 export const PROPERTY_CURRENCIES = 'CURRENCIES';
@@ -230,6 +264,7 @@ export const PROPERTY_OPENROUTER_MODEL = 'OPENROUTER_MODEL';
 export const PROPERTY_SLACK_COMMUNITY_USERS = 'SLACK_COMMUNITY_USERS';
 export const PROPERTY_STRIPE_CONFIG = 'STRIPE_CONFIG';
 export const PROPERTY_SYSTEM_MESSAGE = 'SYSTEM_MESSAGE';
+export const PROPERTY_UPTIME = 'UPTIME';
 
 export const QUEUE_JOB_STATUS_LIST = [
   'active',

@@ -1,4 +1,4 @@
-import { OrderService } from '@ghostfolio/api/app/order/order.service';
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
   loadExportFile,
@@ -70,7 +70,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
-  let orderService: OrderService;
+  let activitiesService: ActivitiesService;
 
   beforeAll(() => {
     exportResponse = loadExportFile(
@@ -94,7 +94,7 @@ describe('PortfolioCalculator', () => {
 
     redisCacheService = new RedisCacheService(null, null);
 
-    orderService = new OrderService(
+    activitiesService = new ActivitiesService(
       null,
       null,
       null,
@@ -111,7 +111,7 @@ describe('PortfolioCalculator', () => {
       exchangeRateDataService,
       portfolioSnapshotService,
       redisCacheService,
-      orderService
+      activitiesService
     );
   });
 

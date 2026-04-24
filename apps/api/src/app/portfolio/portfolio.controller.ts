@@ -1,4 +1,4 @@
-import { OrderService } from '@ghostfolio/api/app/order/order.service';
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { HasPermissionGuard } from '@ghostfolio/api/guards/has-permission.guard';
 import {
@@ -20,6 +20,7 @@ import {
   HEADER_KEY_IMPERSONATION,
   UNKNOWN_KEY
 } from '@ghostfolio/common/config';
+import { SubscriptionType } from '@ghostfolio/common/enums';
 import {
   PortfolioDetails,
   PortfolioDividendsResponse,
@@ -66,10 +67,10 @@ import { UpdateHoldingTagsDto } from './update-holding-tags.dto';
 @Controller('portfolio')
 export class PortfolioController {
   public constructor(
+    private readonly activitiesService: ActivitiesService,
     private readonly apiService: ApiService,
     private readonly configurationService: ConfigurationService,
     private readonly impersonationService: ImpersonationService,
-    private readonly orderService: OrderService,
     private readonly portfolioService: PortfolioService,
     @Inject(REQUEST) private readonly request: RequestWithUser
   ) {}
@@ -95,7 +96,8 @@ export class PortfolioController {
     let hasError = false;
 
     if (this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION')) {
-      hasDetails = this.request.user.subscription.type === 'Premium';
+      hasDetails =
+        this.request.user.subscription.type === SubscriptionType.Premium;
     }
 
     const filters = this.apiService.buildFiltersFromQueryParams({
@@ -341,9 +343,9 @@ export class PortfolioController {
       await this.impersonationService.validateImpersonationId(impersonationId);
     const userCurrency = this.request.user.settings.settings.baseCurrency;
 
-    const { endDate, startDate } = getIntervalFromDateRange(dateRange);
+    const { endDate, startDate } = getIntervalFromDateRange({ dateRange });
 
-    const { activities } = await this.orderService.getOrders({
+    const { activities } = await this.activitiesService.getActivities({
       endDate,
       filters,
       startDate,
@@ -377,7 +379,7 @@ export class PortfolioController {
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
-      this.request.user.subscription.type === 'Basic'
+      this.request.user.subscription.type === SubscriptionType.Basic
     ) {
       dividends = dividends.map((item) => {
         return nullifyValuesInObject(item, ['investment']);
@@ -513,7 +515,7 @@ export class PortfolioController {
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
-      this.request.user.subscription.type === 'Basic'
+      this.request.user.subscription.type === SubscriptionType.Basic
     ) {
       investments = investments.map((item) => {
         return nullifyValuesInObject(item, ['investment']);
@@ -628,7 +630,7 @@ export class PortfolioController {
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
-      this.request.user.subscription.type === 'Basic'
+      this.request.user.subscription.type === SubscriptionType.Basic
     ) {
       performanceInformation.chart = performanceInformation.chart.map(
         (item) => {
@@ -686,7 +688,7 @@ export class PortfolioController {
 
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
-      this.request.user.subscription.type === 'Basic'
+      this.request.user.subscription.type === SubscriptionType.Basic
     ) {
       for (const category of report.xRay.categories) {
         category.rules = null;
@@ -701,7 +703,7 @@ export class PortfolioController {
     return report;
   }
 
-  @HasPermission(permissions.updateOrder)
+  @HasPermission(permissions.updateActivity)
   @Put('holding/:dataSource/:symbol/tags')
   @UseInterceptors(TransformDataSourceInRequestInterceptor)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
@@ -737,7 +739,7 @@ export class PortfolioController {
   /**
    * @deprecated
    */
-  @HasPermission(permissions.updateOrder)
+  @HasPermission(permissions.updateActivity)
   @Put('position/:dataSource/:symbol/tags')
   @UseInterceptors(TransformDataSourceInRequestInterceptor)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)

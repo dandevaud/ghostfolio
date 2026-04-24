@@ -5,17 +5,15 @@ import {
   PortfolioPerformance
 } from '@ghostfolio/common/interfaces';
 
-import { CommonModule } from '@angular/common';
 import {
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
-  Input,
-  Output,
   computed,
   effect,
   input,
+  model,
+  output,
   viewChild
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -32,7 +30,6 @@ import { GfValueComponent } from '../value/value.component';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     GfEntityLogoComponent,
     GfValueComponent,
     MatButtonModule,
@@ -48,10 +45,6 @@ import { GfValueComponent } from '../value/value.component';
   templateUrl: './holdings-table.component.html'
 })
 export class GfHoldingsTableComponent {
-  @Input() pageSize = Number.MAX_SAFE_INTEGER;
-
-  @Output() holdingClicked = new EventEmitter<AssetProfileIdentifier>();
-
   public readonly hasPermissionToOpenDetails = input(true);
   public readonly hasPermissionToShowQuantities = input(true);
   public readonly hasPermissionToShowValues = input(true);
@@ -59,14 +52,18 @@ export class GfHoldingsTableComponent {
   public readonly isInDialog = input(true);
   public readonly holdings = input.required<PortfolioPosition[]>();
   public readonly locale = input(getLocale());
-  public readonly paginator = viewChild.required(MatPaginator);
-  public readonly sort = viewChild.required(MatSort);
-  public readonly performance = input<PortfolioPerformance>(null);
+  public readonly pageSize = model(Number.MAX_SAFE_INTEGER);
+
+  public readonly holdingClicked = output<AssetProfileIdentifier>();
+
+  protected readonly paginator = viewChild.required(MatPaginator);
+  protected readonly sort = viewChild.required(MatSort);
+  public readonly performance = input<PortfolioPerformance>();
 
   protected totalValue = 0;
   protected totalChange = 0;
   protected totalChangePercentage = 0;
-  protected performanceProtected: PortfolioPerformance = null;
+  protected performanceProtected: PortfolioPerformance;
 
   protected readonly dataSource = new MatTableDataSource<PortfolioPosition>([]);
 
@@ -108,7 +105,8 @@ export class GfHoldingsTableComponent {
     // Reactive data update
     effect(() => {
       this.dataSource.data = this.holdings();
-      this.performanceProtected = this.performance();
+      this.performanceProtected =
+        this.performance() ?? ({} as PortfolioPerformance);
     });
 
     // Reactive view connection
@@ -121,7 +119,7 @@ export class GfHoldingsTableComponent {
   protected canShowDetails(holding: PortfolioPosition): boolean {
     return (
       this.hasPermissionToOpenDetails() &&
-      !this.ignoreAssetSubClasses.includes(holding.assetSubClass)
+      !this.ignoreAssetSubClasses.includes(holding.assetProfile.assetSubClass)
     );
   }
 
@@ -133,7 +131,7 @@ export class GfHoldingsTableComponent {
   }
 
   protected onShowAllHoldings() {
-    this.pageSize = Number.MAX_SAFE_INTEGER;
+    this.pageSize.set(Number.MAX_SAFE_INTEGER);
 
     setTimeout(() => {
       this.dataSource.paginator = this.paginator();

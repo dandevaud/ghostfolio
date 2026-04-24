@@ -44,7 +44,7 @@ import { groupBy, uniqBy } from 'lodash';
 import { randomUUID } from 'node:crypto';
 
 @Injectable()
-export class OrderService {
+export class ActivitiesService {
   public constructor(
     private readonly accountBalanceService: AccountBalanceService,
     private readonly accountService: AccountService,
@@ -120,7 +120,7 @@ export class OrderService {
     return result;
   }
 
-  public async createOrder(
+  public async createActivity(
     data: Prisma.OrderCreateInput & {
       accountId?: string;
       assetClass?: AssetClass;
@@ -225,7 +225,7 @@ export class OrderService {
       ? false
       : isAfter(data.date as Date, endOfToday());
 
-    const order = await this.prismaService.order.create({
+    const activity = await this.prismaService.order.create({
       data: {
         ...orderData,
         account,
@@ -259,56 +259,56 @@ export class OrderService {
     this.eventEmitter.emit(
       AssetProfileChangedEvent.getName(),
       new AssetProfileChangedEvent({
-        currency: order.SymbolProfile.currency,
-        dataSource: order.SymbolProfile.dataSource,
-        symbol: order.SymbolProfile.symbol
+        currency: activity.SymbolProfile.currency,
+        dataSource: activity.SymbolProfile.dataSource,
+        symbol: activity.SymbolProfile.symbol
       })
     );
 
     this.eventEmitter.emit(
       PortfolioChangedEvent.getName(),
       new PortfolioChangedEvent({
-        userId: order.userId
+        userId: activity.userId
       })
     );
 
-    return order;
+    return activity;
   }
 
-  public async deleteOrder(
+  public async deleteActivity(
     where: Prisma.OrderWhereUniqueInput
   ): Promise<Order> {
-    const order = await this.prismaService.order.delete({
+    const activity = await this.prismaService.order.delete({
       where
     });
 
     const [symbolProfile] =
       await this.symbolProfileService.getSymbolProfilesByIds([
-        order.symbolProfileId
+        activity.symbolProfileId
       ]);
 
     if (symbolProfile.activitiesCount === 0) {
-      await this.symbolProfileService.deleteById(order.symbolProfileId);
+      await this.symbolProfileService.deleteById(activity.symbolProfileId);
     }
 
     this.eventEmitter.emit(
       PortfolioChangedEvent.getName(),
       new PortfolioChangedEvent({
-        userId: order.userId
+        userId: activity.userId
       })
     );
 
-    return order;
+    return activity;
   }
 
-  public async deleteOrders({
+  public async deleteActivities({
     filters,
     userId
   }: {
     filters?: Filter[];
     userId: string;
   }): Promise<number> {
-    const { activities } = await this.getOrders({
+    const { activities } = await this.getActivities({
       filters,
       userId,
       includeDrafts: true,
@@ -348,7 +348,7 @@ export class OrderService {
   }
 
   /**
-   * Generates synthetic orders for cash holdings based on account balance history.
+   * Generates synthetic activities for cash holdings based on account balance history.
    * Treat currencies as assets with a fixed unit price of 1.0 (in their own currency) to allow
    * performance tracking based on exchange rate fluctuations.
    *
@@ -358,7 +358,7 @@ export class OrderService {
    * @param userId - The ID of the user.
    * @returns A response containing the list of synthetic cash activities.
    */
-  public async getCashOrders({
+  public async getCashActivities({
     cashDetails,
     filters = [],
     userCurrency,
@@ -472,7 +472,10 @@ export class OrderService {
     };
   }
 
-  public async getLatestOrder({ dataSource, symbol }: AssetProfileIdentifier) {
+  public async getLatestActivity({
+    dataSource,
+    symbol
+  }: AssetProfileIdentifier) {
     return this.prismaService.order.findFirst({
       orderBy: {
         date: 'desc'
@@ -484,7 +487,7 @@ export class OrderService {
   }
 
   @LogPerformance
-  public async getOrders({
+  public async getActivities({
     endDate,
     filters,
     includeDrafts = false,
@@ -672,7 +675,7 @@ export class OrderService {
       orderBy = [{ [sortColumn]: sortDirection }];
     }
 
-    if (types) {
+    if (types?.length > 0) {
       where.type = { in: types };
     }
 
@@ -792,17 +795,17 @@ export class OrderService {
   }
 
   /**
-   * Retrieves all orders required for the portfolio calculator, including both standard asset orders
-   * and optional synthetic orders representing cash activities.
+   * Retrieves all activities required for the portfolio calculator, including both standard asset activities
+   * and optional synthetic activities representing cash activities.
    */
   @LogPerformance
-  public async getOrdersForPortfolioCalculator({
+  public async getActivitiesForPortfolioCalculator({
     filters,
     userCurrency,
     userId,
     withCash = false
   }: {
-    /** Optional filters to apply to the orders. */
+    /** Optional filters to apply to the activities. */
     filters?: Filter[];
     /** The base currency of the user. */
     userCurrency: string;
@@ -811,7 +814,7 @@ export class OrderService {
     /** Whether to include cash activities in the result. */
     withCash?: boolean;
   }) {
-    const orders = await this.getOrders({
+    const activities = await this.getActivities({
       filters,
       userCurrency,
       userId,
@@ -825,18 +828,18 @@ export class OrderService {
         currency: userCurrency
       });
 
-      const cashOrders = await this.getCashOrders({
+      const cashActivities = await this.getCashActivities({
         cashDetails,
         filters,
         userCurrency,
         userId
       });
 
-      orders.activities.push(...cashOrders.activities);
-      orders.count += cashOrders.count;
+      activities.activities.push(...cashActivities.activities);
+      activities.count += cashActivities.count;
     }
 
-    return orders;
+    return activities;
   }
 
   public async getStatisticsByCurrency(
@@ -867,7 +870,7 @@ export class OrderService {
     });
   }
 
-  public async updateOrder({
+  public async updateActivity({
     data,
     where
   }: {
@@ -932,7 +935,7 @@ export class OrderService {
       data: { tags: { set: [] } }
     });
 
-    const order = await this.prismaService.order.update({
+    const activity = await this.prismaService.order.update({
       where,
       data: {
         ...data,
@@ -946,11 +949,11 @@ export class OrderService {
     this.eventEmitter.emit(
       PortfolioChangedEvent.getName(),
       new PortfolioChangedEvent({
-        userId: order.userId
+        userId: activity.userId
       })
     );
 
-    return order;
+    return activity;
   }
 
   private async orders(params: {

@@ -13,7 +13,7 @@ import { PerformanceCalculationType } from '@ghostfolio/common/types/performance
 
 import { Injectable } from '@nestjs/common';
 
-import { OrderService } from '../../order/order.service';
+import { ActivitiesService } from '../../activities/activities.service';
 import { MwrPortfolioCalculator } from './mwr/portfolio-calculator';
 import { PortfolioCalculator } from './portfolio-calculator';
 import { RoaiPortfolioCalculator } from './roai/portfolio-calculator';
@@ -29,7 +29,7 @@ export class PortfolioCalculatorFactory {
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly portfolioSnapshotService: PortfolioSnapshotService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly orderService: OrderService
+    private readonly activitiesService: ActivitiesService
   ) {}
 
   @LogPerformance
@@ -61,7 +61,7 @@ export class PortfolioCalculatorFactory {
           exchangeRateDataService: this.exchangeRateDataService,
           portfolioSnapshotService: this.portfolioSnapshotService,
           redisCacheService: this.redisCacheService,
-          orderService: this.orderService
+          activitiesService: this.activitiesService
         });
 
       case PerformanceCalculationType.ROAI:
@@ -76,7 +76,7 @@ export class PortfolioCalculatorFactory {
           exchangeRateDataService: this.exchangeRateDataService,
           portfolioSnapshotService: this.portfolioSnapshotService,
           redisCacheService: this.redisCacheService,
-          orderService: this.orderService
+          activitiesService: this.activitiesService
         });
 
       case PerformanceCalculationType.ROI:
@@ -91,7 +91,7 @@ export class PortfolioCalculatorFactory {
           exchangeRateDataService: this.exchangeRateDataService,
           portfolioSnapshotService: this.portfolioSnapshotService,
           redisCacheService: this.redisCacheService,
-          orderService: this.orderService
+          activitiesService: this.activitiesService
         });
 
       case PerformanceCalculationType.TWR:
@@ -105,7 +105,7 @@ export class PortfolioCalculatorFactory {
           exchangeRateDataService: this.exchangeRateDataService,
           portfolioSnapshotService: this.portfolioSnapshotService,
           redisCacheService: this.redisCacheService,
-          orderService: this.orderService,
+          activitiesService: this.activitiesService,
           filters
         });
 
