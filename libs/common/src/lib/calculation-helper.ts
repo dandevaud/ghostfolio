@@ -37,14 +37,16 @@ export function getAnnualizedPerformancePercent({
   return new Big(0);
 }
 
-export function getIntervalFromDateRange(
-  aDateRange: DateRange,
-  portfolioStart = new Date(0)
-) {
-  let endDate = endOfDay(new Date());
-  let startDate = portfolioStart;
+export function getIntervalFromDateRange(params: {
+  dateRange: DateRange;
+  endDate?: Date;
+  startDate?: Date;
+}) {
+  const { dateRange } = params;
+  let endDate = params.endDate ?? endOfDay(new Date());
+  let startDate = params.startDate ?? new Date(0);
 
-  switch (aDateRange) {
+  switch (dateRange) {
     case '1d':
       startDate = max([startDate, subDays(resetHours(new Date()), 1)]);
       break;
@@ -91,8 +93,8 @@ export function getIntervalFromDateRange(
       break;
     default:
       // '2024', '2023', '2022', etc.
-      endDate = endOfYear(new Date(aDateRange));
-      startDate = max([startDate, new Date(aDateRange)]);
+      endDate = endOfYear(new Date(dateRange));
+      startDate = max([startDate, new Date(dateRange)]);
   }
 
   return { endDate, startDate };

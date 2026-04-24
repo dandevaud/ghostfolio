@@ -6,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Access {
@@ -158,6 +157,7 @@ model Order {
   @@index([accountId])
   @@index([date])
   @@index([isDraft])
+  @@index([type])
   @@index([userId])
 }
 
@@ -310,6 +310,7 @@ enum AssetSubClass {
   COMMODITY
   CRYPTOCURRENCY
   ETF
+  LOAN
   MUTUALFUND
   PRECIOUS_METAL
   PRIVATE_EQUITY

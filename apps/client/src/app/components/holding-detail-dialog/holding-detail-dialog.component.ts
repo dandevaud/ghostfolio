@@ -35,10 +35,11 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   Inject,
-  OnDestroy,
   OnInit
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -67,8 +68,7 @@ import {
   walletOutline
 } from 'ionicons/icons';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
-import { Subject } from 'rxjs';
-import { switchMap, takeUntil } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
 
 import { HoldingDetailDialogParams } from './interfaces/interfaces';
 
@@ -102,7 +102,7 @@ import { HoldingDetailDialogParams } from './interfaces/interfaces';
   styleUrls: ['./holding-detail-dialog.component.scss'],
   templateUrl: 'holding-detail-dialog.html'
 })
-export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
+export class GfHoldingDetailDialogComponent implements OnInit {
   public activitiesCount: number;
   public accounts: Account[];
   public assetClass: string;
@@ -160,11 +160,10 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
   public user: User;
   public value: number;
 
-  private unsubscribeSubject = new Subject<void>();
-
   public constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private dataService: DataService,
+    private destroyRef: DestroyRef,
     public dialogRef: MatDialogRef<GfHoldingDetailDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: HoldingDetailDialogParams,
     private formBuilder: FormBuilder,
@@ -194,7 +193,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
 
     this.holdingForm
       .get('tags')
-      .valueChanges.pipe(takeUntil(this.unsubscribeSubject))
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((tags: Tag[]) => {
         const newTag = tags.find(({ id }) => {
           return id === undefined;
@@ -219,7 +218,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
               switchMap(() => {
                 return this.userService.get(true);
               }),
-              takeUntil(this.unsubscribeSubject)
+              takeUntilDestroyed(this.destroyRef)
             )
             .subscribe();
         } else {
@@ -229,7 +228,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
               dataSource: this.data.dataSource,
               symbol: this.data.symbol
             })
-            .pipe(takeUntil(this.unsubscribeSubject))
+            .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe();
         }
       });
@@ -238,7 +237,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
       .fetchAccounts({
         filters
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ accounts }) => {
         this.accounts = accounts;
 
@@ -251,7 +250,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
         sortColumn: this.sortColumn,
         sortDirection: this.sortDirection
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ activities }) => {
         this.dataSource = new MatTableDataSource(activities);
 
@@ -263,7 +262,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
         dataSource: this.data.dataSource,
         symbol: this.data.symbol
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(
         ({
           activitiesCount,
@@ -541,7 +540,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
       );
 
     this.userService.stateChanged
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         if (state?.user) {
           this.user = state.user;
@@ -598,8 +597,8 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
     };
 
     this.dataService
-      .postOrder(activity)
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .postActivity(activity)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.router.navigate(
           internalRoutes.portfolio.subRoutes.activities.routerLink
@@ -616,7 +615,7 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
 
     this.dataService
       .fetchExport({ activityIds })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data) => {
         downloadAsFile({
           content: data,
@@ -646,18 +645,13 @@ export class GfHoldingDetailDialogComponent implements OnDestroy, OnInit {
     this.dialogRef.close();
   }
 
-  public ngOnDestroy() {
-    this.unsubscribeSubject.next();
-    this.unsubscribeSubject.complete();
-  }
-
   private fetchMarketData() {
     this.dataService
       .fetchMarketDataBySymbol({
         dataSource: this.data.dataSource,
         symbol: this.data.symbol
       })
-      .pipe(takeUntil(this.unsubscribeSubject))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ marketData }) => {
         this.marketDataItems = marketData;
 

@@ -170,10 +170,10 @@ export abstract class PortfolioCalculator {
     this.redisCacheService = redisCacheService;
     this.userId = userId;
 
-    const { endDate, startDate } = getIntervalFromDateRange(
-      'max',
-      subDays(dateOfFirstActivity, 1)
-    );
+    const { endDate, startDate } = getIntervalFromDateRange({
+      dateRange: 'max',
+      startDate: subDays(dateOfFirstActivity, 1)
+    });
 
     this.endDate = endOfDay(endDate);
     this.startDate = startOfDay(startDate);

@@ -1,6 +1,6 @@
 import { AccountModule } from '@ghostfolio/api/app/account/account.module';
+import { ActivitiesModule } from '@ghostfolio/api/app/activities/activities.module';
 import { CacheModule } from '@ghostfolio/api/app/cache/cache.module';
-import { OrderModule } from '@ghostfolio/api/app/order/order.module';
 import { PlatformModule } from '@ghostfolio/api/app/platform/platform.module';
 import { PortfolioModule } from '@ghostfolio/api/app/portfolio/portfolio.module';
 import { RedisCacheModule } from '@ghostfolio/api/app/redis-cache/redis-cache.module';
@@ -12,7 +12,7 @@ import { DataProviderModule } from '@ghostfolio/api/services/data-provider/data-
 import { ExchangeRateDataModule } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.module';
 import { MarketDataModule } from '@ghostfolio/api/services/market-data/market-data.module';
 import { PrismaModule } from '@ghostfolio/api/services/prisma/prisma.module';
-import { DataGatheringModule } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.module';
+import { DataGatheringQueueModule } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.module';
 import { SymbolProfileModule } from '@ghostfolio/api/services/symbol-profile/symbol-profile.module';
 import { TagModule } from '@ghostfolio/api/services/tag/tag.module';
 
@@ -25,14 +25,14 @@ import { ImportService } from './import.service';
   controllers: [ImportController],
   imports: [
     AccountModule,
+    ActivitiesModule,
     ApiModule,
     CacheModule,
     ConfigurationModule,
-    DataGatheringModule,
+    DataGatheringQueueModule,
     DataProviderModule,
     ExchangeRateDataModule,
     MarketDataModule,
-    OrderModule,
     PlatformModule,
     PortfolioModule,
     PrismaModule,
