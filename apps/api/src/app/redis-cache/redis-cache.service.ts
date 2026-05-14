@@ -8,6 +8,8 @@ import Keyv from 'keyv';
 import ms from 'ms';
 import { createHash, randomUUID } from 'node:crypto';
 
+import { DateQuery } from '../portfolio/interfaces/date-query.interface';
+
 @Injectable()
 export class RedisCacheService {
   private client: Keyv;
@@ -72,6 +74,45 @@ export class RedisCacheService {
 
   public getQuoteKey({ dataSource, symbol }: AssetProfileIdentifier) {
     return `quote-${getAssetProfileIdentifier({ dataSource, symbol })}`;
+  }
+
+  public getDateQueryKey(dateQuery: DateQuery) {
+    const lt = dateQuery.lt ? dateQuery.lt.getTime() : '';
+    const gte = dateQuery.gte ? dateQuery.gte.getTime() : '';
+    const inPart = (dateQuery.in ?? []).map((date) => date.getTime()).join(',');
+
+    return `dateQuery-lte-${lt}-gte-${gte}-in-${inPart}`;
+  }
+
+  public getDateQueryFromKey(key: string): DateQuery | null {
+    const regex = /dateQuery-lte-(\d*)-gte-(\d*)-in-([\d,]*)/;
+    const match = key.match(regex);
+
+    if (!match) {
+      return null;
+    }
+
+    const lt = match[1];
+    const gte = match[2];
+    const inPart = match[3];
+
+    const dateQuery: DateQuery = {};
+
+    if (lt) {
+      dateQuery.lt = new Date(parseInt(lt));
+    }
+
+    if (gte) {
+      dateQuery.gte = new Date(parseInt(gte));
+    }
+
+    if (inPart) {
+      dateQuery.in = inPart
+        .split(',')
+        .map((timestamp) => new Date(parseInt(timestamp)));
+    }
+
+    return dateQuery;
   }
 
   public async isHealthy() {

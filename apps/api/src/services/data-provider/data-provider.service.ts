@@ -505,6 +505,7 @@ export class DataProviderService implements OnModuleInit {
 
       throw error;
     }
+    await this.invalidateCaches(assetProfileIdentifiers);
 
     return result;
   }
@@ -885,5 +886,20 @@ export class DataProviderService implements OnModuleInit {
     }
 
     return data;
+  }
+
+  private async invalidateCaches(
+    assetProfileIdentifiers: AssetProfileIdentifier[]
+  ) {
+    for (const { dataSource, symbol } of assetProfileIdentifiers) {
+      const quoteKey = this.redisCacheService.getQuoteKey({
+        dataSource,
+        symbol
+      });
+      let keys = await this.redisCacheService.getKeys(`GetRange_${quoteKey}_*`);
+      for (const key of keys) {
+        await this.redisCacheService.remove(key);
+      }
+    }
   }
 }

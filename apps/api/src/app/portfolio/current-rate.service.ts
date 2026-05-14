@@ -98,15 +98,14 @@ export class CurrentRateService {
         skip: i,
         take: CurrentRateService.MARKET_DATA_PAGE_SIZE
       });
-
-      values.push(
-        ...data.map(({ dataSource, date, marketPrice, symbol }) => ({
+      data
+        .map(({ dataSource, date, marketPrice, symbol }) => ({
           dataSource,
           date,
           marketPrice,
           symbol
         }))
-      );
+        .forEach((value) => values.push(value));
     }
 
     const response: GetValuesObject = {
