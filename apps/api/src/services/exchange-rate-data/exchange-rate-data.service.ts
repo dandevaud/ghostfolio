@@ -21,6 +21,7 @@ import { MarketData } from '@prisma/client';
 import {
   eachDayOfInterval,
   format,
+  isAfter,
   isBefore,
   isToday,
   subDays
@@ -28,6 +29,7 @@ import {
 import { isNumber } from 'lodash';
 import ms from 'ms';
 
+import { SymbolProfileService } from '../symbol-profile/symbol-profile.service';
 import { ExchangeRatesByCurrency } from './interfaces/exchange-rate-data.interface';
 
 @Injectable()
@@ -41,7 +43,8 @@ export class ExchangeRateDataService {
     private readonly dataProviderService: DataProviderService,
     private readonly marketDataService: MarketDataService,
     private readonly prismaService: PrismaService,
-    private readonly propertyService: PropertyService
+    private readonly propertyService: PropertyService,
+    private readonly symbolProfileService: SymbolProfileService
   ) {}
 
   @LogPerformance
@@ -74,7 +77,7 @@ export class ExchangeRateDataService {
 
     for (const currency of currencies) {
       exchangeRatesByCurrency[`${currency}${targetCurrency}`] =
-        this.getExchangeRates({
+        await this.getExchangeRates({
           startDate,
           currencyFrom: currency,
           currencyTo: targetCurrency,
@@ -169,7 +172,7 @@ export class ExchangeRateDataService {
   }
 
   @LogPerformance
-  private getExchangeRates({
+  private async getExchangeRates({
     currencyFrom,
     currencyTo,
     endDate = new Date(),
@@ -266,16 +269,31 @@ export class ExchangeRateDataService {
               factors[format(date, DATE_FORMAT)] = factor;
             }
           } catch {
-            let errorMessage = `No exchange rate has been found for ${currencyFrom}${currencyTo} at ${format(
-              date,
-              DATE_FORMAT
-            )}. Please complement market data for ${DEFAULT_CURRENCY}${currencyFrom}`;
+            const { _min } = await this.prismaService.order.aggregate({
+              _min: {
+                date: true
+              },
+              where: {
+                OR: [
+                  { SymbolProfile: { currency: currencyFrom } },
+                  { SymbolProfile: { currency: currencyTo } }
+                ]
+              }
+            });
+            if (_min?.date && isAfter(_min.date, date)) {
+              continue; // No need to log error for dates before the first activity
+            } else {
+              let errorMessage = `No exchange rate has been found for ${currencyFrom}${currencyTo} at ${format(
+                date,
+                DATE_FORMAT
+              )}. Please complement market data for ${DEFAULT_CURRENCY}${currencyFrom}`;
 
-            if (DEFAULT_CURRENCY !== currencyTo) {
-              errorMessage = `${errorMessage} and ${DEFAULT_CURRENCY}${currencyTo}`;
+              if (DEFAULT_CURRENCY !== currencyTo) {
+                errorMessage = `${errorMessage} and ${DEFAULT_CURRENCY}${currencyTo}`;
+              }
+
+              Logger.error(`${errorMessage}.`, 'ExchangeRateDataService');
             }
-
-            Logger.error(`${errorMessage}.`, 'ExchangeRateDataService');
           }
         }
       }
