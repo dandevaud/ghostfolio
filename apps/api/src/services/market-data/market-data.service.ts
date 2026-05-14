@@ -81,7 +81,7 @@ export class MarketDataService {
   }): Promise<MarketData[]> {
     const { dateQueryBeforeToday, dateQueryMissing } =
       this.getAdaptedDateRange(dateQuery);
-    var tasks = assetProfileIdentifiers.map(async ({ dataSource, symbol }) => {
+    let tasks = assetProfileIdentifiers.map(async ({ dataSource, symbol }) => {
       return await this.retrieveDataFromCacheOrDatabase(
         dataSource,
         symbol,
@@ -361,7 +361,7 @@ export class MarketDataService {
       !dateQueryBeforeToday.lt ||
       dateQueryBeforeToday.lt > resetHours(new Date())
     ) {
-      let startofDay = resetHours(new Date());
+      const startofDay = resetHours(new Date());
       dateQueryBeforeToday = {
         ...dateQueryBeforeToday,
         lt: startofDay
