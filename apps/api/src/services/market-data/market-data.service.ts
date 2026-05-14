@@ -79,12 +79,8 @@ export class MarketDataService {
     skip?: number;
     take?: number;
   }): Promise<MarketData[]> {
-    let dateQueryBeforeToday = dateQuery;
-    let dateQueryMissing;
-    ({ dateQueryBeforeToday, dateQueryMissing } = this.getAdaptedDateRange(
-      dateQueryBeforeToday,
-      dateQueryMissing
-    ));
+    const { dateQueryBeforeToday, dateQueryMissing } =
+      this.getAdaptedDateRange(dateQuery);
     var tasks = assetProfileIdentifiers.map(async ({ dataSource, symbol }) => {
       return await this.retrieveDataFromCacheOrDatabase(
         dataSource,
@@ -322,8 +318,8 @@ export class MarketDataService {
     const datequeryKey =
       this.redisCacheService.getDateQueryKey(dateQueryBeforeToday);
     const cacheKey = `GetRange_${quoteKey}_${datequeryKey}_${skip}_${take}`;
-    let cacheValue = await this.redisCacheService.get(cacheKey);
-    let values = undefined;
+    const cacheValue = await this.redisCacheService.get(cacheKey);
+    let values;
     if (cacheValue) {
       values =
         typeof cacheValue === 'string' ? JSON.parse(cacheValue) : cacheValue;
@@ -359,10 +355,8 @@ export class MarketDataService {
     return values;
   }
 
-  private getAdaptedDateRange(
-    dateQueryBeforeToday: DateQuery,
-    dateQueryMissing: any
-  ) {
+  private getAdaptedDateRange(dateQueryBeforeToday: DateQuery) {
+    let dateQueryMissing;
     if (
       !dateQueryBeforeToday.lt ||
       dateQueryBeforeToday.lt > resetHours(new Date())
