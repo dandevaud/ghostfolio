@@ -1,4 +1,5 @@
 import { DateQuery } from '@ghostfolio/api/app/portfolio/interfaces/date-query.interface';
+import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { DataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
@@ -17,7 +18,10 @@ import AwaitLock from 'await-lock';
 
 @Injectable()
 export class MarketDataService {
-  public constructor(private readonly prismaService: PrismaService) {}
+  public constructor(
+    private readonly prismaService: PrismaService,
+    private readonly redisCacheService: RedisCacheService
+  ) {}
 
   lock = new AwaitLock();
 
@@ -44,6 +48,7 @@ export class MarketDataService {
     });
   }
 
+  @LogPerformance
   public async getMax({ dataSource, symbol }: AssetProfileIdentifier) {
     return this.prismaService.marketData.findFirst({
       select: {
@@ -74,27 +79,29 @@ export class MarketDataService {
     skip?: number;
     take?: number;
   }): Promise<MarketData[]> {
-    return this.prismaService.marketData.findMany({
+    const { dateQueryBeforeToday, dateQueryMissing } =
+      this.getAdaptedDateRange(dateQuery);
+    const tasks = assetProfileIdentifiers.map(
+      async ({ dataSource, symbol }) => {
+        return await this.retrieveDataFromCacheOrDatabase(
+          dataSource,
+          symbol,
+          dateQueryBeforeToday,
+          skip,
+          take
+        );
+      }
+    );
+
+    this.handleMissingDates(
+      dateQueryMissing,
+      tasks,
       skip,
       take,
-      orderBy: [
-        {
-          date: 'asc'
-        },
-        {
-          symbol: 'asc'
-        }
-      ],
-      where: {
-        date: dateQuery,
-        OR: assetProfileIdentifiers.map(({ dataSource, symbol }) => {
-          return {
-            dataSource,
-            symbol
-          };
-        })
-      }
-    });
+      assetProfileIdentifiers
+    );
+
+    return (await Promise.all(tasks)).flat();
   }
 
   @LogPerformance
@@ -263,5 +270,108 @@ export class MarketDataService {
       }
     );
     return await Promise.all(upsertPromises);
+  }
+
+  private handleMissingDates(
+    dateQueryMissing: any,
+    tasks: Promise<any>[],
+    skip: number,
+    take: number,
+    assetProfileIdentifiers: AssetProfileIdentifier[]
+  ) {
+    if (dateQueryMissing) {
+      tasks.push(
+        this.prismaService.marketData.findMany({
+          skip,
+          take,
+          orderBy: [
+            {
+              date: 'asc'
+            },
+            {
+              symbol: 'asc'
+            }
+          ],
+          where: {
+            date: dateQueryMissing,
+            OR: assetProfileIdentifiers.map(({ dataSource, symbol }) => {
+              return {
+                dataSource,
+                symbol
+              };
+            })
+          }
+        })
+      );
+    }
+  }
+
+  private async retrieveDataFromCacheOrDatabase(
+    dataSource: DataSource,
+    symbol: string,
+    dateQueryBeforeToday: DateQuery,
+    skip: number,
+    take: number
+  ) {
+    const quoteKey = this.redisCacheService.getQuoteKey({
+      dataSource,
+      symbol
+    });
+    const datequeryKey =
+      this.redisCacheService.getDateQueryKey(dateQueryBeforeToday);
+    const cacheKey = `GetRange_${quoteKey}_${datequeryKey}_${skip}_${take}`;
+    const cacheValue = await this.redisCacheService.get(cacheKey);
+    let values;
+    if (cacheValue) {
+      values =
+        typeof cacheValue === 'string' ? JSON.parse(cacheValue) : cacheValue;
+    }
+    if (!values) {
+      values = await this.prismaService.marketData.findMany({
+        skip,
+        take,
+        orderBy: [
+          {
+            date: 'asc'
+          },
+          {
+            symbol: 'asc'
+          }
+        ],
+        where: {
+          date: dateQueryBeforeToday,
+          OR: [
+            {
+              dataSource,
+              symbol
+            }
+          ]
+        }
+      });
+      await this.redisCacheService.set(
+        cacheKey,
+        JSON.stringify(values),
+        12 * 60 * 60
+      ); // Cache for 12 hours
+    }
+    return values;
+  }
+
+  private getAdaptedDateRange(dateQueryBeforeToday: DateQuery) {
+    let dateQueryMissing;
+    if (
+      !dateQueryBeforeToday.lt ||
+      dateQueryBeforeToday.lt > resetHours(new Date())
+    ) {
+      const startofDay = resetHours(new Date());
+      dateQueryBeforeToday = {
+        ...dateQueryBeforeToday,
+        lt: startofDay
+      } as DateQuery;
+      dateQueryMissing = {
+        gte: startofDay
+      } as DateQuery;
+    }
+    return { dateQueryBeforeToday, dateQueryMissing };
   }
 }

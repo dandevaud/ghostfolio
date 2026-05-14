@@ -78,6 +78,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
     };
   }
 
+  @LogPerformance
   protected getSymbolMetrics({
     chartDateMap,
     dataSource,

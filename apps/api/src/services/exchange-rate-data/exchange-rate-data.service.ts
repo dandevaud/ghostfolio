@@ -21,6 +21,7 @@ import { MarketData } from '@prisma/client';
 import {
   eachDayOfInterval,
   format,
+  isAfter,
   isBefore,
   isToday,
   subDays
@@ -36,6 +37,7 @@ export class ExchangeRateDataService {
   private currencyPairs: DataGatheringItem[] = [];
   private derivedCurrencyFactors: { [currencyPair: string]: number } = {};
   private exchangeRates: { [currencyPair: string]: number } = {};
+  private firstActivityDateByCurrency: { [currency: string]: Date } = {};
 
   public constructor(
     private readonly dataProviderService: DataProviderService,
@@ -74,7 +76,7 @@ export class ExchangeRateDataService {
 
     for (const currency of currencies) {
       exchangeRatesByCurrency[`${currency}${targetCurrency}`] =
-        this.getExchangeRates({
+        await this.getExchangeRates({
           startDate,
           currencyFrom: currency,
           currencyTo: targetCurrency,
@@ -169,7 +171,7 @@ export class ExchangeRateDataService {
   }
 
   @LogPerformance
-  private getExchangeRates({
+  private async getExchangeRates({
     currencyFrom,
     currencyTo,
     endDate = new Date(),
@@ -266,22 +268,49 @@ export class ExchangeRateDataService {
               factors[format(date, DATE_FORMAT)] = factor;
             }
           } catch {
-            let errorMessage = `No exchange rate has been found for ${currencyFrom}${currencyTo} at ${format(
-              date,
-              DATE_FORMAT
-            )}. Please complement market data for ${DEFAULT_CURRENCY}${currencyFrom}`;
+            this.firstActivityDateByCurrency[currencyFrom] =
+              this.firstActivityDateByCurrency[currencyFrom] ||
+              (await this.getFirstActivityDateForCurrency(currencyFrom));
+            this.firstActivityDateByCurrency[currencyTo] =
+              this.firstActivityDateByCurrency[currencyTo] ||
+              (await this.getFirstActivityDateForCurrency(currencyTo));
+            if (
+              isAfter(this.firstActivityDateByCurrency[currencyFrom], date) ||
+              isAfter(this.firstActivityDateByCurrency[currencyTo], date)
+            ) {
+              continue; // No need to log error for dates before the first activity
+            } else {
+              let errorMessage = `No exchange rate has been found for ${currencyFrom}${currencyTo} at ${format(
+                date,
+                DATE_FORMAT
+              )}. Please complement market data for ${DEFAULT_CURRENCY}${currencyFrom}`;
 
-            if (DEFAULT_CURRENCY !== currencyTo) {
-              errorMessage = `${errorMessage} and ${DEFAULT_CURRENCY}${currencyTo}`;
+              if (DEFAULT_CURRENCY !== currencyTo) {
+                errorMessage = `${errorMessage} and ${DEFAULT_CURRENCY}${currencyTo}`;
+              }
+
+              Logger.error(`${errorMessage}.`, 'ExchangeRateDataService');
             }
-
-            Logger.error(`${errorMessage}.`, 'ExchangeRateDataService');
           }
         }
       }
     }
 
     return factors;
+  }
+
+  private async getFirstActivityDateForCurrency(
+    currency: string
+  ): Promise<Date> {
+    const result = await this.prismaService.order.aggregate({
+      _min: {
+        date: true
+      },
+      where: {
+        OR: [{ SymbolProfile: { currency: currency } }]
+      }
+    });
+    return result._min.date;
   }
 
   public getCurrencies() {
