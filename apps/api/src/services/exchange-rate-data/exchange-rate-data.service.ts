@@ -29,7 +29,6 @@ import {
 import { isNumber } from 'lodash';
 import ms from 'ms';
 
-import { SymbolProfileService } from '../symbol-profile/symbol-profile.service';
 import { ExchangeRatesByCurrency } from './interfaces/exchange-rate-data.interface';
 
 @Injectable()
@@ -38,13 +37,13 @@ export class ExchangeRateDataService {
   private currencyPairs: DataGatheringItem[] = [];
   private derivedCurrencyFactors: { [currencyPair: string]: number } = {};
   private exchangeRates: { [currencyPair: string]: number } = {};
+  private firstActivityDateByCurrency: { [currency: string]: Date } = {};
 
   public constructor(
     private readonly dataProviderService: DataProviderService,
     private readonly marketDataService: MarketDataService,
     private readonly prismaService: PrismaService,
-    private readonly propertyService: PropertyService,
-    private readonly symbolProfileService: SymbolProfileService
+    private readonly propertyService: PropertyService
   ) {}
 
   @LogPerformance
@@ -269,18 +268,16 @@ export class ExchangeRateDataService {
               factors[format(date, DATE_FORMAT)] = factor;
             }
           } catch {
-            const { _min } = await this.prismaService.order.aggregate({
-              _min: {
-                date: true
-              },
-              where: {
-                OR: [
-                  { SymbolProfile: { currency: currencyFrom } },
-                  { SymbolProfile: { currency: currencyTo } }
-                ]
-              }
-            });
-            if (_min?.date && isAfter(_min.date, date)) {
+            this.firstActivityDateByCurrency[currencyFrom] =
+              this.firstActivityDateByCurrency[currencyFrom] ||
+              (await this.getFirstActivityDateForCurrency(currencyFrom));
+            this.firstActivityDateByCurrency[currencyTo] =
+              this.firstActivityDateByCurrency[currencyTo] ||
+              (await this.getFirstActivityDateForCurrency(currencyTo));
+            if (
+              isAfter(this.firstActivityDateByCurrency[currencyFrom], date) ||
+              isAfter(this.firstActivityDateByCurrency[currencyTo], date)
+            ) {
               continue; // No need to log error for dates before the first activity
             } else {
               let errorMessage = `No exchange rate has been found for ${currencyFrom}${currencyTo} at ${format(
@@ -300,6 +297,20 @@ export class ExchangeRateDataService {
     }
 
     return factors;
+  }
+
+  private async getFirstActivityDateForCurrency(
+    currency: string
+  ): Promise<Date> {
+    const result = await this.prismaService.order.aggregate({
+      _min: {
+        date: true
+      },
+      where: {
+        OR: [{ SymbolProfile: { currency: currency } }]
+      }
+    });
+    return result._min.date;
   }
 
   public getCurrencies() {
