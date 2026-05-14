@@ -896,7 +896,9 @@ export class DataProviderService implements OnModuleInit {
         dataSource,
         symbol
       });
-      let keys = await this.redisCacheService.getKeys(`GetRange_${quoteKey}_*`);
+      const keys = await this.redisCacheService.getKeys(
+        `GetRange_${quoteKey}_*`
+      );
       for (const key of keys) {
         await this.redisCacheService.remove(key);
       }

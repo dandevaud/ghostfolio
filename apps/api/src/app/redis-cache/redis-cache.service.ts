@@ -86,7 +86,7 @@ export class RedisCacheService {
 
   public getDateQueryFromKey(key: string): DateQuery | null {
     const regex = /dateQuery-lte-(\d*)-gte-(\d*)-in-([\d,]*)/;
-    const match = key.match(regex);
+    const match = regex.exec(key);
 
     if (!match) {
       return null;
@@ -99,17 +99,17 @@ export class RedisCacheService {
     const dateQuery: DateQuery = {};
 
     if (lt) {
-      dateQuery.lt = new Date(parseInt(lt));
+      dateQuery.lt = new Date(parseInt(lt, 10));
     }
 
     if (gte) {
-      dateQuery.gte = new Date(parseInt(gte));
+      dateQuery.gte = new Date(parseInt(gte, 10));
     }
 
     if (inPart) {
       dateQuery.in = inPart
         .split(',')
-        .map((timestamp) => new Date(parseInt(timestamp)));
+        .map((timestamp) => new Date(parseInt(timestamp, 10)));
     }
 
     return dateQuery;

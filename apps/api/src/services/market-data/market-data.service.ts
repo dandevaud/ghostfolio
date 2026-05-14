@@ -81,15 +81,17 @@ export class MarketDataService {
   }): Promise<MarketData[]> {
     const { dateQueryBeforeToday, dateQueryMissing } =
       this.getAdaptedDateRange(dateQuery);
-    let tasks = assetProfileIdentifiers.map(async ({ dataSource, symbol }) => {
-      return await this.retrieveDataFromCacheOrDatabase(
-        dataSource,
-        symbol,
-        dateQueryBeforeToday,
-        skip,
-        take
-      );
-    });
+    const tasks = assetProfileIdentifiers.map(
+      async ({ dataSource, symbol }) => {
+        return await this.retrieveDataFromCacheOrDatabase(
+          dataSource,
+          symbol,
+          dateQueryBeforeToday,
+          skip,
+          take
+        );
+      }
+    );
 
     this.handleMissingDates(
       dateQueryMissing,
