@@ -6,14 +6,14 @@ import { Prisma, SymbolProfile } from '@prisma/client';
 import { countries } from 'countries-list';
 import Papa from 'papaparse';
 
-type ISharesCsvRow = {
+interface ISharesCsvRow {
   'Asset Class'?: string;
   Location?: string;
   Name?: string;
   Sector?: string;
   Ticker?: string;
   'Weight (%)'?: string;
-};
+}
 
 @Injectable()
 export class ISharesDataEnhancerService implements DataEnhancerInterface {
@@ -109,9 +109,7 @@ export class ISharesDataEnhancerService implements DataEnhancerInterface {
     return 'https://www.ishares.com/us/products/239726/ishares-core-msci-world-ucits-etf/1467271812596.ajax?fileType=csv&tab=all';
   }
 
-  private aggregateCountries(
-    holdings: Array<{ country?: string; weight: number }>
-  ) {
+  private aggregateCountries(holdings: { country?: string; weight: number }[]) {
     const countryMap = new Map<string, number>();
 
     for (const { country, weight } of holdings) {
@@ -143,9 +141,7 @@ export class ISharesDataEnhancerService implements DataEnhancerInterface {
       });
   }
 
-  private aggregateSectors(
-    holdings: Array<{ sector?: string; weight: number }>
-  ) {
+  private aggregateSectors(holdings: { sector?: string; weight: number }[]) {
     const sectorMap = new Map<string, number>();
 
     for (const { sector, weight } of holdings) {
