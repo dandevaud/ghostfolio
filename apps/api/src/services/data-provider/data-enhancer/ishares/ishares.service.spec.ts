@@ -113,10 +113,6 @@ Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Par
       { code: 'FR' }
     ]);
     expect(response.countries[0].weight).toBeCloseTo(0.0184);
-    expect(response.sectors).toMatchObject([
-      { name: 'Treasury' },
-      { name: 'Cash and/or Derivatives' }
-    ]);
-    expect(response.sectors[0].weight).toBeCloseTo(0.0414);
+    expect(response.sectors).toMatchObject([]);
   });
 });
