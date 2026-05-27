@@ -153,8 +153,10 @@ export class ISharesDataEnhancerService implements DataEnhancerInterface {
         continue;
       }
 
-      const sectorName =
-        ISharesDataEnhancerService.sectorsMapping[sector] ?? 'Other';
+      const sectorName = ISharesDataEnhancerService.sectorsMapping[sector];
+      if (!sectorName) {
+        continue;
+      }
 
       sectorMap.set(sectorName, (sectorMap.get(sectorName) ?? 0) + weight);
     }
