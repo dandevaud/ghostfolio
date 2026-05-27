@@ -4,11 +4,13 @@ export interface DataEnhancerInterface {
   enhance({
     requestTimeout,
     response,
-    symbol
+    symbol,
+    symbolMapping
   }: {
     requestTimeout?: number;
     response: Partial<SymbolProfile>;
     symbol: string;
+    symbolMapping?: { [key: string]: string };
   }): Promise<Partial<SymbolProfile>>;
 
   getName(): string;
