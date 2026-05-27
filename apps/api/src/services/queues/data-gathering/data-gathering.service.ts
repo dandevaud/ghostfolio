@@ -204,7 +204,8 @@ export class DataGatheringService {
         try {
           assetProfiles[symbol] = await dataEnhancer.enhance({
             response: assetProfile,
-            symbol: symbolMapping?.[dataEnhancer.getName()] ?? symbol
+            symbol: symbolMapping?.[dataEnhancer.getName()] ?? symbol,
+            symbolMapping
           });
         } catch (error) {
           Logger.error(
