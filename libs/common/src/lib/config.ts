@@ -35,8 +35,11 @@ export const warnColorRgb = {
 };
 
 export const ASSET_CLASS_MAPPING = new Map<AssetClass, AssetSubClass[]>([
-  [AssetClass.ALTERNATIVE_INVESTMENT, [AssetSubClass.COLLECTIBLE]],
-  [AssetClass.COMMODITY, [AssetSubClass.PRECIOUS_METAL]],
+  [
+    AssetClass.ALTERNATIVE_INVESTMENT,
+    [AssetSubClass.ETF, AssetSubClass.COLLECTIBLE]
+  ],
+  [AssetClass.COMMODITY, [AssetSubClass.ETF, AssetSubClass.PRECIOUS_METAL]],
   [
     AssetClass.EQUITY,
     [
@@ -46,9 +49,12 @@ export const ASSET_CLASS_MAPPING = new Map<AssetClass, AssetSubClass[]>([
       AssetSubClass.STOCK
     ]
   ],
-  [AssetClass.FIXED_INCOME, [AssetSubClass.BOND, AssetSubClass.LOAN]],
-  [AssetClass.LIQUIDITY, [AssetSubClass.CRYPTOCURRENCY]],
-  [AssetClass.REAL_ESTATE, []]
+  [
+    AssetClass.FIXED_INCOME,
+    [AssetSubClass.ETF, AssetSubClass.BOND, AssetSubClass.LOAN]
+  ],
+  [AssetClass.LIQUIDITY, [AssetSubClass.ETF, AssetSubClass.CRYPTOCURRENCY]],
+  [AssetClass.REAL_ESTATE, [AssetSubClass.ETF]]
 ]);
 
 export const BULL_BOARD_COOKIE_NAME = 'bull_board_token';
