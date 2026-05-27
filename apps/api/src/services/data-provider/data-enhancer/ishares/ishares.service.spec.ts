@@ -72,8 +72,7 @@ Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Pri
     expect(response.countries[1].weight).toBeCloseTo(0.0072);
     expect(response.sectors).toMatchObject([
       { name: 'Technology' },
-      { name: 'Healthcare' },
-      { name: 'Cash and/or Derivatives' }
+      { name: 'Healthcare' }
     ]);
     expect(response.sectors[0].weight).toBeCloseTo(0.0649);
   });

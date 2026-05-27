@@ -64,12 +64,16 @@ export class ISharesDataEnhancerService implements DataEnhancerInterface {
     });
 
     if (holdings.length === 0) {
+      Logger.warn(
+        `No holdings found for symbol ${symbol} with iShares holding endpoint ${holdingsEndpoint}`,
+        'ISharesDataEnhancerService'
+      );
       return response;
     }
 
     if (
-      (response.holdings as unknown as Prisma.JsonArray)?.length <
-      holdings.length
+      (response.holdings as unknown as Prisma.JsonArray)?.length ??
+      0 < holdings.length
     ) {
       response.holdings = holdings
         .filter(({ name, weight }) => {
