@@ -413,24 +413,12 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     let transactionInvestmentWithCurrencyEffect = new Big(0);
     if (symbolMetricsHelper.totalUnits.gt(0)) {
       transactionInvestment = new Big(
-        Math.min(
-          symbolMetricsHelper.symbolMetrics.totalInvestment
-            .div(symbolMetricsHelper.totalUnits)
-            .mul(order.quantity)
-            .toNumber(),
-          order.quantity.mul(order.unitPriceInBaseCurrency).toNumber()
-        )
+        order.quantity.mul(order.unitPriceInBaseCurrency).toNumber()
       ).mul(getFactor(order.type));
       transactionInvestmentWithCurrencyEffect = new Big(
-        Math.min(
-          symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect
-            .div(symbolMetricsHelper.totalUnits)
-            .mul(order.quantity)
-            .toNumber(),
-          order.quantity
-            .mul(order.unitPriceInBaseCurrencyWithCurrencyEffect)
-            .toNumber()
-        )
+        order.quantity
+          .mul(order.unitPriceInBaseCurrencyWithCurrencyEffect)
+          .toNumber()
       ).mul(getFactor(order.type));
     }
     return { transactionInvestment, transactionInvestmentWithCurrencyEffect };
