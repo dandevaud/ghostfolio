@@ -165,8 +165,8 @@ describe('PortfolioCalculator', () => {
               '0.14465699208443271768'
             ),
             grossPerformanceWithCurrencyEffect: new Big('21.93'),
-            investment: new Big('75.80'),
-            investmentWithCurrencyEffect: new Big('75.80'),
+            investment: new Big('65.87'),
+            investmentWithCurrencyEffect: new Big('65.87'),
             netPerformance: new Big('17.68'),
             netPerformancePercentage: new Big('0.11662269129287598945'),
             netPerformancePercentageWithCurrencyEffectMap: {
@@ -185,8 +185,8 @@ describe('PortfolioCalculator', () => {
         ],
         totalFeesWithCurrencyEffect: new Big('4.25'),
         totalInterestWithCurrencyEffect: new Big('0'),
-        totalInvestment: new Big('75.80'),
-        totalInvestmentWithCurrencyEffect: new Big('75.80'),
+        totalInvestment: new Big('65.87'),
+        totalInvestmentWithCurrencyEffect: new Big('65.87'),
         totalLiabilitiesWithCurrencyEffect: new Big('0')
       });
 
@@ -196,7 +196,7 @@ describe('PortfolioCalculator', () => {
           netPerformanceInPercentage: 0.11662269129287598945,
           netPerformanceInPercentageWithCurrencyEffect: 0.11662269129287598945,
           netPerformanceWithCurrencyEffect: 17.68,
-          totalInvestmentValueWithCurrencyEffect: 75.8
+          totalInvestmentValueWithCurrencyEffect: 65.87
         })
       );
 
@@ -207,7 +207,7 @@ describe('PortfolioCalculator', () => {
 
       expect(investmentsByMonth).toEqual([
         { date: '2022-03-01', investment: 151.6 },
-        { date: '2022-04-01', investment: -75.8 }
+        { date: '2022-04-01', investment: -85.73 }
       ]);
     });
   });
