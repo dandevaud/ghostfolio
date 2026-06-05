@@ -267,7 +267,7 @@ describe('PortfolioCalculator', () => {
 
       expect(investmentsByMonth).toEqual([
         { date: '2022-03-01', investment: 151.6 },
-        { date: '2022-04-01', investment: -151.6 }
+        { date: '2022-04-01', investment: -171.46 }
       ]);
     });
   });

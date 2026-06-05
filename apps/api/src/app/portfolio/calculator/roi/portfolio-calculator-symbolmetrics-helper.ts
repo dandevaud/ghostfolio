@@ -167,6 +167,10 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       transactionInvestmentWithCurrencyEffect
     );
 
+    symbolMetricsHelper.totalUnits = symbolMetricsHelper.totalUnits.plus(
+      order.quantity.mul(getFactor(order.type))
+    );
+
     this.updateTotalInvestments(
       symbolMetricsHelper,
       transactionInvestment,
@@ -180,10 +184,6 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     );
 
     this.accumulateFees(symbolMetricsHelper, order);
-
-    symbolMetricsHelper.totalUnits = symbolMetricsHelper.totalUnits.plus(
-      order.quantity.mul(getFactor(order.type))
-    );
 
     this.fillOrderUnitPricesIfMissing(order, symbolMetricsHelper);
 
@@ -349,14 +349,30 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     transactionInvestment: Big,
     transactionInvestmentWithCurrencyEffect: Big
   ) {
-    symbolMetricsHelper.symbolMetrics.totalInvestment =
-      symbolMetricsHelper.symbolMetrics.totalInvestment.plus(
-        transactionInvestment
-      );
+    if (symbolMetricsHelper.totalUnits.toNumber() === 0) {
+      symbolMetricsHelper.symbolMetrics.totalInvestment = new Big(0);
+      symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect =
+        new Big(0);
+      return;
+    }
+
+    symbolMetricsHelper.symbolMetrics.totalInvestment = new Big(
+      Math.max(
+        symbolMetricsHelper.symbolMetrics.totalInvestment
+          .plus(transactionInvestment)
+          .toNumber(),
+        0
+      )
+    );
 
     symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect =
-      symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect.plus(
-        transactionInvestmentWithCurrencyEffect
+      new Big(
+        Math.max(
+          symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect
+            .plus(transactionInvestmentWithCurrencyEffect)
+            .toNumber(),
+          0
+        )
       );
   }
 
