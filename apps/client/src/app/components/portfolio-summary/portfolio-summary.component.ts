@@ -6,27 +6,28 @@ import { translate } from '@ghostfolio/ui/i18n';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
+  inject,
   Input,
   OnChanges,
-  Output
+  output
 } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { IonIcon } from '@ionic/angular/standalone';
 import { formatDistanceToNow } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
+  caretForwardOutline,
   ellipsisHorizontalCircleOutline,
   informationCircleOutline
 } from 'ionicons/icons';
+import { isNumber } from 'lodash';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, GfValueComponent, IonIcon, MatTooltipModule],
+  imports: [GfValueComponent, IonIcon, MatTooltipModule],
   selector: 'gf-portfolio-summary',
   styleUrls: ['./portfolio-summary.component.scss'],
   templateUrl: './portfolio-summary.component.html'
@@ -42,46 +43,94 @@ export class GfPortfolioSummaryComponent implements OnChanges {
   @Input() summary: PortfolioSummary;
   @Input() user: User;
 
-  @Output() emergencyFundChanged = new EventEmitter<number>();
+  public emergencyFundChanged = output<number>();
 
-  public buyAndSellActivitiesTooltip = translate(
+  protected readonly buyAndSellActivitiesTooltip = translate(
     'BUY_AND_SELL_ACTIVITIES_TOOLTIP'
   );
 
-  public precision = 2;
-  public timeInMarket: string;
+  protected isCashExpanded = false;
+  protected isHoldingsExpanded = false;
+  protected precision = 2;
+  protected timeInMarket: string | undefined;
+
+  private readonly notificationService = inject(NotificationService);
 
   protected calculationType: { title: string; value: string };
 
-  public get buyingPowerPercentage() {
+  public constructor() {
+    addIcons({
+      caretForwardOutline,
+      ellipsisHorizontalCircleOutline,
+      informationCircleOutline
+    });
+  }
+
+  protected get cashPercentage() {
     return this.summary?.totalValueInBaseCurrency
-      ? this.summary.cash / this.summary.totalValueInBaseCurrency
+      ? this.summary.totalCashInBaseCurrency /
+          this.summary.totalValueInBaseCurrency
       : 0;
   }
 
-  public get emergencyFundPercentage() {
+  protected get emergencyFundPercentage() {
     return this.summary?.totalValueInBaseCurrency
       ? (this.summary.emergencyFund?.total || 0) /
           this.summary.totalValueInBaseCurrency
       : 0;
   }
 
-  public get excludedFromAnalysisPercentage() {
+  protected get excludedFromAnalysisPercentage() {
     return this.summary?.totalValueInBaseCurrency
       ? this.summary.excludedAccountsAndActivities /
           this.summary.totalValueInBaseCurrency
       : 0;
   }
 
-  public constructor(private notificationService: NotificationService) {
-    addIcons({ ellipsisHorizontalCircleOutline, informationCircleOutline });
+  protected get hasCashBreakdown() {
+    return !this.isLoading && this.summary?.emergencyFund?.cash > 0;
+  }
+
+  protected get hasHoldingsBreakdown() {
+    return !this.isLoading && this.summary?.emergencyFund?.assets > 0;
+  }
+
+  protected get holdingsInBaseCurrency() {
+    if (
+      !isNumber(this.summary?.totalAssetsInBaseCurrency) ||
+      !isNumber(this.summary?.totalCashInBaseCurrency)
+    ) {
+      return null;
+    }
+
+    return (
+      this.summary.totalAssetsInBaseCurrency -
+      this.summary.totalCashInBaseCurrency
+    );
+  }
+
+  protected get holdingsPercentage() {
+    return this.summary?.totalValueInBaseCurrency &&
+      isNumber(this.holdingsInBaseCurrency)
+      ? this.holdingsInBaseCurrency / this.summary.totalValueInBaseCurrency
+      : 0;
+  }
+
+  protected get investmentsInBaseCurrency() {
+    if (!isNumber(this.holdingsInBaseCurrency)) {
+      return null;
+    }
+
+    return (
+      this.holdingsInBaseCurrency - (this.summary.emergencyFund?.assets ?? 0)
+    );
   }
 
   public ngOnChanges() {
     if (this.summary) {
       if (
         this.deviceType === 'mobile' &&
-        this.summary.totalValueInBaseCurrency >=
+        (this.summary.totalValueInBaseCurrency ?? 0) >=
           NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
       ) {
         this.precision = 0;
@@ -95,7 +144,7 @@ export class GfPortfolioSummaryComponent implements OnChanges {
           }
         );
       } else {
-        this.timeInMarket = '-';
+        this.timeInMarket = '–';
       }
     } else {
       this.timeInMarket = undefined;
@@ -103,7 +152,7 @@ export class GfPortfolioSummaryComponent implements OnChanges {
     this.calculationType = this.getCalulationType();
   }
 
-  public onEditEmergencyFund() {
+  protected onEditEmergencyFund() {
     this.notificationService.prompt({
       confirmFn: (value) => {
         const emergencyFund = parseFloat(value.trim()) || 0;
@@ -132,5 +181,13 @@ export class GfPortfolioSummaryComponent implements OnChanges {
       default:
         return undefined;
     }
+  }
+
+  protected onToggleCash() {
+    this.isCashExpanded = !this.isCashExpanded;
+  }
+
+  protected onToggleHoldings() {
+    this.isHoldingsExpanded = !this.isHoldingsExpanded;
   }
 }

@@ -1,22 +1,22 @@
 import {
-  getTooltipOptions,
+  getChartBorderColor,
+  getChartElementsOptions,
+  getTimeAxisOptions,
+  getValueAxisOptions,
   getVerticalHoverLinePlugin,
+  getZeroLineAnnotation,
   transformTickToAbbreviation
 } from '@ghostfolio/common/chart-helper';
 import { primaryColorRgb, secondaryColorRgb } from '@ghostfolio/common/config';
-import {
-  getBackgroundColor,
-  getDateFormatString,
-  getLocale,
-  getTextColor,
-  parseDate
-} from '@ghostfolio/common/helper';
+import { getLocale, parseDate } from '@ghostfolio/common/helper';
 import { LineChartItem } from '@ghostfolio/common/interfaces';
 import { InvestmentItem } from '@ghostfolio/common/interfaces/investment-item.interface';
 import { ColorScheme, GroupBy } from '@ghostfolio/common/types';
-import { registerChartConfiguration } from '@ghostfolio/ui/chart';
+import {
+  getTimeSeriesTooltipOptions,
+  registerChartConfiguration
+} from '@ghostfolio/ui/chart';
 
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -24,7 +24,7 @@ import {
   Input,
   OnChanges,
   OnDestroy,
-  ViewChild
+  viewChild
 } from '@angular/core';
 import {
   BarController,
@@ -41,40 +41,38 @@ import {
   type TooltipOptions
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import annotationPlugin, {
-  type AnnotationOptions
-} from 'chartjs-plugin-annotation';
-import { isAfter } from 'date-fns';
+import { type AnnotationOptions } from 'chartjs-plugin-annotation';
+import { isFuture } from 'date-fns';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, NgxSkeletonLoaderModule],
+  imports: [NgxSkeletonLoaderModule],
   selector: 'gf-investment-chart',
   styleUrls: ['./investment-chart.component.scss'],
   templateUrl: './investment-chart.component.html'
 })
 export class GfInvestmentChartComponent implements OnChanges, OnDestroy {
-  @Input() benchmarkDataItems: InvestmentItem[] = [];
-  @Input() benchmarkDataLabel = '';
-  @Input() colorScheme: ColorScheme;
-  @Input() currency: string;
-  @Input() groupBy: GroupBy;
-  @Input() historicalDataItems: LineChartItem[] = [];
-  @Input() isInPercentage = false;
-  @Input() isLoading = false;
-  @Input() locale = getLocale();
-  @Input() savingsRate = 0;
+  @Input() public readonly benchmarkDataItems: InvestmentItem[] = [];
+  @Input() public readonly benchmarkDataLabel = '';
+  @Input() public readonly colorScheme: ColorScheme;
+  @Input() public readonly currency: string;
+  @Input() public readonly groupBy: GroupBy;
+  @Input() public readonly historicalDataItems: LineChartItem[] = [];
+  @Input() public readonly isInPercentage = false;
+  @Input() public readonly isLoading = false;
+  @Input() public readonly locale = getLocale();
+  @Input() public readonly savingsRate = 0;
 
-  @ViewChild('chartCanvas') chartCanvas: ElementRef<HTMLCanvasElement>;
+  private readonly chartCanvas =
+    viewChild.required<ElementRef<HTMLCanvasElement>>('chartCanvas');
 
-  public chart: Chart<'bar' | 'line'>;
+  private chart: Chart<'bar' | 'line'>;
   private investments: InvestmentItem[];
   private values: LineChartItem[];
 
   public constructor() {
     Chart.register(
-      annotationPlugin,
       BarController,
       BarElement,
       LinearScale,
@@ -118,7 +116,7 @@ export class GfInvestmentChartComponent implements OnChanges, OnDestroy {
           borderWidth: this.groupBy ? 0 : 1,
           data: this.investments.map(({ date, investment }) => {
             return {
-              x: parseDate(date).getTime(),
+              x: parseDate(date)?.getTime() ?? null,
               y: this.isInPercentage ? investment * 100 : investment
             };
           }),
@@ -138,7 +136,7 @@ export class GfInvestmentChartComponent implements OnChanges, OnDestroy {
           borderWidth: 2,
           data: this.values.map(({ date, value }) => {
             return {
-              x: parseDate(date).getTime(),
+              x: parseDate(date)?.getTime() ?? null,
               y: this.isInPercentage ? value * 100 : value
             };
           }),
@@ -165,123 +163,80 @@ export class GfInvestmentChartComponent implements OnChanges, OnDestroy {
           this.getTooltipPluginConfiguration();
 
         const annotations = this.chart.options.plugins.annotation
-          .annotations as Record<string, AnnotationOptions<'line'>>;
+          ?.annotations as Record<string, AnnotationOptions<'line'>>;
         if (this.savingsRate && annotations.savingsRate) {
           annotations.savingsRate.value = this.savingsRate;
         }
 
         this.chart.update();
       } else {
-        this.chart = new Chart(this.chartCanvas.nativeElement, {
-          data: chartData,
-          options: {
-            animation: false,
-            elements: {
-              line: {
-                tension: 0
-              },
-              point: {
-                hoverBackgroundColor: getBackgroundColor(this.colorScheme),
-                hoverRadius: 2,
-                radius: 0
-              }
-            },
-            interaction: { intersect: false, mode: 'index' },
-            maintainAspectRatio: true,
-            plugins: {
-              annotation: {
-                annotations: {
-                  savingsRate: this.savingsRate
-                    ? {
-                        borderColor: `rgba(${primaryColorRgb.r}, ${primaryColorRgb.g}, ${primaryColorRgb.b}, 0.75)`,
-                        borderWidth: 1,
-                        label: {
-                          backgroundColor: `rgb(${primaryColorRgb.r}, ${primaryColorRgb.g}, ${primaryColorRgb.b})`,
-                          borderRadius: 2,
-                          color: 'white',
-                          content: $localize`Savings Rate`,
-                          display: true,
-                          font: { size: 10, weight: 'normal' },
-                          padding: {
-                            x: 4,
-                            y: 2
+        this.chart = new Chart<'bar' | 'line'>(
+          this.chartCanvas().nativeElement,
+          {
+            data: chartData,
+            options: {
+              animation: false,
+              elements: getChartElementsOptions(this.colorScheme),
+              interaction: { intersect: false, mode: 'index' },
+              maintainAspectRatio: true,
+              plugins: {
+                annotation: {
+                  annotations: {
+                    savingsRate: this.savingsRate
+                      ? {
+                          borderColor: `rgba(${primaryColorRgb.r}, ${primaryColorRgb.g}, ${primaryColorRgb.b}, 0.75)`,
+                          borderWidth: 1,
+                          label: {
+                            backgroundColor: `rgb(${primaryColorRgb.r}, ${primaryColorRgb.g}, ${primaryColorRgb.b})`,
+                            borderRadius: 2,
+                            color: 'white',
+                            content: $localize`Savings Rate`,
+                            display: true,
+                            font: { size: 10, weight: 'normal' },
+                            padding: {
+                              x: 4,
+                              y: 2
+                            },
+                            position: 'start'
                           },
-                          position: 'start'
-                        },
-                        scaleID: 'y',
-                        type: 'line',
-                        value: this.savingsRate
-                      }
-                    : undefined,
-                  yAxis: {
-                    borderColor: `rgba(${getTextColor(this.colorScheme)}, 0.1)`,
-                    borderWidth: 1,
-                    scaleID: 'y',
-                    type: 'line',
-                    value: 0
+                          scaleID: 'y',
+                          type: 'line',
+                          value: this.savingsRate
+                        }
+                      : undefined,
+                    yAxis: getZeroLineAnnotation(this.colorScheme)
                   }
+                },
+                legend: {
+                  display: false
+                },
+                tooltip: this.getTooltipPluginConfiguration(),
+                verticalHoverLine: {
+                  color: getChartBorderColor(this.colorScheme)
                 }
               },
-              legend: {
-                display: false
-              },
-              tooltip: this.getTooltipPluginConfiguration(),
-              verticalHoverLine: {
-                color: `rgba(${getTextColor(this.colorScheme)}, 0.1)`
+              responsive: true,
+              scales: {
+                x: getTimeAxisOptions({
+                  borderWidth: this.groupBy ? 0 : 1,
+                  colorScheme: this.colorScheme,
+                  locale: this.locale
+                }),
+                y: getValueAxisOptions({
+                  colorScheme: this.colorScheme,
+                  display: !this.isInPercentage,
+                  tickCallback: (tickValue) => {
+                    return transformTickToAbbreviation(Number(tickValue));
+                  }
+                })
               }
             },
-            responsive: true,
-            scales: {
-              x: {
-                border: {
-                  color: `rgba(${getTextColor(this.colorScheme)}, 0.1)`,
-                  width: this.groupBy ? 0 : 1
-                },
-                display: true,
-                grid: {
-                  display: false
-                },
-                type: 'time',
-                time: {
-                  tooltipFormat: getDateFormatString(this.locale),
-                  unit: 'year'
-                }
-              },
-              y: {
-                border: {
-                  display: false
-                },
-                display: !this.isInPercentage,
-                grid: {
-                  color: ({ scale, tick }) => {
-                    if (
-                      tick.value === 0 ||
-                      tick.value === scale.max ||
-                      tick.value === scale.min
-                    ) {
-                      return `rgba(${getTextColor(this.colorScheme)}, 0.1)`;
-                    }
-
-                    return 'transparent';
-                  }
-                },
-                position: 'right',
-                ticks: {
-                  callback: (value: number) => {
-                    return transformTickToAbbreviation(value);
-                  },
-                  display: true,
-                  mirror: true,
-                  z: 1
-                }
-              }
-            }
-          },
-          plugins: [
-            getVerticalHoverLinePlugin(this.chartCanvas, this.colorScheme)
-          ],
-          type: this.groupBy ? 'bar' : 'line'
-        });
+            plugins: [
+              getVerticalHoverLinePlugin(this.chartCanvas(), this.colorScheme)
+            ],
+            type: this.groupBy ? 'bar' : 'line'
+          }
+        );
       }
     }
   }
@@ -289,24 +244,22 @@ export class GfInvestmentChartComponent implements OnChanges, OnDestroy {
   private getTooltipPluginConfiguration(): Partial<
     TooltipOptions<'bar' | 'line'>
   > {
-    return {
-      ...getTooltipOptions({
-        colorScheme: this.colorScheme,
-        currency: this.isInPercentage ? undefined : this.currency,
-        groupBy: this.groupBy,
-        locale: this.isInPercentage ? undefined : this.locale,
-        unit: this.isInPercentage ? '%' : undefined
-      }),
-      mode: 'index',
-      position: 'top',
-      xAlign: 'center',
-      yAlign: 'bottom'
-    };
+    return getTimeSeriesTooltipOptions<'bar' | 'line'>({
+      colorScheme: this.colorScheme,
+      currency: this.isInPercentage ? undefined : this.currency,
+      groupBy: this.groupBy,
+      locale: this.isInPercentage ? undefined : this.locale,
+      unit: this.isInPercentage ? '%' : undefined
+    });
   }
 
   private isInFuture<T>(aContext: ScriptableLineSegmentContext, aValue: T) {
-    return isAfter(new Date(aContext?.p1?.parsed?.x), new Date())
-      ? aValue
-      : undefined;
+    const xValue = aContext?.p1?.parsed?.x;
+
+    if (xValue == null) {
+      return undefined;
+    }
+
+    return isFuture(new Date(xValue)) ? aValue : undefined;
   }
 }

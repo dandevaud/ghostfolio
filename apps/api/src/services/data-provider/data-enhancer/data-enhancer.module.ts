@@ -4,6 +4,7 @@ import { ISharesDataEnhancerService } from '@ghostfolio/api/services/data-provid
 import { OpenFigiDataEnhancerService } from '@ghostfolio/api/services/data-provider/data-enhancer/openfigi/openfigi.service';
 import { TrackinsightDataEnhancerService } from '@ghostfolio/api/services/data-provider/data-enhancer/trackinsight/trackinsight.service';
 import { YahooFinanceDataEnhancerService } from '@ghostfolio/api/services/data-provider/data-enhancer/yahoo-finance/yahoo-finance.service';
+import { FetchModule } from '@ghostfolio/api/services/fetch/fetch.module';
 
 import { Module } from '@nestjs/common';
 
@@ -18,7 +19,7 @@ import { DataEnhancerService } from './data-enhancer.service';
     YahooFinanceDataEnhancerService,
     'DataEnhancers'
   ],
-  imports: [ConfigurationModule, CryptocurrencyModule],
+  imports: [ConfigurationModule, CryptocurrencyModule, FetchModule],
   providers: [
     DataEnhancerService,
     ISharesDataEnhancerService,

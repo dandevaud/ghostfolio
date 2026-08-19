@@ -2,6 +2,7 @@ import { AccountService } from '@ghostfolio/api/app/account/account.service';
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { PlatformService } from '@ghostfolio/api/app/platform/platform.service';
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
+import { getTagsWithDraftTag } from '@ghostfolio/api/helper/activity.helper';
 import { ApiService } from '@ghostfolio/api/services/api/api.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
@@ -9,14 +10,21 @@ import { MarketDataService } from '@ghostfolio/api/services/market-data/market-d
 import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import { TagService } from '@ghostfolio/api/services/tag/tag.service';
-import { DATA_GATHERING_QUEUE_PRIORITY_HIGH } from '@ghostfolio/common/config';
 import {
+  DATA_GATHERING_QUEUE_PRIORITY_HIGH,
+  ghostfolioPrefix,
+  NON_INVESTMENT_ACTIVITY_TYPES,
+  TAG_ID_DRAFT,
+  TAG_ID_EXCLUDE_FROM_ANALYSIS
+} from '@ghostfolio/common/config';
+import {
+  CreateAccountWithBalancesDto,
   CreateAssetProfileDto,
-  CreateAccountDto,
   CreateOrderDto
 } from '@ghostfolio/common/dtos';
 import {
   getAssetProfileIdentifier,
+  isValidCustomAssetProfileSymbol,
   parseDate
 } from '@ghostfolio/common/helper';
 import {
@@ -32,9 +40,10 @@ import {
 } from '@ghostfolio/common/types';
 
 import { Injectable } from '@nestjs/common';
-import { DataSource, Prisma } from '@prisma/client';
+import { Account, DataSource, Prisma } from '@prisma/client';
 import { Big } from 'big.js';
-import { endOfToday, isAfter, isSameSecond, parseISO } from 'date-fns';
+import { isISIN } from 'class-validator';
+import { isSameSecond, parseISO } from 'date-fns';
 import { omit, uniqBy } from 'lodash';
 import { randomUUID } from 'node:crypto';
 
@@ -66,12 +75,11 @@ export class ImportService {
     userId: string;
   }): Promise<Activity[]> {
     try {
-      const holding = await this.portfolioService.getHolding(
+      const holding = await this.portfolioService.getHolding({
         dataSource,
-        undefined,
         symbol,
         userId
-      );
+      });
 
       if (!holding) {
         return [];
@@ -95,7 +103,9 @@ export class ImportService {
             filters,
             userCurrency,
             userId,
-            startDate: parseDate(dateOfFirstActivity)
+            includeDrafts: true,
+            startDate: parseDate(dateOfFirstActivity),
+            withExcludedAccountsAndActivities: true
           }),
           this.symbolProfileService.getSymbolProfiles([
             {
@@ -116,6 +126,8 @@ export class ImportService {
 
       return await Promise.all(
         Object.entries(dividends).map(([dateString, { marketPrice }]) => {
+          const date = parseDate(dateString);
+
           const quantity =
             historicalData.find((historicalDataItem) => {
               return historicalDataItem.date === dateString;
@@ -123,15 +135,13 @@ export class ImportService {
 
           const value = new Big(quantity).mul(marketPrice).toNumber();
 
-          const date = parseDate(dateString);
           const isDuplicate = activities.some((activity) => {
             return (
-              activity.accountId === account?.id &&
-              activity.SymbolProfile.currency === assetProfile.currency &&
-              activity.SymbolProfile.dataSource === assetProfile.dataSource &&
+              activity.assetProfile.currency === assetProfile.currency &&
+              activity.assetProfile.dataSource === assetProfile.dataSource &&
               isSameSecond(activity.date, date) &&
               activity.quantity === quantity &&
-              activity.SymbolProfile.symbol === assetProfile.symbol &&
+              activity.assetProfile.symbol === assetProfile.symbol &&
               activity.type === 'DIVIDEND' &&
               activity.unitPrice === marketPrice
             );
@@ -143,6 +153,7 @@ export class ImportService {
 
           return {
             account,
+            assetProfile,
             date,
             error,
             quantity,
@@ -156,8 +167,6 @@ export class ImportService {
             feeInAssetProfileCurrency: 0,
             feeInBaseCurrency: 0,
             id: assetProfile.id,
-            isDraft: false,
-            SymbolProfile: assetProfile,
             symbolProfileId: assetProfile.id,
             type: 'DIVIDEND',
             unitPrice: marketPrice,
@@ -179,6 +188,7 @@ export class ImportService {
     assetProfilesWithMarketDataDto,
     isDryRun = false,
     maxActivitiesToImport,
+    platformsDto,
     tagsDto,
     user
   }: {
@@ -187,143 +197,148 @@ export class ImportService {
     assetProfilesWithMarketDataDto: ImportDataDto['assetProfiles'];
     isDryRun?: boolean;
     maxActivitiesToImport: number;
+    platformsDto: ImportDataDto['platforms'];
     tagsDto: ImportDataDto['tags'];
     user: UserWithSettings;
   }): Promise<Activity[]> {
     const accountIdMapping: { [oldAccountId: string]: string } = {};
     const assetProfileSymbolMapping: { [oldSymbol: string]: string } = {};
+    const platformIdMapping: { [oldPlatformId: string]: string } = {};
     const tagIdMapping: { [oldTagId: string]: string } = {};
     const userCurrency = user.settings.settings.baseCurrency;
 
-    if (!isDryRun && accountsWithBalancesDto?.length) {
-      const [existingAccounts, existingPlatforms] = await Promise.all([
-        this.accountService.accounts({
-          where: {
-            id: {
-              in: accountsWithBalancesDto.map(({ id }) => {
-                return id;
-              })
-            }
-          }
+    // Validate the symbols before any data is persisted
+    for (const [index, assetProfileWithMarketData] of (
+      assetProfilesWithMarketDataDto ?? []
+    ).entries()) {
+      if (
+        assetProfileWithMarketData.dataSource === DataSource.MANUAL &&
+        !isValidCustomAssetProfileSymbol(assetProfileWithMarketData.symbol)
+      ) {
+        throw new Error(
+          `assetProfiles.${index}.symbol ("${assetProfileWithMarketData.symbol}") must be a UUID or start with the prefix "${ghostfolioPrefix}_" for the data source ("${DataSource.MANUAL}")`
+        );
+      }
+    }
+
+    // Validate the symbols before any data is persisted. Activities without a
+    // data source are excluded, since a symbol is generated in
+    // createActivity() if needed.
+    for (const [index, activity] of activitiesDto.entries()) {
+      if (!activity.dataSource) {
+        if (NON_INVESTMENT_ACTIVITY_TYPES.includes(activity.type)) {
+          activity.dataSource = DataSource.MANUAL;
+        } else {
+          activity.dataSource =
+            this.dataProviderService.getDataSourceForImport();
+        }
+      } else if (
+        activity.dataSource === DataSource.MANUAL &&
+        !isValidCustomAssetProfileSymbol(activity.symbol)
+      ) {
+        throw new Error(
+          `activities.${index}.symbol ("${activity.symbol}") must be a UUID or start with the prefix "${ghostfolioPrefix}_" for the data source ("${DataSource.MANUAL}")`
+        );
+      }
+    }
+
+    // Resolve the symbols with an ISIN to the symbol of the data provider
+    // before the asset profiles are created and the duplicates are detected
+    const assetProfileIdentifiersWithIsin: AssetProfileIdentifier[] = uniqBy(
+      [...(assetProfilesWithMarketDataDto ?? []), ...activitiesDto]
+        .filter(({ dataSource, symbol }) => {
+          return dataSource !== DataSource.MANUAL && isISIN(symbol);
+        })
+        .map(({ dataSource, symbol }) => {
+          return { dataSource, symbol };
         }),
-        this.platformService.getPlatforms()
-      ]);
+      getAssetProfileIdentifier
+    );
 
-      for (const accountWithBalances of accountsWithBalancesDto) {
-        // Check if there is any existing account with the same ID
-        const accountWithSameId = existingAccounts.find((existingAccount) => {
-          return existingAccount.id === accountWithBalances.id;
-        });
+    const resolvedAssetProfileIdentifiers = await Promise.all(
+      assetProfileIdentifiersWithIsin.map(async ({ dataSource, symbol }) => {
+        try {
+          const assetProfile = await this.dataProviderService
+            .getDataProvider(dataSource)
+            .getAssetProfile({ symbol });
 
-        // If there is no account or if the account belongs to a different user then create a new account
-        if (!accountWithSameId || accountWithSameId.userId !== user.id) {
-          const account: CreateAccountDto = omit(
-            accountWithBalances,
-            'balances'
-          );
+          return { dataSource, symbol, resolvedSymbol: assetProfile?.symbol };
+        } catch {
+          return { dataSource, symbol, resolvedSymbol: undefined };
+        }
+      })
+    );
 
-          let oldAccountId: string;
-          const platformId = account.platformId;
+    for (const {
+      dataSource,
+      resolvedSymbol,
+      symbol
+    } of resolvedAssetProfileIdentifiers) {
+      if (!resolvedSymbol || resolvedSymbol === symbol) {
+        continue;
+      }
 
-          delete account.platformId;
+      for (const activity of activitiesDto) {
+        if (activity.dataSource === dataSource && activity.symbol === symbol) {
+          activity.symbol = resolvedSymbol;
+        }
+      }
 
-          if (accountWithSameId) {
-            oldAccountId = account.id;
-            delete account.id;
-          }
-
-          let accountObject: Prisma.AccountCreateInput = {
-            ...account,
-            balances: {
-              create: accountWithBalances.balances ?? []
-            },
-            user: { connect: { id: user.id } }
-          };
-
-          if (
-            existingPlatforms.some(({ id }) => {
-              return id === platformId;
-            })
-          ) {
-            accountObject = {
-              ...accountObject,
-              platform: { connect: { id: platformId } }
-            };
-          }
-
-          const newAccount = await this.accountService.createAccount(
-            accountObject,
-            user.id
-          );
-
-          // Store the new to old account ID mappings for updating activities
-          if (accountWithSameId && oldAccountId) {
-            accountIdMapping[oldAccountId] = newAccount.id;
-          }
+      for (const assetProfileWithMarketData of assetProfilesWithMarketDataDto ??
+        []) {
+        if (
+          assetProfileWithMarketData.dataSource === dataSource &&
+          assetProfileWithMarketData.symbol === symbol
+        ) {
+          assetProfileWithMarketData.symbol = resolvedSymbol;
         }
       }
     }
 
-    if (!isDryRun && assetProfilesWithMarketDataDto?.length) {
-      const existingAssetProfiles =
-        await this.symbolProfileService.getSymbolProfiles(
-          assetProfilesWithMarketDataDto.map(({ dataSource, symbol }) => {
-            return { dataSource, symbol };
-          })
-        );
+    if (platformsDto?.length) {
+      const canCreatePlatform = hasPermission(
+        user.permissions,
+        permissions.createPlatform
+      );
 
-      for (const assetProfileWithMarketData of assetProfilesWithMarketDataDto) {
-        // Check if there is any existing asset profile
-        const existingAssetProfile = existingAssetProfiles.find(
-          ({ dataSource, symbol }) => {
-            return (
-              dataSource === assetProfileWithMarketData.dataSource &&
-              symbol === assetProfileWithMarketData.symbol
+      const existingPlatforms = await this.platformService.getPlatforms();
+
+      for (const platform of platformsDto) {
+        // Check if there is any existing platform with the same ID, otherwise
+        // fall back to a platform with the same URL
+        const existingPlatform =
+          existingPlatforms.find(({ id }) => {
+            return id === platform.id;
+          }) ??
+          existingPlatforms.find(({ url }) => {
+            return url === platform.url;
+          });
+
+        if (existingPlatform) {
+          // Store the new to old platform ID mappings for creating accounts
+          if (platform.id && existingPlatform.id !== platform.id) {
+            platformIdMapping[platform.id] = existingPlatform.id;
+          }
+        } else {
+          if (!canCreatePlatform) {
+            throw new Error(
+              `Insufficient permissions to create platform ("${platform.name}")`
             );
           }
-        );
 
-        // If there is no asset profile or if the asset profile belongs to a different user, then create a new asset profile
-        if (!existingAssetProfile || existingAssetProfile.userId !== user.id) {
-          const assetProfile: CreateAssetProfileDto = omit(
-            assetProfileWithMarketData,
-            'marketData'
-          );
-
-          // Asset profile belongs to a different user
-          if (existingAssetProfile) {
-            const symbol = randomUUID();
-            assetProfileSymbolMapping[assetProfile.symbol] = symbol;
-            assetProfile.symbol = symbol;
+          if (!isDryRun) {
+            await this.platformService.createPlatform(platform);
           }
-
-          // Create a new asset profile
-          const assetProfileObject: Prisma.SymbolProfileCreateInput = {
-            ...assetProfile,
-            user: { connect: { id: user.id } }
-          };
-
-          await this.symbolProfileService.add(assetProfileObject);
         }
-
-        // Insert or update market data
-        const marketDataObjects = assetProfileWithMarketData.marketData.map(
-          (marketData) => {
-            return {
-              ...marketData,
-              dataSource: assetProfileWithMarketData.dataSource,
-              symbol: assetProfileWithMarketData.symbol
-            } as Prisma.MarketDataUpdateInput;
-          }
-        );
-
-        await this.marketDataService.updateMany({ data: marketDataObjects });
       }
     }
 
-    if (tagsDto?.length) {
-      const existingTagsOfUser = await this.tagService.getTagsForUser(user.id);
+    const existingTagsOfUser =
+      tagsDto?.length || (!isDryRun && accountsWithBalancesDto?.length)
+        ? await this.tagService.getTagsForUser(user.id)
+        : [];
 
+    if (tagsDto?.length) {
       const canCreateOwnTag = hasPermission(
         user.permissions,
         permissions.createOwnTag
@@ -334,7 +349,7 @@ export class ImportService {
           return id === tag.id;
         });
 
-        if (!existingTagOfUser || existingTagOfUser.userId !== null) {
+        if (!existingTagOfUser) {
           if (!canCreateOwnTag) {
             throw new Error(
               `Insufficient permissions to create custom tag ("${tag.name}")`
@@ -360,32 +375,284 @@ export class ImportService {
             if (existingTag && oldTagId) {
               tagIdMapping[oldTagId] = newTag.id;
             }
+
+            existingTagsOfUser.push({
+              id: newTag.id,
+              isUsed: false,
+              name: newTag.name,
+              userId: newTag.userId
+            });
           }
         }
       }
     }
 
-    for (const activity of activitiesDto) {
-      if (!activity.dataSource) {
-        if (['FEE', 'INTEREST', 'LIABILITY'].includes(activity.type)) {
-          activity.dataSource = DataSource.MANUAL;
-        } else {
-          activity.dataSource =
-            this.dataProviderService.getDataSourceForImport();
+    if (accountsWithBalancesDto?.length) {
+      const [
+        existingAccountsOfOtherUsers,
+        existingAccountsOfUser,
+        existingPlatforms
+      ] = await Promise.all([
+        this.accountService.accounts({
+          where: {
+            id: {
+              in: accountsWithBalancesDto
+                .filter(({ id }) => {
+                  return Boolean(id);
+                })
+                .map(({ id }) => {
+                  return id;
+                })
+            },
+            userId: { not: user.id }
+          }
+        }),
+        this.accountService.accounts({
+          where: { userId: user.id }
+        }),
+        this.platformService.getPlatforms()
+      ]);
+
+      const existingTagIds = new Set(
+        existingTagsOfUser.map(({ id }) => {
+          return id;
+        })
+      );
+
+      for (const accountWithBalances of accountsWithBalancesDto) {
+        // Skip the account if it already belongs to the user
+        if (
+          existingAccountsOfUser.some(({ id }) => {
+            return id === accountWithBalances.id;
+          })
+        ) {
+          continue;
         }
+
+        // If there is no account or if the account belongs to a different
+        // user, then reuse an existing account of the user with the same name
+        // and currency or create a new account
+        const accountToReuse = this.getAccountToReuse({
+          accountWithBalances,
+          accountsWithBalancesDto,
+          existingAccountsOfUser
+        });
+
+        if (accountToReuse) {
+          // Reuse the account of the user instead of creating a duplicate. The
+          // balances, the platform and the tags of the import are deliberately
+          // not applied to leave the existing account of the user untouched.
+          if (
+            accountWithBalances.id &&
+            accountWithBalances.id !== accountToReuse.id
+          ) {
+            // Store the new to old account ID mappings for updating activities
+            accountIdMapping[accountWithBalances.id] = accountToReuse.id;
+          }
+
+          continue;
+        }
+
+        if (isDryRun) {
+          continue;
+        }
+
+        // Check if there is any existing account of a different user with the
+        // same ID, since the ID cannot be reused in this case
+        const accountWithSameIdOfOtherUser = existingAccountsOfOtherUsers.find(
+          ({ id }) => {
+            return id === accountWithBalances.id;
+          }
+        );
+
+        const account = omit(accountWithBalances, [
+          'balance',
+          'balances',
+          'isExcluded',
+          'tags'
+        ]);
+
+        let oldAccountId: string;
+        const platformId =
+          platformIdMapping[account.platformId] ?? account.platformId;
+
+        delete account.platformId;
+
+        if (accountWithSameIdOfOtherUser) {
+          oldAccountId = account.id;
+          delete account.id;
+        }
+
+        const tagIds = (accountWithBalances.tags ?? [])
+          .map((tagId) => {
+            return tagIdMapping[tagId] ?? tagId;
+          })
+          .filter((tagId) => {
+            return existingTagIds.has(tagId);
+          });
+
+        // Map the legacy isExcluded attribute of old export files to
+        // the "Exclude from Analysis" tag
+        if (
+          accountWithBalances.isExcluded &&
+          existingTagIds.has(TAG_ID_EXCLUDE_FROM_ANALYSIS) &&
+          !tagIds.includes(TAG_ID_EXCLUDE_FROM_ANALYSIS)
+        ) {
+          tagIds.push(TAG_ID_EXCLUDE_FROM_ANALYSIS);
+        }
+
+        let accountObject: Prisma.AccountCreateInput = {
+          ...account,
+          balances: {
+            create: accountWithBalances.balances ?? []
+          },
+          user: { connect: { id: user.id } }
+        };
+
+        if (
+          existingPlatforms.some(({ id }) => {
+            return id === platformId;
+          })
+        ) {
+          accountObject = {
+            ...accountObject,
+            platform: { connect: { id: platformId } }
+          };
+        }
+
+        const newAccount = await this.accountService.createAccount({
+          tagIds,
+          balance: accountWithBalances.balance,
+          data: accountObject,
+          userId: user.id
+        });
+
+        // Store the new to old account ID mappings for updating activities
+        if (accountWithSameIdOfOtherUser && oldAccountId) {
+          accountIdMapping[oldAccountId] = newAccount.id;
+        }
+      }
+    }
+
+    if (assetProfilesWithMarketDataDto?.length) {
+      const customAssetProfileNames = assetProfilesWithMarketDataDto
+        .filter(({ dataSource, name }) => {
+          return dataSource === DataSource.MANUAL && Boolean(name);
+        })
+        .map(({ name }) => {
+          return name;
+        });
+
+      const [existingAssetProfiles, existingCustomAssetProfilesOfUser] =
+        await Promise.all([
+          this.symbolProfileService.getSymbolProfiles(
+            assetProfilesWithMarketDataDto.map(({ dataSource, symbol }) => {
+              return { dataSource, symbol };
+            })
+          ),
+          this.symbolProfileService.getCustomSymbolProfilesByNames({
+            names: customAssetProfileNames,
+            userId: user.id
+          })
+        ]);
+
+      for (const assetProfileWithMarketData of assetProfilesWithMarketDataDto) {
+        let symbol = assetProfileWithMarketData.symbol;
+
+        // Check if there is any existing asset profile
+        const existingAssetProfile = existingAssetProfiles.find(
+          (assetProfile) => {
+            return (
+              assetProfile.dataSource ===
+                assetProfileWithMarketData.dataSource &&
+              assetProfile.symbol === assetProfileWithMarketData.symbol
+            );
+          }
+        );
+
+        // If there is no asset profile or if the asset profile belongs to a
+        // different user, then reuse the custom asset profile of the user or
+        // create a new asset profile
+        if (existingAssetProfile?.userId !== user.id) {
+          // Check if the user has a custom asset profile with the same name.
+          // Skip asset profiles with a legacy free-text symbol as they would
+          // fail the symbol validation on a future import.
+          const existingCustomAssetProfileOfUser =
+            assetProfileWithMarketData.dataSource === DataSource.MANUAL
+              ? existingCustomAssetProfilesOfUser.find((customAssetProfile) => {
+                  return (
+                    customAssetProfile.name ===
+                      assetProfileWithMarketData.name &&
+                    isValidCustomAssetProfileSymbol(customAssetProfile.symbol)
+                  );
+                })
+              : undefined;
+
+          if (existingCustomAssetProfileOfUser) {
+            // Reuse the custom asset profile of the user instead of creating a duplicate
+            symbol = existingCustomAssetProfileOfUser.symbol;
+          } else {
+            const assetProfile: CreateAssetProfileDto = omit(
+              assetProfileWithMarketData,
+              'marketData'
+            );
+
+            // Asset profile belongs to a different user, generate a new symbol
+            if (existingAssetProfile && !isDryRun) {
+              symbol = randomUUID();
+            }
+
+            assetProfile.symbol = symbol;
+
+            if (!isDryRun) {
+              // Create a new asset profile
+              const assetProfileObject: Prisma.SymbolProfileCreateInput = {
+                ...assetProfile,
+                user: { connect: { id: user.id } }
+              };
+
+              await this.symbolProfileService.add(assetProfileObject);
+            }
+          }
+
+          if (symbol !== assetProfileWithMarketData.symbol) {
+            assetProfileSymbolMapping[assetProfileWithMarketData.symbol] =
+              symbol;
+
+            // Keep the asset profile in sync with the activities to validate
+            assetProfileWithMarketData.symbol = symbol;
+          }
+        }
+
+        if (!isDryRun) {
+          // Insert or update market data
+          const marketDataObjects = (
+            assetProfileWithMarketData.marketData ?? []
+          ).map((marketData) => {
+            return {
+              ...marketData,
+              symbol,
+              dataSource: assetProfileWithMarketData.dataSource
+            } as Prisma.MarketDataUpdateInput;
+          });
+
+          await this.marketDataService.updateMany({ data: marketDataObjects });
+        }
+      }
+    }
+
+    for (const activity of activitiesDto) {
+      // If an asset profile is created or reused, then update the symbol in all activities
+      if (assetProfileSymbolMapping[activity.symbol]) {
+        activity.symbol = assetProfileSymbolMapping[activity.symbol];
+      }
+
+      // If an account is created or reused, then update the accountId in all activities
+      if (accountIdMapping[activity.accountId]) {
+        activity.accountId = accountIdMapping[activity.accountId];
       }
 
       if (!isDryRun) {
-        // If a new account is created, then update the accountId in all activities
-        if (accountIdMapping[activity.accountId]) {
-          activity.accountId = accountIdMapping[activity.accountId];
-        }
-
-        // If a new asset profile is created, then update the symbol in all activities
-        if (assetProfileSymbolMapping[activity.symbol]) {
-          activity.symbol = assetProfileSymbolMapping[activity.symbol];
-        }
-
         // If a new tag is created, then update the tag ID in all activities
         activity.tags = (activity.tags ?? []).map((tagId) => {
           return tagIdMapping[tagId] ?? tagId;
@@ -413,9 +680,20 @@ export class ImportService {
     );
 
     if (isDryRun) {
-      accountsWithBalancesDto.forEach(({ id, name }) => {
-        accounts.push({ id, name });
-      });
+      accountsWithBalancesDto
+        .filter(({ id }) => {
+          // Skip the accounts which are reused or which already belong to the
+          // user, since they are part of the accounts of the user above
+          return (
+            !accountIdMapping[id] &&
+            !accounts.some(({ id: accountId }) => {
+              return accountId === id;
+            })
+          );
+        })
+        .forEach(({ id, name }) => {
+          accounts.push({ id, name });
+        });
     }
 
     const tags = (await this.tagService.getTagsForUser(user.id)).map(
@@ -436,6 +714,11 @@ export class ImportService {
         });
     }
 
+    // Preview the "Draft" tag which createActivity() assigns in a real run
+    const draftTag = tags.find(({ id }) => {
+      return id === TAG_ID_DRAFT;
+    }) ?? { id: TAG_ID_DRAFT, name: 'DRAFT' };
+
     const activities: Activity[] = [];
 
     for (const activity of activitiesExtendedWithErrors) {
@@ -446,19 +729,18 @@ export class ImportService {
       const error = activity.error;
       const fee = activity.fee;
       const quantity = activity.quantity;
-      const SymbolProfile = activity.SymbolProfile;
       const tagIds = activity.tagIds ?? [];
       const type = activity.type;
       const unitPrice = activity.unitPrice;
 
       const assetProfile = assetProfiles[
         getAssetProfileIdentifier({
-          dataSource: SymbolProfile.dataSource,
-          symbol: SymbolProfile.symbol
+          dataSource: activity.assetProfile.dataSource,
+          symbol: activity.assetProfile.symbol
         })
       ] ?? {
-        dataSource: SymbolProfile.dataSource,
-        symbol: SymbolProfile.symbol
+        dataSource: activity.assetProfile.dataSource,
+        symbol: activity.assetProfile.symbol
       };
       const {
         assetClass,
@@ -499,6 +781,13 @@ export class ImportService {
           });
 
       if (isDryRun) {
+        const previewTags = getTagsWithDraftTag({
+          date,
+          draftTag,
+          type,
+          tags: validatedTags
+        });
+
         order = {
           comment,
           currency,
@@ -512,7 +801,6 @@ export class ImportService {
           accountUserId: undefined,
           createdAt: new Date(),
           id: randomUUID(),
-          isDraft: isAfter(date, endOfToday()),
           SymbolProfile: {
             assetClass,
             assetSubClass,
@@ -536,10 +824,12 @@ export class ImportService {
             url,
             comment: assetProfile.comment,
             currency: assetProfile.currency,
+            dataGatheringFrequency:
+              assetProfile.dataGatheringFrequency ?? 'DAILY',
             userId: dataSource === 'MANUAL' ? user.id : undefined
           },
           symbolProfileId: undefined,
-          tags: validatedTags,
+          tags: previewTags,
           updatedAt: new Date(),
           userId: user.id
         };
@@ -590,20 +880,21 @@ export class ImportService {
 
       const value = new Big(quantity).mul(unitPrice).toNumber();
 
-      const valueInBaseCurrency = this.exchangeRateDataService.toCurrencyAtDate(
-        value,
-        currency ?? assetProfile.currency,
-        userCurrency,
-        date
-      );
+      const valueInBaseCurrency =
+        (await this.exchangeRateDataService.toCurrencyAtDate(
+          value,
+          currency ?? assetProfile.currency,
+          userCurrency,
+          date
+        )) ?? 0;
 
       activities.push({
         ...order,
+        // @ts-ignore
+        assetProfile,
         error,
         value,
-        valueInBaseCurrency: await valueInBaseCurrency,
-        // @ts-ignore
-        SymbolProfile: assetProfile
+        valueInBaseCurrency
       });
     }
 
@@ -613,19 +904,19 @@ export class ImportService {
 
     if (!isDryRun) {
       // Gather symbol data in the background, if not dry run
-      const uniqueActivities = uniqBy(activities, ({ SymbolProfile }) => {
+      const uniqueActivities = uniqBy(activities, ({ assetProfile }) => {
         return getAssetProfileIdentifier({
-          dataSource: SymbolProfile.dataSource,
-          symbol: SymbolProfile.symbol
+          dataSource: assetProfile.dataSource,
+          symbol: assetProfile.symbol
         });
       });
 
       this.dataGatheringService.gatherSymbols({
-        dataGatheringItems: uniqueActivities.map(({ date, SymbolProfile }) => {
+        dataGatheringItems: uniqueActivities.map(({ assetProfile, date }) => {
           return {
             date,
-            dataSource: SymbolProfile.dataSource,
-            symbol: SymbolProfile.symbol
+            dataSource: assetProfile.dataSource,
+            symbol: assetProfile.symbol
           };
         }),
         priority: DATA_GATHERING_QUEUE_PRIORITY_HIGH
@@ -667,17 +958,17 @@ export class ImportService {
         unitPrice
       }) => {
         const date = parseISO(dateString);
+
         const isDuplicate = existingActivities.some((activity) => {
           return (
-            activity.accountId === accountId &&
-            activity.comment === comment &&
+            (activity.comment || null) === (comment || null) &&
             (activity.currency === currency ||
-              activity.SymbolProfile.currency === currency) &&
-            activity.SymbolProfile.dataSource === dataSource &&
+              activity.assetProfile.currency === currency) &&
+            activity.assetProfile.dataSource === dataSource &&
             isSameSecond(activity.date, date) &&
             activity.fee === fee &&
             activity.quantity === quantity &&
-            activity.SymbolProfile.symbol === symbol &&
+            activity.assetProfile.symbol === symbol &&
             activity.type === type &&
             activity.unitPrice === unitPrice
           );
@@ -697,7 +988,7 @@ export class ImportService {
           quantity,
           type,
           unitPrice,
-          SymbolProfile: {
+          assetProfile: {
             dataSource,
             symbol,
             activitiesCount: undefined,
@@ -716,6 +1007,52 @@ export class ImportService {
         };
       }
     );
+  }
+
+  /**
+   * Returns the account of the user to reuse for the given account of the
+   * import, based on the name and the currency. The currency is considered
+   * because the activities of the import would otherwise end up in an account
+   * of a different currency. The name is only considered if it is unambiguous,
+   * both in the accounts of the user and in the accounts of the import, since
+   * it is not unique. Otherwise, distinct accounts would be merged into a
+   * single one.
+   */
+  private getAccountToReuse({
+    accountWithBalances,
+    accountsWithBalancesDto,
+    existingAccountsOfUser
+  }: {
+    accountWithBalances: CreateAccountWithBalancesDto;
+    accountsWithBalancesDto: ImportDataDto['accounts'];
+    existingAccountsOfUser: Account[];
+  }): Account {
+    const matchingAccountsOfUser = existingAccountsOfUser.filter(
+      ({ currency, name }) => {
+        return (
+          currency === accountWithBalances.currency &&
+          name === accountWithBalances.name
+        );
+      }
+    );
+
+    const matchingAccountsToImport = accountsWithBalancesDto.filter(
+      ({ currency, name }) => {
+        return (
+          currency === accountWithBalances.currency &&
+          name === accountWithBalances.name
+        );
+      }
+    );
+
+    if (
+      matchingAccountsOfUser.length !== 1 ||
+      matchingAccountsToImport.length !== 1
+    ) {
+      return undefined;
+    }
+
+    return matchingAccountsOfUser[0];
   }
 
   private isUniqueAccount(accounts: AccountWithValue[]) {

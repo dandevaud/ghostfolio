@@ -1,6 +1,7 @@
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
 import { Access, User } from '@ghostfolio/common/interfaces';
 import { publicRoutes } from '@ghostfolio/common/routes/routes';
+import { hasScope, scopes } from '@ghostfolio/common/scopes';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
@@ -31,6 +32,7 @@ import {
   removeCircleOutline
 } from 'ionicons/icons';
 import ms from 'ms';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,7 @@ import ms from 'ms';
     MatButtonModule,
     MatMenuModule,
     MatTableModule,
+    NgxSkeletonLoaderModule,
     RouterModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -68,6 +71,10 @@ export class GfAccessTableComponent {
     return columns;
   });
 
+  protected readonly isLoading = computed(() => {
+    return !this.accesses();
+  });
+
   private readonly clipboard = inject(Clipboard);
   private readonly notificationService = inject(NotificationService);
   private readonly snackBar = inject(MatSnackBar);
@@ -92,6 +99,10 @@ export class GfAccessTableComponent {
     const languageCode = this.user().settings.language;
 
     return `${this.baseUrl}/${languageCode}/${publicRoutes.public.path}/${aId}`;
+  }
+
+  protected hasScopeToReadValues({ scopes: scopesOfAccess }: Access) {
+    return hasScope(scopesOfAccess, scopes.portfolioReadValues);
   }
 
   protected onCopyUrlToClipboard(aId: string) {

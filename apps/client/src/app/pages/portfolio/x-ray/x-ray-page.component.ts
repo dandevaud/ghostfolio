@@ -12,8 +12,12 @@ import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
 import { DataService } from '@ghostfolio/ui/services';
 
-import { NgClass } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -25,11 +29,11 @@ import {
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GfPremiumIndicatorComponent,
     GfRulesComponent,
     IonIcon,
-    NgClass,
     NgxSkeletonLoaderModule
   ],
   selector: 'gf-x-ray-page',
@@ -65,6 +69,8 @@ export class GfXRayPageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((impersonationId) => {
         this.hasImpersonationId = !!impersonationId;
+
+        this.changeDetectorRef.markForCheck();
       });
 
     this.userService.stateChanged
@@ -105,11 +111,16 @@ export class GfXRayPageComponent {
   private initializePortfolioReport() {
     this.isLoading = true;
 
+    this.changeDetectorRef.markForCheck();
+
     this.dataService
       .fetchPortfolioReport()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ xRay: { categories, statistics } }) => {
-        this.categories = categories;
+        this.categories = categories.filter(({ rules }) => {
+          return rules?.length > 0;
+        });
+
         this.inactiveRules = this.mergeInactiveRules(categories);
         this.statistics = statistics;
 

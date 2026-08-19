@@ -1,6 +1,5 @@
 import { EntityLogoImageSourceService } from '@ghostfolio/ui/entity-logo/entity-logo-image-source.service';
 
-import { CommonModule } from '@angular/common';
 import {
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
@@ -12,7 +11,6 @@ import { DataSource } from '@prisma/client';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-entity-logo',
   styleUrls: ['./entity-logo.component.scss'],
@@ -20,18 +18,22 @@ import { DataSource } from '@prisma/client';
 })
 export class GfEntityLogoComponent implements OnChanges {
   @Input() dataSource: DataSource;
+  @Input() hasPlaceholder = false;
   @Input() size: 'large';
   @Input() symbol: string;
   @Input() tooltip: string;
   @Input() url: string;
 
-  public src: string;
+  public hasError = false;
+  public src?: string;
 
   public constructor(
     private readonly imageSourceService: EntityLogoImageSourceService
   ) {}
 
   public ngOnChanges() {
+    this.hasError = false;
+
     if (this.dataSource && this.symbol) {
       this.src = this.imageSourceService.getLogoUrlByAssetProfileIdentifier({
         dataSource: this.dataSource,
@@ -39,6 +41,12 @@ export class GfEntityLogoComponent implements OnChanges {
       });
     } else if (this.url) {
       this.src = this.imageSourceService.getLogoUrlByUrl(this.url);
+    } else {
+      this.src = undefined;
     }
+  }
+
+  public onError() {
+    this.hasError = true;
   }
 }

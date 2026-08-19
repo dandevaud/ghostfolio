@@ -6,6 +6,7 @@ import { GfLogoComponent } from '@ghostfolio/ui/logo';
 import { DataService } from '@ghostfolio/ui/services';
 
 import {
+  ChangeDetectionStrategy,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   DestroyRef,
@@ -21,6 +22,7 @@ import { UserAccountRegistrationDialogParams } from './user-account-registration
 import { GfUserAccountRegistrationDialogComponent } from './user-account-registration-dialog/user-account-registration-dialog.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'page' },
   imports: [GfLogoComponent, MatButtonModule, RouterModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -40,7 +42,7 @@ export class GfRegisterPageComponent implements OnInit {
   public constructor(
     private dataService: DataService,
     private destroyRef: DestroyRef,
-    private deviceService: DeviceDetectorService,
+    private deviceDetectorService: DeviceDetectorService,
     private dialog: MatDialog,
     private router: Router,
     private tokenStorageService: TokenStorageService,
@@ -54,7 +56,7 @@ export class GfRegisterPageComponent implements OnInit {
   public ngOnInit() {
     const { globalPermissions } = this.dataService.fetchInfo();
 
-    this.deviceType = this.deviceService.getDeviceInfo().deviceType;
+    this.deviceType = this.deviceDetectorService.getDeviceInfo().deviceType;
 
     this.hasPermissionForAuthGoogle = hasPermission(
       globalPermissions,

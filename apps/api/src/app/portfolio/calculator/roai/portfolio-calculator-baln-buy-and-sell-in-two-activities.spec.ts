@@ -1,6 +1,6 @@
 import {
   activityDummyData,
-  symbolProfileDummyData,
+  assetProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
@@ -10,7 +10,6 @@ import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.s
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
-import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
@@ -46,18 +45,6 @@ jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   };
 });
 
-jest.mock(
-  '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service',
-  () => {
-    return {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      ExchangeRateDataService: jest.fn().mockImplementation(() => {
-        return ExchangeRateDataServiceMock;
-      })
-    };
-  }
-);
-
 describe('PortfolioCalculator', () => {
   let configurationService: ConfigurationService;
   let currentRateService: CurrentRateService;
@@ -67,6 +54,9 @@ describe('PortfolioCalculator', () => {
   let redisCacheService: RedisCacheService;
 
   beforeEach(() => {
+    PortfolioSnapshotServiceMock.reset();
+    RedisCacheServiceMock.reset();
+
     configurationService = new ConfigurationService();
 
     currentRateService = new CurrentRateService(null, null, null, null);
@@ -78,7 +68,7 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    portfolioSnapshotService = new PortfolioSnapshotService(null);
+    portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     redisCacheService = new RedisCacheService(null, null);
 
@@ -87,8 +77,7 @@ describe('PortfolioCalculator', () => {
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService,
-      null
+      redisCacheService
     );
   });
 
@@ -99,49 +88,49 @@ describe('PortfolioCalculator', () => {
       const activities: Activity[] = [
         {
           ...activityDummyData,
-          date: new Date('2021-11-22'),
-          feeInAssetProfileCurrency: 1.55,
-          feeInBaseCurrency: 1.55,
-          quantity: 2,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'CHF',
             dataSource: 'YAHOO',
             name: 'Bâloise Holding AG',
             symbol: 'BALN.SW'
           },
+          date: new Date('2021-11-22'),
+          feeInAssetProfileCurrency: 1.55,
+          feeInBaseCurrency: 1.55,
+          quantity: 2,
           type: 'BUY',
           unitPriceInAssetProfileCurrency: 142.9
         },
         {
           ...activityDummyData,
-          date: new Date('2021-11-30'),
-          feeInAssetProfileCurrency: 1.65,
-          feeInBaseCurrency: 1.65,
-          quantity: 1,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'CHF',
             dataSource: 'YAHOO',
             name: 'Bâloise Holding AG',
             symbol: 'BALN.SW'
           },
+          date: new Date('2021-11-30'),
+          feeInAssetProfileCurrency: 1.65,
+          feeInBaseCurrency: 1.65,
+          quantity: 1,
           type: 'SELL',
           unitPriceInAssetProfileCurrency: 136.6
         },
         {
           ...activityDummyData,
-          date: new Date('2021-11-30'),
-          feeInAssetProfileCurrency: 0,
-          feeInBaseCurrency: 0,
-          quantity: 1,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'CHF',
             dataSource: 'YAHOO',
             name: 'Bâloise Holding AG',
             symbol: 'BALN.SW'
           },
+          date: new Date('2021-11-30'),
+          feeInAssetProfileCurrency: 0,
+          feeInBaseCurrency: 0,
+          quantity: 1,
           type: 'SELL',
           unitPriceInAssetProfileCurrency: 136.6
         }
@@ -194,7 +183,9 @@ describe('PortfolioCalculator', () => {
             netPerformancePercentageWithCurrencyEffectMap: {
               max: new Big('-0.0552834149755073478')
             },
-            netPerformanceWithCurrencyEffectMap: { max: new Big('-15.8') },
+            netPerformanceWithCurrencyEffectMap: {
+              max: new Big('-15.8')
+            },
             marketPrice: 148.9,
             marketPriceInBaseCurrency: 148.9,
             quantity: new Big('0'),

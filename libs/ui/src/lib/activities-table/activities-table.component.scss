@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
   display: block;
   .activities {
@@ -51,4 +53,11 @@
       ) !important;
     }
   }
+
+  @include mat.form-field-overrides(
+    (
+      container-height: 2rem,
+      container-vertical-padding: 0.33rem
+    )
+  );
 }

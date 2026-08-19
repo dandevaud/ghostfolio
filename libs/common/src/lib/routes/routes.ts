@@ -66,6 +66,27 @@ export const internalRoutes = {
   accounts: {
     path: 'accounts',
     routerLink: ['/accounts'],
+    subRoutes: {
+      create: {
+        path: 'create',
+        routerLink: ['/accounts', 'create'],
+        title: $localize`Add Account`
+      },
+      detail: {
+        path: undefined, // Default sub route
+        routerLink: (aAccountId: string) => {
+          return ['/accounts', aAccountId];
+        },
+        title: $localize`Account`
+      },
+      update: {
+        path: 'update',
+        routerLink: (aAccountId: string) => {
+          return ['/accounts', aAccountId, 'update'];
+        },
+        title: $localize`Update Account`
+      }
+    },
     title: $localize`Accounts`
   },
   api: {
@@ -94,11 +115,6 @@ export const internalRoutes = {
         routerLink: ['/home', 'markets'],
         title: $localize`Markets`
       },
-      marketsPremium: {
-        path: 'markets-premium',
-        routerLink: ['/home', 'markets-premium'],
-        title: $localize`Markets`
-      },
       summary: {
         path: 'summary',
         routerLink: ['/home', 'summary'],
@@ -125,6 +141,27 @@ export const internalRoutes = {
       activities: {
         path: 'activities',
         routerLink: ['/portfolio', 'activities'],
+        subRoutes: {
+          clone: {
+            path: 'clone',
+            routerLink: (aActivityId: string) => {
+              return ['/portfolio', 'activities', aActivityId, 'clone'];
+            },
+            title: $localize`Clone Activity`
+          },
+          create: {
+            path: 'create',
+            routerLink: ['/portfolio', 'activities', 'create'],
+            title: $localize`Add Activity`
+          },
+          update: {
+            path: 'update',
+            routerLink: (aActivityId: string) => {
+              return ['/portfolio', 'activities', aActivityId, 'update'];
+            },
+            title: $localize`Update Activity`
+          }
+        },
         title: $localize`Activities`
       },
       allocations: {
@@ -153,8 +190,7 @@ export const internalRoutes = {
   webauthn: {
     excludeFromAssistant: true,
     path: 'webauthn',
-    routerLink: ['/webauthn'],
-    title: $localize`Sign in`
+    routerLink: ['/webauthn']
   },
   zen: {
     excludeFromAssistant: true,

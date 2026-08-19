@@ -139,24 +139,32 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
 @include mat.elevation-classes();
 @include mat.table-density(-1);
 
-// $gf-typography: mat.m2-define-typography-config();
+$gf-typography: (
+  // Font families
+  brand-family: var(--font-family-sans-serif),
+  plain-family: var(--font-family-sans-serif),
+  // Font weights
+  bold-weight: 700,
+  medium-weight: 500,
+  regular-weight: 400
+);
 
 .theme-light {
-  $gf-theme-default: mat.define-theme(
+  color-scheme: light;
+
+  @include mat.theme(
     (
       color: (
         primary: $_primary,
-        theme-type: light,
-        tertiary: $_tertiary
+        tertiary: $_tertiary,
+        theme-type: light
       ),
       density: (
         scale: -3
       ),
-      // typography: $gf-typography
+      typography: $gf-typography
     )
   );
-
-  @include mat.all-component-themes($gf-theme-default);
 
   @include mat.autocomplete-overrides(
     (
@@ -225,21 +233,21 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
 }
 
 .theme-dark {
-  $gf-theme-dark: mat.define-theme(
+  color-scheme: dark;
+
+  @include mat.theme(
     (
       color: (
         primary: $_primary,
-        theme-type: dark,
-        tertiary: $_tertiary
+        tertiary: $_tertiary,
+        theme-type: dark
       ),
       density: (
         scale: -3
       ),
-      // typography: $gf-typography
+      typography: $gf-typography
     )
   );
-
-  @include mat.all-component-themes($gf-theme-dark);
 
   @include mat.button-overrides(
     (
@@ -285,24 +293,6 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
         container-shape: 4px
       )
     );
-
-    .page.has-tabs {
-      @include mat.tabs-overrides(
-        (
-          container-height: 3rem
-        )
-      );
-    }
-  }
-
-  @media (min-width: 576px) {
-    .page.has-tabs {
-      @include mat.tabs-overrides(
-        (
-          container-height: 2rem
-        )
-      );
-    }
   }
 
   @include mat.badge-overrides(
@@ -322,7 +312,10 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
 
   @include mat.checkbox-overrides(
     (
-      selected-icon-color: var(--gf-theme-primary-500)
+      selected-focus-icon-color: var(--gf-theme-primary-500),
+      selected-hover-icon-color: var(--gf-theme-primary-500),
+      selected-icon-color: var(--gf-theme-primary-500),
+      selected-pressed-icon-color: var(--gf-theme-primary-500)
     )
   );
 
@@ -359,9 +352,21 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
     )
   );
 
+  @include mat.paginator-overrides(
+    (
+      container-background-color: transparent
+    )
+  );
+
   @include mat.progress-bar-overrides(
     (
       active-indicator-color: var(--gf-theme-primary-500)
+    )
+  );
+
+  @include mat.pseudo-checkbox-overrides(
+    (
+      full-selected-icon-color: var(--gf-theme-primary-500)
     )
   );
 
@@ -396,8 +401,11 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
 
   @include mat.tabs-overrides(
     (
+      active-focus-indicator-color: var(--gf-theme-primary-500),
       active-focus-label-text-color: var(--gf-theme-primary-500),
+      active-hover-indicator-color: var(--gf-theme-primary-500),
       active-hover-label-text-color: var(--gf-theme-primary-500),
+      active-indicator-color: var(--gf-theme-primary-500),
       active-label-text-color: var(--gf-theme-primary-500),
       active-ripple-color: var(--gf-theme-primary-500),
       inactive-ripple-color: var(--gf-theme-primary-500)
@@ -419,15 +427,6 @@ $_tertiary: map.merge(map.get($_palettes, tertiary), $_rest);
         filled-container-color: #f44336,
         filled-label-text-color: white,
         outlined-label-text-color: #f44336
-      )
-    );
-  }
-
-  .page.has-tabs {
-    @include mat.tabs-overrides(
-      (
-        active-indicator-height: 0,
-        label-text-tracking: normal
       )
     );
   }

@@ -1,5 +1,6 @@
 import { InfoResponse } from '@ghostfolio/common/interfaces';
 import { filterGlobalPermissions } from '@ghostfolio/common/permissions';
+import { registerChartConfiguration } from '@ghostfolio/ui/chart';
 import { GF_ENVIRONMENT } from '@ghostfolio/ui/environment';
 import { GfNotificationModule } from '@ghostfolio/ui/notifications';
 
@@ -22,7 +23,6 @@ import {
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideAnimations } from '@angular/platform-browser/animations';
 import { RouterModule, TitleStrategy } from '@angular/router';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -44,8 +44,7 @@ import { environment } from './environments/environment';
   const response = await fetch('/api/v1/info');
   const info: InfoResponse = await response.json();
   const utmSource = window.localStorage.getItem('utm_source') as
-    | 'ios'
-    | 'trusted-web-activity';
+    'ios' | 'trusted-web-activity';
 
   info.globalPermissions = filterGlobalPermissions(
     info.globalPermissions,
@@ -57,6 +56,8 @@ import { environment } from './environments/environment';
   if (environment.production) {
     enableProdMode();
   }
+
+  registerChartConfiguration();
 
   await bootstrapApplication(GfAppComponent, {
     providers: [
@@ -79,7 +80,6 @@ import { environment } from './environments/environment';
       ),
       LanguageService,
       ModulePreloadService,
-      provideAnimations(),
       provideHttpClient(withInterceptorsFromDi()),
       provideIonicAngular(),
       provideMarkdown(),

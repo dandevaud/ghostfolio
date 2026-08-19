@@ -1,4 +1,3 @@
-import { GfSymbolPipe } from '@ghostfolio/common/pipes';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 
 import { FocusableOption } from '@angular/cdk/a11y';
@@ -24,7 +23,7 @@ import {
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GfSymbolPipe, RouterModule],
+  imports: [RouterModule],
   selector: 'gf-assistant-list-item',
   styleUrls: ['./assistant-list-item.scss'],
   templateUrl: './assistant-list-item.html'
@@ -53,12 +52,8 @@ export class GfAssistantListItemComponent
 
   public ngOnChanges() {
     if (this.item?.mode === SearchMode.ACCOUNT) {
-      this.queryParams = {
-        accountDetailDialog: true,
-        accountId: this.item.id
-      };
-
-      this.routerLink = internalRoutes.accounts.routerLink;
+      this.queryParams = {};
+      this.routerLink = this.item.routerLink;
     } else if (this.item?.mode === SearchMode.ASSET_PROFILE) {
       this.queryParams = {
         assetProfileDialog: true,

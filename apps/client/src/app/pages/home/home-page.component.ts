@@ -1,20 +1,20 @@
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { TabConfiguration, User } from '@ghostfolio/common/interfaces';
-import { hasPermission, permissions } from '@ghostfolio/common/permissions';
+import { User } from '@ghostfolio/common/interfaces';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
+import {
+  GfPageTabsComponent,
+  TabConfiguration
+} from '@ghostfolio/ui/page-tabs';
 
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  CUSTOM_ELEMENTS_SCHEMA,
   DestroyRef,
   OnInit
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatTabsModule } from '@angular/material/tabs';
-import { RouterModule } from '@angular/router';
-import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   albumsOutline,
@@ -23,18 +23,16 @@ import {
   newspaperOutline,
   readerOutline
 } from 'ionicons/icons';
-import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
-  host: { class: 'page has-tabs' },
-  imports: [IonIcon, MatTabsModule, RouterModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
+  imports: [GfPageTabsComponent],
   selector: 'gf-home-page',
   styleUrls: ['./home-page.scss'],
   templateUrl: './home-page.html'
 })
 export class GfHomePageComponent implements OnInit {
-  public deviceType: string;
   public hasImpersonationId: boolean;
   public tabs: TabConfiguration[] = [];
   public user: User;
@@ -42,7 +40,6 @@ export class GfHomePageComponent implements OnInit {
   public constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private destroyRef: DestroyRef,
-    private deviceService: DeviceDetectorService,
     private impersonationStorageService: ImpersonationStorageService,
     private userService: UserService
   ) {
@@ -75,23 +72,13 @@ export class GfHomePageComponent implements OnInit {
             },
             {
               iconName: 'newspaper-outline',
-              label: hasPermission(
-                this.user?.permissions,
-                permissions.readMarketDataOfMarkets
-              )
-                ? internalRoutes.home.subRoutes.marketsPremium.title
-                : internalRoutes.home.subRoutes.markets.title,
-              routerLink: hasPermission(
-                this.user?.permissions,
-                permissions.readMarketDataOfMarkets
-              )
-                ? internalRoutes.home.subRoutes.marketsPremium.routerLink
-                : internalRoutes.home.subRoutes.markets.routerLink
+              label: internalRoutes.home.subRoutes.markets.title,
+              routerLink: internalRoutes.home.subRoutes.markets.routerLink
             }
           ];
-
-          this.changeDetectorRef.markForCheck();
         }
+
+        this.changeDetectorRef.markForCheck();
       });
 
     addIcons({
@@ -104,8 +91,6 @@ export class GfHomePageComponent implements OnInit {
   }
 
   public ngOnInit() {
-    this.deviceType = this.deviceService.getDeviceInfo().deviceType;
-
     this.impersonationStorageService
       .onChangeHasImpersonation()
       .pipe(takeUntilDestroyed(this.destroyRef))

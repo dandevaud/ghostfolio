@@ -1,8 +1,7 @@
-import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
+  assetProfileDummyData,
   loadExportFile,
-  symbolProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
@@ -12,7 +11,6 @@ import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.s
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
-import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
@@ -49,18 +47,6 @@ jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   };
 });
 
-jest.mock(
-  '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service',
-  () => {
-    return {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      ExchangeRateDataService: jest.fn().mockImplementation(() => {
-        return ExchangeRateDataServiceMock;
-      })
-    };
-  }
-);
-
 describe('PortfolioCalculator', () => {
   let exportResponse: ExportResponse;
 
@@ -70,7 +56,6 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
-  let activitiesService: ActivitiesService;
 
   beforeAll(() => {
     exportResponse = loadExportFile(
@@ -79,6 +64,9 @@ describe('PortfolioCalculator', () => {
   });
 
   beforeEach(() => {
+    PortfolioSnapshotServiceMock.reset();
+    RedisCacheServiceMock.reset();
+
     configurationService = new ConfigurationService();
 
     currentRateService = new CurrentRateService(null, null, null, null);
@@ -90,28 +78,16 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    portfolioSnapshotService = new PortfolioSnapshotService(null);
+    portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     redisCacheService = new RedisCacheService(null, null);
-
-    activitiesService = new ActivitiesService(
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    );
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService,
-      activitiesService
+      redisCacheService
     );
   });
 
@@ -123,16 +99,16 @@ describe('PortfolioCalculator', () => {
         (activity) => ({
           ...activityDummyData,
           ...activity,
-          date: parseDate(activity.date),
-          feeInAssetProfileCurrency: 4.46,
-          feeInBaseCurrency: 4.46,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'USD',
             dataSource: activity.dataSource,
             name: 'Bitcoin',
             symbol: activity.symbol
           },
+          date: parseDate(activity.date),
+          feeInAssetProfileCurrency: 4.46,
+          feeInBaseCurrency: 4.46,
           unitPriceInAssetProfileCurrency: 44558.42
         })
       );
@@ -172,9 +148,7 @@ describe('PortfolioCalculator', () => {
         netPerformanceInPercentageWithCurrencyEffect: 0,
         netPerformanceWithCurrencyEffect: 0,
         netWorth: 0,
-        timeWeightedPerformanceInPercentage: 0,
-        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0,
-        totalAccountBalance: 0,
+        totalCashInBaseCurrency: 0,
         totalInvestment: 0,
         totalInvestmentValueWithCurrencyEffect: 0,
         value: 0,
@@ -192,9 +166,7 @@ describe('PortfolioCalculator', () => {
         netPerformanceInPercentageWithCurrencyEffect: 0.12422837255001412, // 5535.42 ÷ 44558.42 = 0.12422837255001412
         netPerformanceWithCurrencyEffect: 5535.42, // 1 * (50098.3 - 44558.42) - 4.46 = 5535.42
         netWorth: 50098.3, // 1 * 50098.3 = 50098.3
-        timeWeightedPerformanceInPercentage: 0,
-        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0,
-        totalAccountBalance: 0,
+        totalCashInBaseCurrency: 0,
         totalInvestment: 44558.42,
         totalInvestmentValueWithCurrencyEffect: 44558.42,
         value: 50098.3, // 1 * 50098.3 = 50098.3
@@ -213,10 +185,7 @@ describe('PortfolioCalculator', () => {
         netPerformanceInPercentageWithCurrencyEffect: -0.032837340282712,
         netPerformanceWithCurrencyEffect: -1463.18,
         netWorth: 43099.7,
-        timeWeightedPerformanceInPercentage: -0.13969735500006986,
-        timeWeightedPerformanceInPercentageWithCurrencyEffect:
-          -0.13969735500006986,
-        totalAccountBalance: 0,
+        totalCashInBaseCurrency: 0,
         totalInvestment: 44558.42,
         totalInvestmentValueWithCurrencyEffect: 44558.42,
         value: 43099.7,

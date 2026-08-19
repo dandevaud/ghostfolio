@@ -32,6 +32,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
     let totalInvestmentWithCurrencyEffect = new Big(0);
     let totalTimeWeightedInvestment = new Big(0);
     let totalTimeWeightedInvestmentWithCurrencyEffect = new Big(0);
+    let totalCashInBaseCurrency = new Big(0);
 
     for (const currentPosition of positions) {
       ({
@@ -44,7 +45,8 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
         grossPerformanceWithCurrencyEffect,
         netPerformance,
         totalTimeWeightedInvestment,
-        totalTimeWeightedInvestmentWithCurrencyEffect
+        totalTimeWeightedInvestmentWithCurrencyEffect,
+        totalCashInBaseCurrency
       } = this.calculatePositionMetrics(
         currentPosition,
         totalFeesWithCurrencyEffect,
@@ -56,7 +58,8 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
         grossPerformanceWithCurrencyEffect,
         netPerformance,
         totalTimeWeightedInvestment,
-        totalTimeWeightedInvestmentWithCurrencyEffect
+        totalTimeWeightedInvestmentWithCurrencyEffect,
+        totalCashInBaseCurrency
       ));
     }
 
@@ -68,6 +71,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       totalInterestWithCurrencyEffect,
       totalInvestment,
       totalInvestmentWithCurrencyEffect,
+      totalCashInBaseCurrency,
       activitiesCount: this.activities.filter(({ type }) => {
         return ['BUY', 'SELL', 'STAKE'].includes(type);
       }).length,
@@ -114,8 +118,8 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       );
 
     let orders: PortfolioOrderItem[] = cloneDeep(
-      this.activities.filter(({ SymbolProfile }) => {
-        return SymbolProfile.symbol === symbol;
+      this.activities.filter(({ assetProfile }) => {
+        return assetProfile.symbol === symbol;
       })
     );
 
@@ -140,7 +144,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       symbolMetricsHelper,
       dataSource,
       symbol,
-      orders.some((order) => order.SymbolProfile.assetSubClass === 'CASH')
+      orders.some((order) => order.assetProfile.assetSubClass === 'CASH')
     );
 
     orders = symbolMetricsHelperClass.fillOrdersAndSortByTime(
@@ -197,7 +201,8 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
     grossPerformanceWithCurrencyEffect: Big,
     netPerformance: Big,
     totalTimeWeightedInvestment: Big,
-    totalTimeWeightedInvestmentWithCurrencyEffect: Big
+    totalTimeWeightedInvestmentWithCurrencyEffect: Big,
+    totalCashInBaseCurrency: Big
   ) {
     if (currentPosition.feeInBaseCurrency) {
       totalFeesWithCurrencyEffect = totalFeesWithCurrencyEffect.plus(
@@ -266,7 +271,8 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       grossPerformanceWithCurrencyEffect,
       netPerformance,
       totalTimeWeightedInvestment,
-      totalTimeWeightedInvestmentWithCurrencyEffect
+      totalTimeWeightedInvestmentWithCurrencyEffect,
+      totalCashInBaseCurrency
     };
   }
 }

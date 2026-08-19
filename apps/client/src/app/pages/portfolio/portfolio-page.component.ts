@@ -1,16 +1,18 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { TabConfiguration, User } from '@ghostfolio/common/interfaces';
+import { User } from '@ghostfolio/common/interfaces';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
+import {
+  GfPageTabsComponent,
+  TabConfiguration
+} from '@ghostfolio/ui/page-tabs';
 
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  DestroyRef,
-  OnInit
+  DestroyRef
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatTabsModule } from '@angular/material/tabs';
-import { RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   analyticsOutline,
@@ -19,24 +21,22 @@ import {
   scanOutline,
   swapVerticalOutline
 } from 'ionicons/icons';
-import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
-  host: { class: 'page has-tabs' },
-  imports: [MatTabsModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
+  imports: [GfPageTabsComponent],
   selector: 'gf-portfolio-page',
   styleUrls: ['./portfolio-page.scss'],
   templateUrl: './portfolio-page.html'
 })
-export class PortfolioPageComponent implements OnInit {
-  public deviceType: string;
+export class PortfolioPageComponent {
   public tabs: TabConfiguration[] = [];
   public user: User;
 
   public constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private destroyRef: DestroyRef,
-    private deviceService: DeviceDetectorService,
     private userService: UserService
   ) {
     this.userService.stateChanged
@@ -73,9 +73,9 @@ export class PortfolioPageComponent implements OnInit {
             }
           ];
           this.user = state.user;
-
-          this.changeDetectorRef.markForCheck();
         }
+
+        this.changeDetectorRef.markForCheck();
       });
 
     addIcons({
@@ -85,9 +85,5 @@ export class PortfolioPageComponent implements OnInit {
       scanOutline,
       swapVerticalOutline
     });
-  }
-
-  public ngOnInit() {
-    this.deviceType = this.deviceService.getDeviceInfo().deviceType;
   }
 }

@@ -4,7 +4,6 @@ import { AssetProfileIdentifier, Filter } from '@ghostfolio/common/interfaces';
 
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import Keyv from 'keyv';
 import ms from 'ms';
 import { createHash, randomUUID } from 'node:crypto';
 
@@ -12,7 +11,9 @@ import { DateQuery } from '../portfolio/interfaces/date-query.interface';
 
 @Injectable()
 export class RedisCacheService {
-  private client: Keyv;
+  private readonly logger = new Logger(RedisCacheService.name);
+
+  private client: Cache['stores'][0];
 
   public constructor(
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
@@ -29,7 +30,7 @@ export class RedisCacheService {
     };
 
     this.client.on('error', (error) => {
-      Logger.error(error, 'RedisCacheService');
+      this.logger.error(error);
     });
   }
 
@@ -142,7 +143,7 @@ export class RedisCacheService {
 
       return true;
     } catch (error) {
-      Logger.error(error?.message, 'RedisCacheService');
+      this.logger.error(error?.message);
 
       return false;
     } finally {

@@ -1,22 +1,22 @@
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 
 import { Injectable } from '@nestjs/common';
-import { DataSource, Prisma, SymbolProfileOverrides } from '@prisma/client';
+import { DataSource, Prisma, AssetProfileOverrides } from '@prisma/client';
 
 @Injectable()
 export class SymbolProfileOverwriteService {
   public constructor(private readonly prismaService: PrismaService) {}
 
   public async add(
-    assetProfileOverwrite: Prisma.SymbolProfileOverridesCreateInput
-  ): Promise<SymbolProfileOverrides | never> {
-    return this.prismaService.symbolProfileOverrides.create({
+    assetProfileOverwrite: Prisma.AssetProfileOverridesCreateInput
+  ): Promise<AssetProfileOverrides | never> {
+    return this.prismaService.assetProfileOverrides.create({
       data: assetProfileOverwrite
     });
   }
 
   public async delete(symbolProfileId: string) {
-    return this.prismaService.symbolProfileOverrides.delete({
+    return this.prismaService.assetProfileOverrides.delete({
       where: { symbolProfileId: symbolProfileId }
     });
   }
@@ -29,8 +29,8 @@ export class SymbolProfileOverwriteService {
     sectors,
     url,
     symbolProfileId
-  }: Prisma.SymbolProfileOverridesUpdateInput & { symbolProfileId: string }) {
-    return this.prismaService.symbolProfileOverrides.update({
+  }: Prisma.AssetProfileOverridesUpdateInput & { symbolProfileId: string }) {
+    return this.prismaService.assetProfileOverrides.update({
       data: {
         assetClass,
         assetSubClass,
@@ -56,7 +56,7 @@ export class SymbolProfileOverwriteService {
       })
       .then((s) => s.id);
 
-    const symbolProfileIdSaved = await this.prismaService.symbolProfileOverrides
+    const symbolProfileIdSaved = await this.prismaService.assetProfileOverrides
       .findFirst({
         where: {
           symbolProfileId: SymbolProfileId

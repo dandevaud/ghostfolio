@@ -11,7 +11,7 @@
             : ''
         }}</span
       >
-      @if (user?.subscription?.type === 'Basic') {
+      @if (user()?.subscription?.type === 'Basic') {
         <gf-premium-indicator class="ml-1" />
       }
     </div>
@@ -25,12 +25,12 @@
       <mat-label i18n>Compare with...</mat-label>
       <mat-select
         name="benchmark"
-        [disabled]="user?.subscription?.type === 'Basic'"
-        [value]="benchmark?.id"
+        [disabled]="user()?.subscription?.type === 'Basic'"
+        [value]="benchmark()?.id"
         (selectionChange)="onChangeBenchmark($event.value)"
       >
         <mat-option [value]="null" />
-        @for (symbolProfile of benchmarks; track symbolProfile) {
+        @for (symbolProfile of benchmarks(); track symbolProfile) {
           <mat-option [value]="symbolProfile.id">{{
             symbolProfile.name
           }}</mat-option>
@@ -48,7 +48,7 @@
   </div>
 </div>
 <div class="chart-container">
-  @if (isLoading) {
+  @if (isLoading()) {
     <ngx-skeleton-loader
       animation="pulse"
       [theme]="{
@@ -60,6 +60,6 @@
   <canvas
     #chartCanvas
     class="h-100"
-    [ngStyle]="{ display: isLoading ? 'none' : 'block' }"
+    [style.display]="isLoading() ? 'none' : 'block'"
   ></canvas>
 </div>
