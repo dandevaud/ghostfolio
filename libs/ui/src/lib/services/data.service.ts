@@ -735,8 +735,7 @@ export class DataService {
     filters,
     range,
     withExcludedAccounts = false,
-    timeWeightedPerformance = false,
-    withItems = false
+    timeWeightedPerformance = false
   }: {
     filters?: Filter[];
     range: DateRange;

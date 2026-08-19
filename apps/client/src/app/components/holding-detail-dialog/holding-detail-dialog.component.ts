@@ -580,7 +580,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
 
           if (Number.isInteger(this.quantity)) {
             this.quantityPrecision = 0;
-          } else if (this.SymbolProfile?.assetSubClass === 'CRYPTOCURRENCY') {
+          } else if (this.assetProfile?.assetSubClass === 'CRYPTOCURRENCY') {
             if (this.quantity < 1) {
               this.quantityPrecision = 7;
             } else if (this.quantity < 1000) {

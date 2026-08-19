@@ -176,11 +176,10 @@
     </div>
     <div
       class="mb-3"
-      [ngClass]="{
-        'd-none':
-          activityForm.get('type')?.value === 'FEE' ||
-          activityForm.get('type')?.value === 'STAKE'
-      }"
+      [class.d-none]="
+        activityForm.get('type')?.value === 'FEE' ||
+        activityForm.get('type')?.value === 'STAKE'
+      "
     >
       <div class="align-items-start d-flex">
         <mat-form-field appearance="outline" class="w-100">

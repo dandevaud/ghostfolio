@@ -179,7 +179,7 @@ export class GfPortfolioSummaryComponent implements OnChanges {
         };
 
       default:
-        return undefined;
+        return { title: '', value: '' };
     }
   }
 

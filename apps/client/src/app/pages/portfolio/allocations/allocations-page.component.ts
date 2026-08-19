@@ -6,10 +6,7 @@ import {
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { MAX_TOP_HOLDINGS, UNKNOWN_KEY } from '@ghostfolio/common/config';
-import {
-  canOpenHoldingDetail,
-  getCountryName
-} from '@ghostfolio/common/helper';
+import { canOpenHoldingDetail } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   Holding,
@@ -399,27 +396,28 @@ export class GfAllocationsPageComponent implements OnInit {
           ? position.allocationInPercentage
           : (position.valueInBaseCurrency ?? 0)
       };
-      if (position.assetClass !== AssetClass.LIQUIDITY) {
+      if (position.assetProfile.assetClass !== AssetClass.LIQUIDITY) {
         // Prepare analysis data by continents, countries, holdings and sectors except for liquidity
 
         if (position.assetProfile.countries.length > 0) {
-          for (const country of position.countries) {
+          for (const country of position.assetProfile.countries) {
             const { code, continent, name, weight } = country;
 
             if (this.continents[continent]?.value) {
               this.continents[continent].value +=
                 weight *
                 (isNumber(position.valueInBaseCurrency)
-                  ? position.valueInBaseCurrency
-                  : position.valueInPercentage);
+                  ? position.valueInBaseCurrency!
+                  : position.valueInPercentage!);
             } else {
               this.continents[continent] = {
                 name: continent,
                 value:
                   weight *
                   (isNumber(position.valueInBaseCurrency)
-                    ? this.portfolioDetails.holdings[symbol].valueInBaseCurrency
-                    : this.portfolioDetails.holdings[symbol].valueInPercentage)
+                    ? this.portfolioDetails.holdings[symbol]
+                        .valueInBaseCurrency!
+                    : this.portfolioDetails.holdings[symbol].valueInPercentage!)
               };
             }
 
@@ -427,16 +425,17 @@ export class GfAllocationsPageComponent implements OnInit {
               this.countries[code].value +=
                 weight *
                 (isNumber(position.valueInBaseCurrency)
-                  ? position.valueInBaseCurrency
-                  : position.valueInPercentage);
+                  ? position.valueInBaseCurrency!
+                  : position.valueInPercentage!);
             } else {
               this.countries[code] = {
                 name,
                 value:
                   weight *
                   (isNumber(position.valueInBaseCurrency)
-                    ? this.portfolioDetails.holdings[symbol].valueInBaseCurrency
-                    : this.portfolioDetails.holdings[symbol].valueInPercentage)
+                    ? this.portfolioDetails.holdings[symbol]
+                        .valueInBaseCurrency!
+                    : this.portfolioDetails.holdings[symbol].valueInPercentage!)
               };
             }
           }
@@ -444,14 +443,14 @@ export class GfAllocationsPageComponent implements OnInit {
           this.continents[UNKNOWN_KEY].value += isNumber(
             position.valueInBaseCurrency
           )
-            ? this.portfolioDetails.holdings[symbol].valueInBaseCurrency
-            : this.portfolioDetails.holdings[symbol].valueInPercentage;
+            ? this.portfolioDetails.holdings[symbol].valueInBaseCurrency!
+            : this.portfolioDetails.holdings[symbol].valueInPercentage!;
 
           this.countries[UNKNOWN_KEY].value += isNumber(
             position.valueInBaseCurrency
           )
-            ? this.portfolioDetails.holdings[symbol].valueInBaseCurrency
-            : this.portfolioDetails.holdings[symbol].valueInPercentage;
+            ? this.portfolioDetails.holdings[symbol].valueInBaseCurrency!
+            : this.portfolioDetails.holdings[symbol].valueInPercentage!;
         }
       }
 
@@ -560,19 +559,20 @@ export class GfAllocationsPageComponent implements OnInit {
 
     this.tagHoldings = Object.values(this.tagHoldingsMap)
       .map(({ name, value }) => {
-        if (this.hasImpersonationId || this.user.settings.isRestrictedView) {
+        if (this.user.settings.isRestrictedView) {
           return {
             name,
             allocationInPercentage: value,
-            valueInBaseCurrency: null
+            valueInBaseCurrency: 0
           };
         }
 
         return {
           name,
           allocationInPercentage:
-            this.portfolioDetails.summary.currentValueInBaseCurrency > 0
-              ? value / this.portfolioDetails.summary.currentValueInBaseCurrency
+            this.portfolioDetails.summary!.currentValueInBaseCurrency > 0
+              ? value /
+                this.portfolioDetails.summary!.currentValueInBaseCurrency
               : 0,
           valueInBaseCurrency: value
         };

@@ -249,9 +249,9 @@ export class GfCreateOrUpdateActivityDialogComponent {
             this.activityForm.get('quantity')?.value *
               this.activityForm.get('unitPrice')?.value +
             (this.activityForm.get('fee')?.value ?? 0);
-        } else if (this.activityForm.get('type').value === 'STAKE') {
+        } else if (this.activityForm.get('type')?.value === 'STAKE') {
           this.total =
-            this.activityForm.get('quantity').value *
+            this.activityForm.get('quantity')?.value *
             (this.currentMarketPrice ?? 0);
         } else {
           this.total =
@@ -352,7 +352,7 @@ export class GfCreateOrUpdateActivityDialogComponent {
       ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((type: ActivityType) => {
         if (type === 'STAKE') {
-          this.activityForm.get('unitPrice').setValue(0);
+          this.activityForm.get('unitPrice')?.setValue(0);
         }
 
         if (

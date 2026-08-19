@@ -187,8 +187,8 @@ export class GfAssetProfileDialogComponent implements OnInit {
     }),
     isActive: [true],
     name: ['', Validators.required],
-    tags: new FormControl<Tag[]>(undefined),
-    tagsDisconnected: new FormControl<Tag[]>(undefined),
+    tags: new FormControl<Tag[]>([]),
+    tagsDisconnected: new FormControl<Tag[]>([]),
     scraperConfiguration: this.formBuilder.group<
       Omit<ScraperConfiguration, 'headers'> & {
         headers: FormControl<string | null>;
@@ -372,9 +372,10 @@ export class GfAssetProfileDialogComponent implements OnInit {
       .fetchTags()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((tags) => {
-        this.HoldingTags = tags.map(({ id, name, userId }) => {
-          return { id, name, userId };
-        });
+        this.HoldingTags =
+          tags.map(({ id, name, userId }) => {
+            return { id, name, userId: userId ?? '' };
+          }) ?? [];
         this.dataService.updateInfo();
 
         this.changeDetectorRef.markForCheck();
@@ -517,7 +518,7 @@ export class GfAssetProfileDialogComponent implements OnInit {
           },
           sectors: JSON.stringify(this.assetProfile?.sectors ?? []),
           symbolMapping: JSON.stringify(this.assetProfile?.symbolMapping ?? {}),
-          url: this.assetProfile?.url
+          url: this.assetProfile?.url ?? null
         });
 
         if (!this.canEditAssetProfile) {
@@ -745,8 +746,9 @@ export class GfAssetProfileDialogComponent implements OnInit {
       assetSubClass:
         this.assetProfileForm.controls.assetSubClass.value ?? undefined,
       comment: getStringOrNull(this.assetProfileForm.controls.comment.value),
-      tags: this.assetProfileForm.get('tags').value,
-      tagsDisconnected: this.assetProfileForm.get('tagsDisconnected').value,
+      tags: this.assetProfileForm.get('tags')?.value ?? [],
+      tagsDisconnected:
+        this.assetProfileForm.get('tagsDisconnected')?.value ?? [],
       currency: this.assetProfileForm.controls.currency.value ?? undefined,
       dataGatheringFrequency:
         this.assetProfileForm.controls.dataGatheringFrequency.value ??
@@ -928,9 +930,9 @@ export class GfAssetProfileDialogComponent implements OnInit {
 
   public onRemoveTag(aTag: Tag) {
     this.assetProfileForm.controls['tags'].setValue(
-      this.assetProfileForm.controls['tags'].value.filter(({ id }) => {
+      this.assetProfileForm.controls['tags'].value?.filter(({ id }) => {
         return id !== aTag.id;
-      })
+      }) ?? []
     );
     this.assetProfileForm.controls['tagsDisconnected'].setValue([
       ...(this.assetProfileForm.controls['tagsDisconnected'].value ?? []),
@@ -944,7 +946,11 @@ export class GfAssetProfileDialogComponent implements OnInit {
       ...(this.assetProfileForm.controls['tags'].value ?? []),
       this.HoldingTags.find(({ id }) => {
         return id === event.option.value;
-      })
+      }) ?? {
+        name: event.option.viewValue,
+        id: event.option.value,
+        userId: this.user.id
+      }
     ]);
     this.tagInput.nativeElement.value = '';
     this.assetProfileForm.markAsDirty();

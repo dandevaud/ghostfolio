@@ -305,7 +305,7 @@
       <tr
         *matFooterRowDef="displayedColumns()"
         mat-footer-row
-        [ngClass]="{ 'd-none': isLoading() }"
+        [class.d-none]="isLoading()"
       ></tr>
     }
   </table>

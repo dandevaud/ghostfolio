@@ -328,17 +328,6 @@ export class GfAdminMarketDataComponent implements AfterViewInit, OnInit {
       });
   }
 
-  public onGatherMissing() {
-    this.adminService
-      .gatherMissingOnly()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        setTimeout(() => {
-          window.location.reload();
-        }, 300);
-      });
-  }
-
   protected onGatherProfileData() {
     this.adminService
       .gatherProfileData()

@@ -6,7 +6,7 @@
       <span i18n
         >Performance
         {{
-          user?.settings?.performanceCalculationType === 'ROI'
+          user()?.settings?.performanceCalculationType === 'ROI'
             ? '(Time-Weighted)'
             : ''
         }}</span

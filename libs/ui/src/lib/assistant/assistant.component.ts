@@ -58,8 +58,7 @@ import {
   getAssetClassFilters,
   getFiltersFromPortfolioFilterFormValue,
   getHoldingsForFilter,
-  getPortfolioFilterFormValue,
-  getTagFilters
+  getPortfolioFilterFormValue
 } from '../portfolio-filter-form';
 import { GfAssistantListItemComponent } from './assistant-list-item/assistant-list-item.component';
 import { SearchMode } from './enums/search-mode';
@@ -479,29 +478,12 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         ?.sort((a, b) => {
           return a.label.localeCompare(b.label);
         }) ?? [];
-
-    if (this.tags.length === 0) {
-      this.portfolioFilterFormControl.get('tag').disable({ emitEvent: false });
-    }
   }
 
   public hasFilter(aFormValue: { [key: string]: string[] }) {
     return Object.values(aFormValue).some((value) => {
       return !!value;
     });
-  }
-
-  public holdingComparisonFunction(
-    option: PortfolioPosition,
-    value: PortfolioPosition
-  ): boolean {
-    if (value === null) {
-      return false;
-    }
-
-    return (
-      getAssetProfileIdentifier(option) === getAssetProfileIdentifier(value)
-    );
   }
 
   public initialize() {
