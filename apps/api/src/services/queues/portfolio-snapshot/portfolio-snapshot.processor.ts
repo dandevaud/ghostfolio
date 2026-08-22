@@ -1,7 +1,6 @@
 import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/account-balance.service';
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
-import { PortfolioSnapshotValue } from '@ghostfolio/api/app/portfolio/interfaces/snapshot-value.interface';
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import {
@@ -95,7 +94,7 @@ export class PortfolioSnapshotProcessor {
         JSON.stringify({
           expiration: expiration.getTime(),
           portfolioSnapshot: snapshot
-        } as unknown as PortfolioSnapshotValue),
+        }),
         CACHE_TTL_INFINITE
       );
 

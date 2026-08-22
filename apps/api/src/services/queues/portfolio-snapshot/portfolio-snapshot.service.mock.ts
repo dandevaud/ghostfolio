@@ -1,4 +1,3 @@
-import { PortfolioSnapshotValue } from '@ghostfolio/api/app/portfolio/interfaces/snapshot-value.interface';
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 
 import type { Job, JobId, JobOptions } from 'bull';
@@ -26,7 +25,7 @@ export const PortfolioSnapshotServiceMock = {
           JSON.stringify({
             expiration: Date.now() + ms('1 minute'),
             portfolioSnapshot: {}
-          } as unknown as PortfolioSnapshotValue)
+          })
         );
       }
     };
