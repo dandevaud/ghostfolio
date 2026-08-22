@@ -1,7 +1,8 @@
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
 import { Access, User } from '@ghostfolio/common/interfaces';
 import { publicRoutes } from '@ghostfolio/common/routes/routes';
-import { hasScope, scopes } from '@ghostfolio/common/scopes';
+import { getAccessLevel } from '@ghostfolio/common/scopes';
+import { GfAccessLevelIconComponent } from '@ghostfolio/ui/access-level-icon';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
@@ -27,8 +28,6 @@ import {
   createOutline,
   ellipsisHorizontal,
   linkOutline,
-  lockClosedOutline,
-  lockOpenOutline,
   removeCircleOutline
 } from 'ionicons/icons';
 import ms from 'ms';
@@ -38,6 +37,7 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ClipboardModule,
+    GfAccessLevelIconComponent,
     IonIcon,
     MatButtonModule,
     MatMenuModule,
@@ -71,6 +71,8 @@ export class GfAccessTableComponent {
     return columns;
   });
 
+  protected readonly getAccessLevel = getAccessLevel;
+
   protected readonly isLoading = computed(() => {
     return !this.accesses();
   });
@@ -85,8 +87,6 @@ export class GfAccessTableComponent {
       createOutline,
       ellipsisHorizontal,
       linkOutline,
-      lockClosedOutline,
-      lockOpenOutline,
       removeCircleOutline
     });
 
@@ -99,10 +99,6 @@ export class GfAccessTableComponent {
     const languageCode = this.user().settings.language;
 
     return `${this.baseUrl}/${languageCode}/${publicRoutes.public.path}/${aId}`;
-  }
-
-  protected hasScopeToReadValues({ scopes: scopesOfAccess }: Access) {
-    return hasScope(scopesOfAccess, scopes.portfolioReadValues);
   }
 
   protected onCopyUrlToClipboard(aId: string) {

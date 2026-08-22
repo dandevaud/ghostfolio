@@ -63,7 +63,7 @@ import {
   startOfYear,
   subDays
 } from 'date-fns';
-import { isNumber, sortBy, sum, uniqBy } from 'lodash';
+import { groupBy, isNumber, sortBy, sum, uniqBy } from 'lodash';
 
 import { ActivitiesService } from '../../activities/activities.service';
 
@@ -76,6 +76,9 @@ export abstract class PortfolioCalculator {
 
   protected accountBalanceItems: HistoricalDataItem[];
   protected activities: PortfolioOrder[];
+  protected activitiesBySymbol: {
+    [symbol: string]: PortfolioOrder[];
+  };
 
   protected configurationService: ConfigurationService;
   protected currency: string;
@@ -170,6 +173,10 @@ export abstract class PortfolioCalculator {
       .sort((a, b) => {
         return a.date?.localeCompare(b.date);
       });
+
+    this.activitiesBySymbol = groupBy(this.activities, ({ assetProfile }) => {
+      return assetProfile.symbol;
+    });
 
     this.portfolioSnapshotService = portfolioSnapshotService;
     this.redisCacheService = redisCacheService;

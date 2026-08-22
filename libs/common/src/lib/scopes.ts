@@ -1,4 +1,4 @@
-import { AccessPermission } from '@prisma/client';
+import { AccessLevel } from '@ghostfolio/common/types';
 
 /**
  * Scopes describe what a grantee may do on behalf of the granting user. They
@@ -7,54 +7,107 @@ import { AccessPermission } from '@prisma/client';
  * the authenticated user and never widen it.
  */
 export const scopes = {
+  accountCreate: 'account:create',
+  accountDelete: 'account:delete',
   accountRead: 'account:read',
+  accountUpdate: 'account:update',
+  activityCreate: 'activity:create',
+  activityDelete: 'activity:delete',
   activityRead: 'activity:read',
+  activityUpdate: 'activity:update',
   portfolioRead: 'portfolio:read',
   portfolioReadValues: 'portfolio:read:values',
+  watchlistCreate: 'watchlist:create',
+  watchlistDelete: 'watchlist:delete',
   watchlistRead: 'watchlist:read'
 } as const;
 
 export type Scope = (typeof scopes)[keyof typeof scopes];
 
-const SCOPES_OF_PUBLIC_ACCESS: Scope[] = [
+/**
+ * Scopes which read data
+ */
+export const SCOPES_OF_READ_ACCESS: readonly Scope[] = [
+  scopes.accountRead,
+  scopes.activityRead,
+  scopes.portfolioRead,
+  scopes.portfolioReadValues,
+  scopes.watchlistRead
+];
+
+/**
+ * Scopes which change data
+ */
+export const SCOPES_OF_WRITE_ACCESS: readonly Scope[] = [
+  scopes.accountCreate,
+  scopes.accountDelete,
+  scopes.accountUpdate,
+  scopes.activityCreate,
+  scopes.activityDelete,
+  scopes.activityUpdate,
+  scopes.watchlistCreate,
+  scopes.watchlistDelete
+];
+
+const SCOPES_OF_PUBLIC_ACCESS: readonly Scope[] = [
   scopes.activityRead,
   scopes.portfolioRead
 ];
 
-const SCOPES_OF_READ_ACCESS = Object.values(scopes);
-
-const SCOPES_OF_READ_RESTRICTED_ACCESS = SCOPES_OF_READ_ACCESS.filter(
-  (scope) => {
+export const SCOPES_OF_READ_RESTRICTED_ACCESS: readonly Scope[] =
+  SCOPES_OF_READ_ACCESS.filter((scope) => {
     return scope !== scopes.portfolioReadValues;
+  });
+
+/**
+ * Access level which the scopes of an access grant
+ */
+export function getAccessLevel(aScopes: string[] = []): AccessLevel {
+  if (hasAnyScopeOfWriteAccess(aScopes)) {
+    return 'CREATE_READ_UPDATE_DELETE';
   }
-);
+
+  return hasScope(aScopes, scopes.portfolioReadValues)
+    ? 'READ'
+    : 'READ_RESTRICTED';
+}
 
 export function getScopesOfAccess({
   granteeUserId,
-  permissions,
   scopes: scopesOfAccess
 }: {
   granteeUserId?: string | null;
-  permissions?: AccessPermission[];
   scopes?: string[];
 }): string[] {
-  if (!scopesOfAccess?.length) {
-    // TODO: Remove the derivation from the permissions once they have been
-    // dropped from the access
-    scopesOfAccess = permissions?.includes('READ')
-      ? SCOPES_OF_READ_ACCESS
-      : SCOPES_OF_READ_RESTRICTED_ACCESS;
-  }
+  const scopesToEvaluate = scopesOfAccess ?? [];
 
   if (granteeUserId) {
-    return [...scopesOfAccess];
+    // An unknown scope is dropped, so that a scope which has been removed from
+    // the vocabulary cannot stay effective
+    return Object.values(scopes).filter((scope) => {
+      return scopesToEvaluate.includes(scope);
+    });
   }
 
   // An access which has not been granted to a user is public, hence it is
   // narrowed to the scopes exposed by the public endpoints
   return SCOPES_OF_PUBLIC_ACCESS.filter((scope) => {
-    return scopesOfAccess.includes(scope);
+    return scopesToEvaluate.includes(scope);
   });
+}
+
+/**
+ * Scopes which an access level grants
+ */
+export function getScopesOfAccessLevel(aAccessLevel: AccessLevel): Scope[] {
+  switch (aAccessLevel) {
+    case 'CREATE_READ_UPDATE_DELETE':
+      return [...SCOPES_OF_READ_ACCESS, ...SCOPES_OF_WRITE_ACCESS];
+    case 'READ':
+      return [...SCOPES_OF_READ_ACCESS];
+    default:
+      return [...SCOPES_OF_READ_RESTRICTED_ACCESS];
+  }
 }
 
 /**
@@ -71,6 +124,12 @@ export function getScopesOfOwnAccess(): string[] {
  */
 export function getScopesOfUnrestrictedImpersonation(): string[] {
   return [...SCOPES_OF_READ_RESTRICTED_ACCESS];
+}
+
+export function hasAnyScopeOfWriteAccess(aScopes: string[] = []) {
+  return SCOPES_OF_WRITE_ACCESS.some((scope) => {
+    return hasScope(aScopes, scope);
+  });
 }
 
 export function hasScope(aScopes: string[] = [], aScope: Scope) {

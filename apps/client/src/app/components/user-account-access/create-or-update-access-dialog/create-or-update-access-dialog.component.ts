@@ -1,8 +1,16 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { CreateAccessDto, UpdateAccessDto } from '@ghostfolio/common/dtos';
 import { Filter, PortfolioPosition } from '@ghostfolio/common/interfaces';
-import { AccountWithPlatform } from '@ghostfolio/common/types';
+import {
+  Scope,
+  getAccessLevel,
+  getScopesOfAccessLevel,
+  hasScope,
+  scopes
+} from '@ghostfolio/common/scopes';
+import { AccessLevel, AccountWithPlatform } from '@ghostfolio/common/types';
 import { validateObjectForForm } from '@ghostfolio/common/utils';
+import { GfAccessLevelIconComponent } from '@ghostfolio/ui/access-level-icon';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import {
   GfPortfolioFilterFormComponent,
@@ -40,7 +48,6 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { AccessPermission } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 import { EMPTY, catchError } from 'rxjs';
 
@@ -51,6 +58,7 @@ import { CreateOrUpdateAccessDialogParams } from './interfaces/interfaces';
   host: { class: 'h-100' },
   imports: [
     FormsModule,
+    GfAccessLevelIconComponent,
     GfPortfolioFilterFormComponent,
     MatButtonModule,
     MatDialogModule,
@@ -100,20 +108,21 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
     );
   }
 
+  public get canGrantWriteAccess() {
+    return this.hasExperimentalFeatures;
+  }
+
   public ngOnInit() {
     const access = this.data?.access;
     const isPublic = access?.type === 'PUBLIC';
 
     this.accessForm = this.formBuilder.group({
+      accessLevel: getAccessLevel(access?.scopes),
       alias: [access?.alias ?? ''],
       filters: [null],
       granteeUserId: [
         access?.grantee ?? null,
         isPublic ? null : Validators.required
-      ],
-      permissions: [
-        access?.permissions[0] ?? AccessPermission.READ_RESTRICTED,
-        Validators.required
       ],
       type: [
         { disabled: this.mode === 'update', value: access?.type ?? 'PRIVATE' },
@@ -139,7 +148,6 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
       ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((accessType) => {
         const granteeUserIdControl = this.accessForm.get('granteeUserId');
-        const permissionsControl = this.accessForm.get('permissions');
 
         if (accessType === 'PRIVATE') {
           granteeUserIdControl?.setValidators(Validators.required);
@@ -147,9 +155,10 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
         } else {
           granteeUserIdControl?.clearValidators();
           granteeUserIdControl?.setValue(null);
-          permissionsControl?.setValue(
-            access?.permissions[0] ?? AccessPermission.READ_RESTRICTED
-          );
+
+          // A public access never exposes the monetary values and never
+          // changes data
+          this.accessForm.get('accessLevel')?.setValue('READ_RESTRICTED');
         }
 
         granteeUserIdControl?.updateValueAndValidity();
@@ -158,6 +167,10 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
       });
 
     this.loadHoldings();
+  }
+
+  protected get accessLevel(): AccessLevel {
+    return this.accessForm?.get('accessLevel')?.value as AccessLevel;
   }
 
   protected onCancel() {
@@ -178,6 +191,21 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
     );
   }
 
+  private buildScopes(): Scope[] {
+    const scopesOfAccess = this.data.access?.scopes ?? [];
+
+    if (
+      scopesOfAccess.length > 0 &&
+      this.accessLevel === getAccessLevel(scopesOfAccess)
+    ) {
+      return Object.values(scopes).filter((scope) => {
+        return hasScope(scopesOfAccess, scope);
+      });
+    }
+
+    return getScopesOfAccessLevel(this.accessLevel);
+  }
+
   private async createAccess() {
     const filters = this.buildFilters();
 
@@ -185,7 +213,7 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
       alias: this.accessForm.get('alias')?.value,
       filters: filters.length > 0 ? filters : undefined,
       granteeUserId: this.accessForm.get('granteeUserId')?.value,
-      permissions: [this.accessForm.get('permissions')?.value]
+      scopes: this.buildScopes()
     };
 
     try {
@@ -244,7 +272,7 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
       filters: filters.length > 0 ? filters : undefined,
       granteeUserId: this.accessForm.get('granteeUserId')?.value,
       id: accessId,
-      permissions: [this.accessForm.get('permissions')?.value]
+      scopes: this.buildScopes()
     };
 
     try {

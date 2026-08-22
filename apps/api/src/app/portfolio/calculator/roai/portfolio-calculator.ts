@@ -3,7 +3,7 @@ import { PortfolioCalculatorPosition } from '@ghostfolio/api/app/portfolio/inter
 import { PortfolioOrderItem } from '@ghostfolio/api/app/portfolio/interfaces/portfolio-order-item.interface';
 import { getFactor } from '@ghostfolio/api/helper/portfolio.helper';
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
-import { DATE_FORMAT } from '@ghostfolio/common/helper';
+import { DATE_FORMAT, parseDate } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   SymbolMetrics
@@ -21,7 +21,7 @@ import {
   isBefore,
   isThisYear
 } from 'date-fns';
-import { cloneDeep, sortBy } from 'lodash';
+import { sortBy } from 'lodash';
 
 export class RoaiPortfolioCalculator extends PortfolioCalculator {
   private chartDates: string[];
@@ -192,12 +192,13 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
     let valueAtStartDate: Big;
     let valueAtStartDateWithCurrencyEffect: Big;
 
-    // Deep clone as the items are enriched below and the originals are shared
-    let orders: PortfolioOrderItem[] = cloneDeep(
-      this.activities.filter((activities) => {
-        return activities.assetProfile.symbol === symbol;
-      })
-    );
+    // Copy the items as they are enriched below. A shallow copy is sufficient
+    // because only top-level properties are written.
+    let orders: PortfolioOrderItem[] = (
+      this.activitiesBySymbol[symbol] ?? []
+    ).map((activity) => {
+      return { ...activity };
+    });
 
     const isCash = orders[0]?.assetProfile?.assetSubClass === 'CASH';
 
@@ -269,37 +270,8 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
       }
     }
 
-    // The dividends, the interest and the liabilities are derived from the
-    // activities only. Accumulate them upfront so that they survive the bail
-    // out for symbols without a market price below.
-    for (const order of orders) {
-      const exchangeRateAtOrderDate = exchangeRates[order.date];
-
-      if (order.type === 'DIVIDEND') {
-        const dividend = order.quantity.mul(order.unitPrice);
-
-        totalDividend = totalDividend.plus(dividend);
-        totalDividendInBaseCurrency = totalDividendInBaseCurrency.plus(
-          dividend.mul(exchangeRateAtOrderDate ?? 1)
-        );
-      } else if (order.type === 'INTEREST') {
-        const interest = order.quantity.mul(order.unitPrice);
-
-        totalInterest = totalInterest.plus(interest);
-        totalInterestInBaseCurrency = totalInterestInBaseCurrency.plus(
-          interest.mul(exchangeRateAtOrderDate ?? 1)
-        );
-      } else if (order.type === 'LIABILITY') {
-        const liabilities = order.quantity.mul(order.unitPrice);
-
-        totalLiabilities = totalLiabilities.plus(liabilities);
-        totalLiabilitiesInBaseCurrency = totalLiabilitiesInBaseCurrency.plus(
-          liabilities.mul(exchangeRateAtOrderDate ?? 1)
-        );
-      }
-    }
-
-    const dateOfFirstTransaction = new Date(orders[0].date);
+    const dateStringOfFirstActivity = orders[0].date;
+    const dateOfFirstActivity = parseDate(dateStringOfFirstActivity);
 
     const endDateString = format(end, DATE_FORMAT);
     const startDateString = format(start, DATE_FORMAT);
@@ -307,7 +279,7 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
     const unitPriceAtStartDate = marketSymbolMap[startDateString]?.[symbol];
     let unitPriceAtEndDate = marketSymbolMap[endDateString]?.[symbol];
 
-    let latestActivity = orders.at(-1);
+    const latestActivity = orders.at(-1);
 
     if (
       dataSource === 'MANUAL' &&
@@ -324,7 +296,7 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
 
     if (
       !unitPriceAtEndDate ||
-      (!unitPriceAtStartDate && isBefore(dateOfFirstTransaction, start))
+      (!unitPriceAtStartDate && isBefore(dateOfFirstActivity, start))
     ) {
       // A missing market price can only affect the quantity which is held. The
       // dividends, the interest and the liabilities do not hold any quantity
@@ -399,7 +371,9 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
       unitPrice: unitPriceAtEndDate
     });
 
-    let lastUnitPrice: Big;
+    // Fall back to the unit price at the end date for the chart dates before
+    // the first known market price of the symbol
+    let lastUnitPrice = unitPriceAtEndDate;
 
     const ordersByDate: { [date: string]: PortfolioOrderItem[] } = {};
 
@@ -425,23 +399,24 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
             marketSymbolMap[dateString]?.[symbol] ?? lastUnitPrice;
         }
       } else {
-        orders.push({
-          assetProfile,
-          date: dateString,
-          fee: new Big(0),
-          feeInBaseCurrency: new Big(0),
-          quantity: new Big(0),
-          type: 'BUY',
-          unitPrice: marketSymbolMap[dateString]?.[symbol] ?? lastUnitPrice,
-          unitPriceFromMarketData:
-            marketSymbolMap[dateString]?.[symbol] ?? lastUnitPrice
-        });
+        const unitPrice =
+          marketSymbolMap[dateString]?.[symbol] ?? lastUnitPrice;
+
+        if (dateString >= dateStringOfFirstActivity) {
+          orders.push({
+            assetProfile,
+            unitPrice,
+            date: dateString,
+            fee: new Big(0),
+            feeInBaseCurrency: new Big(0),
+            quantity: new Big(0),
+            type: 'BUY',
+            unitPriceFromMarketData: unitPrice
+          });
+        }
+
+        lastUnitPrice = unitPrice;
       }
-
-      latestActivity = orders.at(-1);
-
-      lastUnitPrice =
-        latestActivity.unitPriceFromMarketData ?? latestActivity.unitPrice;
     }
 
     // Sort orders so that the start and end placeholder order are at the correct

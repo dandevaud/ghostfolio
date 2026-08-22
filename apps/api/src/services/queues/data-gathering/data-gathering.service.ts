@@ -313,7 +313,12 @@ export class DataGatheringService {
     });
   }
 
-  public async gatherSymbol({ dataSource, date, symbol }: DataGatheringItem) {
+  public async gatherSymbol({
+    dataSource,
+    date,
+    force = true,
+    symbol
+  }: DataGatheringItem) {
     const dataGatheringItems = (await this.getSymbolsMax())
       .filter((dataGatheringItem) => {
         return (
@@ -328,7 +333,7 @@ export class DataGatheringService {
 
     return this.gatherSymbols({
       dataGatheringItems,
-      force: true,
+      force,
       priority: DATA_GATHERING_QUEUE_PRIORITY_HIGH
     });
   }

@@ -4,7 +4,6 @@ import { registerChartConfiguration } from '@ghostfolio/ui/chart';
 import { GF_ENVIRONMENT } from '@ghostfolio/ui/environment';
 import { GfNotificationModule } from '@ghostfolio/ui/notifications';
 
-import { Platform } from '@angular/cdk/platform';
 import {
   provideHttpClient,
   withInterceptorsFromDi
@@ -17,7 +16,6 @@ import {
 import {
   DateAdapter,
   MAT_DATE_FORMATS,
-  MAT_DATE_LOCALE,
   MatNativeDateModule
 } from '@angular/material/core';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -35,7 +33,6 @@ import { GfAppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { authInterceptorProviders } from './app/core/auth.interceptor';
 import { httpResponseInterceptorProviders } from './app/core/http-response.interceptor';
-import { LanguageService } from './app/core/language.service';
 import { ModulePreloadService } from './app/core/module-preload.service';
 import { PageTitleStrategy } from './app/services/page-title.strategy';
 import { environment } from './environments/environment';
@@ -78,7 +75,6 @@ import { environment } from './environments/environment';
           registrationStrategy: 'registerImmediately'
         })
       ),
-      LanguageService,
       ModulePreloadService,
       provideHttpClient(withInterceptorsFromDi()),
       provideIonicAngular(),
@@ -86,7 +82,6 @@ import { environment } from './environments/environment';
       provideNgxSkeletonLoader(),
       provideZoneChangeDetection(),
       {
-        deps: [LanguageService, MAT_DATE_LOCALE, Platform],
         provide: DateAdapter,
         useClass: CustomDateAdapter
       },

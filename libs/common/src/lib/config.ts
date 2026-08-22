@@ -73,6 +73,9 @@ export const DATA_GATHERING_QUEUE_PRIORITY_MEDIUM = Math.round(
   DATA_GATHERING_QUEUE_PRIORITY_LOW / 2
 );
 
+export const DATA_SOURCES_GHOSTFOLIO_DATA_PROVIDER_SETUP_PERIOD = ms('2 weeks');
+export const DATA_SOURCES_GHOSTFOLIO_DATA_PROVIDER_SETUP_PERIOD_MAX_REQUESTS_FACTOR = 2;
+
 /**
  * The named date ranges, complemented by the calendar years like '2024',
  * '2023', '2022', etc.
@@ -119,6 +122,7 @@ export const DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT =
   ms('30 seconds');
 
 export const DEFAULT_REDACTED_PATHS = [
+  'account.comment',
   'accounts[*].balance',
   'accounts[*].balanceInBaseCurrency',
   'accounts[*].comment',
@@ -137,6 +141,8 @@ export const DEFAULT_REDACTED_PATHS = [
   'activities[*].quantity',
   'activities[*].value',
   'activities[*].valueInBaseCurrency',
+  'assetProfile.symbolMapping',
+  'assetProfile.watchedByCount',
   'balance',
   'balanceInBaseCurrency',
   'balances[*].account.comment',
@@ -144,6 +150,8 @@ export const DEFAULT_REDACTED_PATHS = [
   'balances[*].valueInBaseCurrency',
   'comment',
   'dividendInBaseCurrency',
+  'fee',
+  'feeInAssetProfileCurrency',
   'feeInBaseCurrency',
   'grossPerformance',
   'grossPerformanceWithCurrencyEffect',
@@ -272,6 +280,9 @@ export const HEADER_KEY_IMPERSONATION = 'Impersonation-Id';
 export const HEADER_KEY_TIMEZONE = 'Timezone';
 export const HEADER_KEY_TOKEN = 'Authorization';
 export const HEADER_KEY_SKIP_INTERCEPTOR = 'X-Skip-Interceptor';
+
+export const HTTP_RESPONSE_MESSAGE_IMPERSONATION_UNRESOLVED =
+  'The impersonation identifier cannot be resolved';
 
 export const MAX_TOP_HOLDINGS = 50;
 
