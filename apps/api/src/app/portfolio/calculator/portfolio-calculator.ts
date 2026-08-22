@@ -905,6 +905,7 @@ export abstract class PortfolioCalculator {
   protected getHistoricalDataItems(accumulatedValuesByDate: {
     [date: string]: {
       investmentValueWithCurrencyEffect: Big;
+      totalCashValueWithCurrencyEffect: Big;
       totalCurrentValue: Big;
       totalCurrentValueWithCurrencyEffect: Big;
       totalInvestmentValue: Big;
@@ -913,6 +914,7 @@ export abstract class PortfolioCalculator {
       totalNetPerformanceValueWithCurrencyEffect: Big;
       totalTimeWeightedInvestmentValue: Big;
       totalTimeWeightedInvestmentValueWithCurrencyEffect: Big;
+      totalNetWorthValueWithCurrencyEffect: Big;
     };
   }): HistoricalDataItem[] {
     let previousDateString = '';
@@ -928,7 +930,9 @@ export abstract class PortfolioCalculator {
         totalNetPerformanceValue,
         totalNetPerformanceValueWithCurrencyEffect,
         totalTimeWeightedInvestmentValue,
-        totalTimeWeightedInvestmentValueWithCurrencyEffect
+        totalTimeWeightedInvestmentValueWithCurrencyEffect,
+        totalCashValueWithCurrencyEffect,
+        totalNetWorthValueWithCurrencyEffect
       } = values;
 
       const netPerformanceInPercentage = totalTimeWeightedInvestmentValue.eq(0)
@@ -972,7 +976,8 @@ export abstract class PortfolioCalculator {
         netPerformanceWithCurrencyEffect:
           totalNetPerformanceValueWithCurrencyEffect.toNumber(),
         // TODO: Add valuables
-        netWorth: totalCurrentValueWithCurrencyEffect.toNumber(),
+        totalCashInBaseCurrency: totalCashValueWithCurrencyEffect.toNumber(),
+        netWorth: totalNetWorthValueWithCurrencyEffect.toNumber(),
         totalInvestment: totalInvestmentValue.toNumber(),
         totalInvestmentValueWithCurrencyEffect:
           totalInvestmentValueWithCurrencyEffect.toNumber(),

@@ -1,3 +1,4 @@
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
   assetProfileDummyData,
@@ -65,6 +66,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+  let activitiesService: ActivitiesService;
 
   beforeEach(() => {
     PortfolioSnapshotServiceMock.reset();
@@ -73,6 +75,20 @@ describe('PortfolioCalculator', () => {
     configurationService = new ConfigurationService();
 
     currentRateService = new CurrentRateService(null, null, null, null);
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
 
     exchangeRateDataService = new ExchangeRateDataService(
       null,
@@ -90,7 +106,8 @@ describe('PortfolioCalculator', () => {
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService
+      redisCacheService,
+      activitiesService
     );
   });
 

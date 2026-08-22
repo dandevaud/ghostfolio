@@ -11,6 +11,7 @@ import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.s
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
+import { AssetProfileSplitService } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
@@ -123,12 +124,30 @@ describe('PortfolioCalculator', () => {
 
     portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
+    activitiesService = new ActivitiesService(
+      accountBalanceService,
+      accountService,
+      {
+        getSplitsByUserId: jest.fn().mockResolvedValue([])
+      } as unknown as AssetProfileSplitService,
+      null,
+      null,
+      dataProviderService,
+      null,
+      exchangeRateDataService,
+      null,
+      null,
+      null,
+      null
+    );
+
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService
+      redisCacheService,
+      activitiesService
     );
   });
 
@@ -312,7 +331,9 @@ describe('PortfolioCalculator', () => {
         totalInvestment: 1820,
         totalInvestmentValueWithCurrencyEffect: 1750,
         value: 1820,
-        valueWithCurrencyEffect: 1820
+        valueWithCurrencyEffect: 1820,
+        timeWeightedPerformanceInPercentage: 0,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0.07058823529411765
       });
     });
 
@@ -450,7 +471,9 @@ describe('PortfolioCalculator', () => {
         totalInvestment: 0,
         totalInvestmentValueWithCurrencyEffect: 0,
         value: 0,
-        valueWithCurrencyEffect: 0
+        valueWithCurrencyEffect: 0,
+        timeWeightedPerformanceInPercentage: 0,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0
       });
     });
 
@@ -592,7 +615,9 @@ describe('PortfolioCalculator', () => {
         totalInvestment: 200,
         totalInvestmentValueWithCurrencyEffect: 200,
         value: 200,
-        valueWithCurrencyEffect: 200
+        valueWithCurrencyEffect: 200,
+        timeWeightedPerformanceInPercentage: 0,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0
       });
     });
   });

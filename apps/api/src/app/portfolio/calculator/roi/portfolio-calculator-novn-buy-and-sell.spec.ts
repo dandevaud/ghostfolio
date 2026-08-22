@@ -1,3 +1,4 @@
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
   loadExportFile,
@@ -74,6 +75,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+  let activitiesService: ActivitiesService;
 
   beforeAll(() => {
     activityDtos = loadExportFile(
@@ -100,12 +102,28 @@ describe('PortfolioCalculator', () => {
 
     redisCacheService = new RedisCacheService(null, null);
 
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
+
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService
+      redisCacheService,
+      activitiesService
     );
   });
 
@@ -158,7 +176,7 @@ describe('PortfolioCalculator', () => {
         netWorth: 0,
         timeWeightedPerformanceInPercentage: 0,
         timeWeightedPerformanceInPercentageWithCurrencyEffect: 0,
-        totalAccountBalance: 0,
+        totalCashInBaseCurrency: 0,
         totalInvestment: 0,
         totalInvestmentValueWithCurrencyEffect: 0,
         value: 0,
@@ -175,7 +193,7 @@ describe('PortfolioCalculator', () => {
         timeWeightedPerformanceInPercentage: 0,
         timeWeightedPerformanceInPercentageWithCurrencyEffect: 0,
         netWorth: 151.6,
-        totalAccountBalance: 0,
+        totalCashInBaseCurrency: 0,
         totalInvestment: 151.6,
         totalInvestmentValueWithCurrencyEffect: 151.6,
         value: 151.6,
@@ -196,7 +214,7 @@ describe('PortfolioCalculator', () => {
         timeWeightedPerformanceInPercentageWithCurrencyEffect: 0.13100263852242744,
         netPerformanceWithCurrencyEffect: 19.86,
         netWorth: 0,
-        totalAccountBalance: 0,
+        totalCashInBaseCurrency: 0,
         totalInvestment: 0,
         totalInvestmentValueWithCurrencyEffect: 0,
         value: 0,

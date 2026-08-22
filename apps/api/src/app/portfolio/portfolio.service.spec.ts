@@ -81,7 +81,8 @@ describe('PortfolioService', () => {
       null,
       exchangeRateDataService,
       null,
-      null
+      null,
+      activitiesService
     );
 
     symbolProfileService = new SymbolProfileService(null);
@@ -352,7 +353,8 @@ describe('PortfolioService', () => {
           totalInvestment: new Big(2000),
           totalInvestmentWithCurrencyEffect: new Big(2000)
         }),
-        getStartDate: jest.fn().mockReturnValue(parseDate('2024-01-01'))
+        getStartDate: jest.fn().mockReturnValue(parseDate('2024-01-01')),
+        getUnfilteredNetWorth: jest.fn().mockResolvedValue(new Big(3000))
       } as unknown as PortfolioCalculator;
     }
 

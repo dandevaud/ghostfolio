@@ -1,3 +1,4 @@
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
   assetProfileDummyData,
@@ -69,6 +70,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+  let activitiesService: ActivitiesService;
 
   beforeAll(() => {
     exportResponse = loadExportFile(
@@ -95,12 +97,28 @@ describe('PortfolioCalculator', () => {
 
     redisCacheService = new RedisCacheService(null, null);
 
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
+
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService
+      redisCacheService,
+      activitiesService
     );
   });
 
@@ -165,7 +183,9 @@ describe('PortfolioCalculator', () => {
         totalInvestment: 0,
         totalInvestmentValueWithCurrencyEffect: 0,
         value: 0,
-        valueWithCurrencyEffect: 0
+        valueWithCurrencyEffect: 0,
+        timeWeightedPerformanceInPercentage: 0,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0
       });
 
       /**
@@ -183,7 +203,9 @@ describe('PortfolioCalculator', () => {
         totalInvestment: 44558.42,
         totalInvestmentValueWithCurrencyEffect: 44558.42,
         value: 50098.3, // 1 * 50098.3 = 50098.3
-        valueWithCurrencyEffect: 50098.3
+        valueWithCurrencyEffect: 50098.3,
+        timeWeightedPerformanceInPercentage: 0,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect: 0
       });
 
       expect(
@@ -202,7 +224,10 @@ describe('PortfolioCalculator', () => {
         totalInvestment: 44558.42,
         totalInvestmentValueWithCurrencyEffect: 44558.42,
         value: 43099.7,
-        valueWithCurrencyEffect: 43099.7
+        valueWithCurrencyEffect: 43099.7,
+        timeWeightedPerformanceInPercentage: -0.13969735500006986,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect:
+          -0.13969735500006986
       });
 
       expect(portfolioSnapshot).toMatchObject({
