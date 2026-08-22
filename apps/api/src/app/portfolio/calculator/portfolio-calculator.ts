@@ -616,54 +616,9 @@ export abstract class PortfolioCalculator {
       }
     }
 
-    const historicalData: HistoricalDataItem[] = Object.entries(
+    const historicalData: HistoricalDataItem[] = this.getHistoricalDataItems(
       accumulatedValuesByDate
-    ).map(([date, values]) => {
-      const {
-        investmentValueWithCurrencyEffect,
-        totalCashValueWithCurrencyEffect,
-        totalCurrentValue,
-        totalCurrentValueWithCurrencyEffect,
-        totalInvestmentValue,
-        totalInvestmentValueWithCurrencyEffect,
-        totalNetPerformanceValue,
-        totalNetPerformanceValueWithCurrencyEffect,
-        totalNetWorthValueWithCurrencyEffect,
-        totalTimeWeightedInvestmentValue,
-        totalTimeWeightedInvestmentValueWithCurrencyEffect
-      } = values;
-
-      const netPerformanceInPercentage = totalTimeWeightedInvestmentValue.eq(0)
-        ? 0
-        : totalNetPerformanceValue
-            .div(totalTimeWeightedInvestmentValue)
-            .toNumber();
-
-      const netPerformanceInPercentageWithCurrencyEffect =
-        totalTimeWeightedInvestmentValueWithCurrencyEffect.eq(0)
-          ? 0
-          : totalNetPerformanceValueWithCurrencyEffect
-              .div(totalTimeWeightedInvestmentValueWithCurrencyEffect)
-              .toNumber();
-
-      return {
-        date,
-        netPerformanceInPercentage,
-        netPerformanceInPercentageWithCurrencyEffect,
-        investmentValueWithCurrencyEffect:
-          investmentValueWithCurrencyEffect.toNumber(),
-        netPerformance: totalNetPerformanceValue.toNumber(),
-        netPerformanceWithCurrencyEffect:
-          totalNetPerformanceValueWithCurrencyEffect.toNumber(),
-        netWorth: totalNetWorthValueWithCurrencyEffect.toNumber(),
-        totalCashInBaseCurrency: totalCashValueWithCurrencyEffect.toNumber(),
-        totalInvestment: totalInvestmentValue.toNumber(),
-        totalInvestmentValueWithCurrencyEffect:
-          totalInvestmentValueWithCurrencyEffect.toNumber(),
-        value: totalCurrentValue.toNumber(),
-        valueWithCurrencyEffect: totalCurrentValueWithCurrencyEffect.toNumber()
-      };
-    });
+    );
 
     const overall = this.calculateOverallPerformance(positions);
 
@@ -947,7 +902,6 @@ export abstract class PortfolioCalculator {
   protected getHistoricalDataItems(accumulatedValuesByDate: {
     [date: string]: {
       investmentValueWithCurrencyEffect: Big;
-      totalAccountBalanceWithCurrencyEffect: Big;
       totalCurrentValue: Big;
       totalCurrentValueWithCurrencyEffect: Big;
       totalInvestmentValue: Big;
@@ -964,7 +918,6 @@ export abstract class PortfolioCalculator {
     return Object.entries(accumulatedValuesByDate).map(([date, values]) => {
       const {
         investmentValueWithCurrencyEffect,
-        totalAccountBalanceWithCurrencyEffect,
         totalCurrentValue,
         totalCurrentValueWithCurrencyEffect,
         totalInvestmentValue,
@@ -1016,10 +969,7 @@ export abstract class PortfolioCalculator {
         netPerformanceWithCurrencyEffect:
           totalNetPerformanceValueWithCurrencyEffect.toNumber(),
         // TODO: Add valuables
-        netWorth: totalCurrentValueWithCurrencyEffect
-          .plus(totalAccountBalanceWithCurrencyEffect)
-          .toNumber(),
-        totalAccountBalance: totalAccountBalanceWithCurrencyEffect.toNumber(),
+        netWorth: totalCurrentValueWithCurrencyEffect.toNumber(),
         totalInvestment: totalInvestmentValue.toNumber(),
         totalInvestmentValueWithCurrencyEffect:
           totalInvestmentValueWithCurrencyEffect.toNumber(),
@@ -1637,7 +1587,6 @@ export abstract class PortfolioCalculator {
     accumulatedValuesByDate: {
       [date: string]: {
         investmentValueWithCurrencyEffect: Big;
-        totalAccountBalanceWithCurrencyEffect: Big;
         totalCurrentValue: Big;
         totalCurrentValueWithCurrencyEffect: Big;
         totalInvestmentValue: Big;

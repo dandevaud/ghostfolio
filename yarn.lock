@@ -3264,7 +3264,7 @@
   dependencies:
     "@types/mdx" "^2.0.0"
 
-"@modelcontextprotocol/sdk@1.30.0", "@modelcontextprotocol/sdk@npm:@modelcontextprotocol/sdk@^1.26.0":
+"@modelcontextprotocol/sdk@1.30.0", "@modelcontextprotocol/sdk@npm:@modelcontextprotocol/sdk@^1.30.0":
   version "1.30.0"
   resolved "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.0.tgz"
   integrity sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==
@@ -4910,10 +4910,10 @@
   resolved "https://registry.npmjs.org/@types/ms/-/ms-2.1.0.tgz"
   integrity sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==
 
-"@types/node@*", "@types/node@^20.19.0 || >=22.12.0", "@types/node@>=18", "@types/node@22.15.17":
-  version "22.15.17"
-  resolved "https://registry.npmjs.org/@types/node/-/node-22.15.17.tgz"
-  integrity sha512-wIX2aSZL5FE+MR0JlvF87BNVrtFWf6AE6rxSE9X7OwnVvoyCQjpzSRJ+M87se/4QCkCiebQAqrJ0y6fwIyi7nw==
+"@types/node@*", "@types/node@^20.19.0 || >=22.12.0", "@types/node@>=18", "@types/node@22.20.1":
+  version "22.20.1"
+  resolved "https://registry.npmjs.org/@types/node/-/node-22.20.1.tgz"
+  integrity sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==
   dependencies:
     undici-types "~6.21.0"
 
@@ -14800,7 +14800,7 @@ token-types@^6.1.1:
     "@tokenizer/token" "^0.3.0"
     ieee754 "^1.2.1"
 
-"tough-cookie-file-store@npm:tough-cookie-file-store@^3.0.0":
+"tough-cookie-file-store@npm:tough-cookie-file-store@^3.3.0":
   version "3.3.0"
   resolved "https://registry.npmjs.org/tough-cookie-file-store/-/tough-cookie-file-store-3.3.0.tgz"
   integrity sha512-FbO/cOi/jp4wweo8soVNG/ZjDsgpBZWqaxWwu7gRKvsjg/Qt44kStp87VLfJnin749DlTbZDYvV1wuSr5jly2g==
@@ -14814,10 +14814,10 @@ tough-cookie@^5.1.1:
   dependencies:
     tldts "^6.1.32"
 
-tough-cookie@^6.0.0, tough-cookie@^6.0.1, "tough-cookie@npm:tough-cookie@^6.0.0":
-  version "6.0.1"
-  resolved "https://registry.npmjs.org/tough-cookie/-/tough-cookie-6.0.1.tgz"
-  integrity sha512-LktZQb3IeoUWB9lqR5EWTHgW/VTITCXg4D21M+lvybRVdylLrRMnqaIONLVb5mav8vM19m44HIcGq4qASeu2Qw==
+tough-cookie@^6.0.0, tough-cookie@^6.0.1, "tough-cookie@npm:tough-cookie@^6.0.2":
+  version "6.0.2"
+  resolved "https://registry.npmjs.org/tough-cookie/-/tough-cookie-6.0.2.tgz"
+  integrity sha512-exgYmnmL/sJpR3upZfXG5PoatXQii55xAiXGXzY+sROLZ/Y+SLcp9PgJNI9Vz37HpQ74WvDcLT8eqm+kV3FzrA==
   dependencies:
     tldts "^7.0.5"
 
@@ -15853,18 +15853,18 @@ y18n@^5.0.5, y18n@5.0.8:
   resolved "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz"
   integrity sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==
 
-yahoo-finance2@4.0.0:
-  version "4.0.0"
-  resolved "https://registry.npmjs.org/yahoo-finance2/-/yahoo-finance2-4.0.0.tgz"
-  integrity sha512-3AUMLycIxGSKEf99nEedmsccBLAXyVajCfKlY+Vxsxx6ntsDlFYN1UdL6APGMFiRs8IBivn62eJT4Zj3WQdrlw==
+yahoo-finance2@4.0.2:
+  version "4.0.2"
+  resolved "https://registry.npmjs.org/yahoo-finance2/-/yahoo-finance2-4.0.2.tgz"
+  integrity sha512-wjNd6/l7dS7NrBPePbX8r2P/MkXK6bL86wW6Mqd34GuY3Kab2s80DkrYEchcOoS569Q0loQUztz3NeNxjd827A==
   dependencies:
     "@deno/shim-deno" "~0.18.0"
-    "@modelcontextprotocol/sdk" "npm:@modelcontextprotocol/sdk@^1.26.0"
+    "@modelcontextprotocol/sdk" "npm:@modelcontextprotocol/sdk@^1.30.0"
     fetch-mock-cache "npm:fetch-mock-cache@^3.1.0"
     json-schema "^0.4.0"
-    tough-cookie "npm:tough-cookie@^6.0.0"
-    tough-cookie-file-store "npm:tough-cookie-file-store@^3.0.0"
-    zod "npm:zod@^4.0.0"
+    tough-cookie "npm:tough-cookie@^6.0.2"
+    tough-cookie-file-store "npm:tough-cookie-file-store@^3.3.0"
+    zod "npm:zod@^4.4.3"
 
 yallist@^3.0.2:
   version "3.1.1"
@@ -15967,7 +15967,7 @@ zod-to-json-schema@^3.25.1:
   resolved "https://registry.npmjs.org/zod-to-json-schema/-/zod-to-json-schema-3.25.2.tgz"
   integrity sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==
 
-"zod@^3.25 || ^4.0", "zod@^3.25.28 || ^4", "zod@^3.25.76 || ^4.1.8", zod@^4.0.10, zod@4.4.3, "zod@npm:zod@^4.0.0":
+"zod@^3.25 || ^4.0", "zod@^3.25.28 || ^4", "zod@^3.25.76 || ^4.1.8", zod@^4.0.10, zod@4.4.3, "zod@npm:zod@^4.4.3":
   version "4.4.3"
   resolved "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz"
   integrity sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==
