@@ -11,7 +11,6 @@ import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.s
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
-import { AssetProfileSplitService } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
@@ -122,23 +121,6 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    activitiesService = new ActivitiesService(
-      accountBalanceService,
-      accountService,
-      {
-        getSplitsByUserId: jest.fn().mockResolvedValue([])
-      } as unknown as AssetProfileSplitService,
-      null,
-      null,
-      dataProviderService,
-      null,
-      exchangeRateDataService,
-      null,
-      null,
-      null,
-      null
-    );
-
     portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
@@ -146,8 +128,7 @@ describe('PortfolioCalculator', () => {
       currentRateService,
       exchangeRateDataService,
       portfolioSnapshotService,
-      redisCacheService,
-      activitiesService
+      redisCacheService
     );
   });
 

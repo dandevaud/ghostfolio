@@ -61,6 +61,12 @@ export class DataGatheringProcessor {
     name: GATHER_ASSET_PROFILE_PROCESS_JOB_NAME
   })
   public async gatherAssetProfile(job: Job<AssetProfileIdentifier>) {
+    if (!job.data?.dataSource || !job.data?.symbol) {
+      this.logger.error(
+        `Job ${job.id} has invalid/missing data: ${JSON.stringify(job.data)}`
+      );
+      return job.discard();
+    }
     const { dataSource, symbol } = job.data;
 
     try {
@@ -107,6 +113,12 @@ export class DataGatheringProcessor {
     name: GATHER_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
   })
   public async gatherHistoricalMarketData(job: Job<DataGatheringItem>) {
+    if (!job.data?.dataSource || !job.data?.symbol) {
+      this.logger.error(
+        `Job ${job.id} has invalid/missing data: ${JSON.stringify(job.data)}`
+      );
+      return job.discard();
+    }
     const { dataSource, date, force, symbol } = job.data;
 
     try {
@@ -220,6 +232,12 @@ export class DataGatheringProcessor {
     name: GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME
   })
   public async gatherMissingHistoricalMarketData(job: Job<DataGatheringItem>) {
+    if (!job.data?.dataSource || !job.data?.symbol) {
+      this.logger.error(
+        `Job ${job.id} has invalid/missing data: ${JSON.stringify(job.data)}`
+      );
+      return job.discard();
+    }
     const { dataSource, date, symbol } = job.data;
     try {
       Logger.log(
