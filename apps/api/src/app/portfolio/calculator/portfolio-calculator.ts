@@ -110,7 +110,8 @@ export abstract class PortfolioCalculator {
     filters,
     portfolioSnapshotService,
     redisCacheService,
-    userId
+    userId,
+    activitiesService
   }: {
     accountBalanceItems: HistoricalDataItem[];
     activities: Activity[];
@@ -122,6 +123,7 @@ export abstract class PortfolioCalculator {
     portfolioSnapshotService: PortfolioSnapshotService;
     redisCacheService: RedisCacheService;
     userId: string;
+    activitiesService: ActivitiesService;
   }) {
     this.accountBalanceItems = accountBalanceItems;
     this.configurationService = configurationService;
@@ -129,6 +131,7 @@ export abstract class PortfolioCalculator {
     this.currentRateService = currentRateService;
     this.exchangeRateDataService = exchangeRateDataService;
     this.filters = filters;
+    this.activitiesService = activitiesService;
 
     let dateOfFirstActivity = new Date();
 

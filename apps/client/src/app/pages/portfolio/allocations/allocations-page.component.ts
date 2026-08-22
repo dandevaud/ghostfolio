@@ -271,9 +271,6 @@ export class GfAllocationsPageComponent implements OnInit {
   private fetchPortfolioDetails() {
     return this.dataService.fetchPortfolioDetails({
       filters: this.userService.getFilters(),
-      parameters: {
-        isAllocation: true
-      },
       withMarkets: true
     });
   }
