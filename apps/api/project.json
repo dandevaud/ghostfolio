@@ -49,7 +49,8 @@
     "lint": {
       "executor": "@nx/eslint:lint",
       "options": {
-        "lintFilePatterns": ["apps/api/**/*.ts"]
+        "lintFilePatterns": ["apps/api/**/*.ts"],
+        "quiet": true
       }
     },
     "test": {

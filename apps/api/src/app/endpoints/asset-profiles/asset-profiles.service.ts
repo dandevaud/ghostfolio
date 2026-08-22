@@ -580,7 +580,7 @@ export class AssetProfilesService {
         let activitiesCount: EnhancedAssetProfile['activitiesCount'] = 0;
         let currency: EnhancedAssetProfile['currency'] = '-';
         let dateOfFirstActivity: EnhancedAssetProfile['dateOfFirstActivity'];
-        let tags: EnhancedAssetProfile['tags'] = [];
+        const tags: EnhancedAssetProfile['tags'] = [];
 
         if (isCurrency(getCurrencyFromSymbol(symbol))) {
           currency = getCurrencyFromSymbol(symbol);
