@@ -1,7 +1,7 @@
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
+import { DATE_RANGES } from '@ghostfolio/common/config';
 import { DATE_FORMAT } from '@ghostfolio/common/helper';
 import { SymbolMetrics } from '@ghostfolio/common/interfaces';
-import { DateRangeTypes } from '@ghostfolio/common/types/date-range.type';
 
 import { DataSource } from '@prisma/client';
 import { Big } from 'big.js';
@@ -31,7 +31,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     start: Date,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
-    for (const dateRange of DateRangeTypes) {
+    for (const dateRange of DATE_RANGES) {
       const dateInterval = getIntervalFromDateRange({
         dateRange,
         startDate: start
@@ -727,7 +727,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
             symbol,
             marketSymbolMap,
             lastUnitPrice,
-            orders.some((order) => order.SymbolProfile.assetSubClass === 'CASH')
+            orders.some((order) => order.assetProfile.assetSubClass === 'CASH')
           )
         );
       }
@@ -752,7 +752,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       fee: new Big(0),
       feeInBaseCurrency: new Big(0),
       quantity: new Big(0),
-      SymbolProfile: {
+      assetProfile: {
         dataSource,
         symbol,
         assetSubClass: isCash ? 'CASH' : undefined
@@ -787,7 +787,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       feeInBaseCurrency: new Big(0),
       itemType: 'start',
       quantity: new Big(0),
-      SymbolProfile: {
+      assetProfile: {
         dataSource,
         symbol,
         assetSubClass: isCash ? 'CASH' : undefined
@@ -801,7 +801,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       fee: new Big(0),
       feeInBaseCurrency: new Big(0),
       itemType: 'end',
-      SymbolProfile: {
+      assetProfile: {
         dataSource,
         symbol,
         assetSubClass: isCash ? 'CASH' : undefined
@@ -867,12 +867,12 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     order.unitPriceInBaseCurrency ??= this.marketSymbolMap[order.date]?.[
-      order.SymbolProfile.symbol
+      order.assetProfile.symbol
     ].mul(symbolMetricsHelper.currentExchangeRate);
 
     order.unitPriceInBaseCurrencyWithCurrencyEffect ??= this.marketSymbolMap[
       order.date
-    ]?.[order.SymbolProfile.symbol].mul(
+    ]?.[order.assetProfile.symbol].mul(
       symbolMetricsHelper.exchangeRateAtOrderDate
     );
   }

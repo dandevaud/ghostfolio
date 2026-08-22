@@ -1,5 +1,5 @@
 <div class="container">
-  <div class="mb-5 row">
+  <div class="row">
     <div class="col">
       <h1 class="d-none d-sm-block h3 mb-4 text-center" i18n>
         Discover Open Source Alternatives for Personal Finance Tools
@@ -22,12 +22,13 @@
         personalFinanceTool of personalFinanceTools;
         track personalFinanceTool
       ) {
-        <mat-card appearance="outlined" class="mb-3">
+        <mat-card appearance="outlined" [class.mb-3]="!$last">
           <mat-card-content class="p-0">
             <div class="container p-0">
               <div class="flex-nowrap no-gutters row">
                 <a
                   class="d-flex overflow-hidden p-3 w-100"
+                  i18n-title
                   title="Compare Ghostfolio to {{
                     personalFinanceTool.name
                   }} - {{ personalFinanceTool.slogan }}"

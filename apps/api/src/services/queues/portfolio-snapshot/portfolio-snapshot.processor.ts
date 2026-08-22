@@ -1,7 +1,6 @@
 import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/account-balance.service';
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
-import { PortfolioSnapshotValue } from '@ghostfolio/api/app/portfolio/interfaces/snapshot-value.interface';
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import {
@@ -21,6 +20,8 @@ import { PortfolioSnapshotQueueJob } from './interfaces/portfolio-snapshot-queue
 @Injectable()
 @Processor(PORTFOLIO_SNAPSHOT_COMPUTATION_QUEUE)
 export class PortfolioSnapshotProcessor {
+  private readonly logger = new Logger(PortfolioSnapshotProcessor.name);
+
   public constructor(
     private readonly accountBalanceService: AccountBalanceService,
     private readonly activitiesService: ActivitiesService,
@@ -41,9 +42,8 @@ export class PortfolioSnapshotProcessor {
     try {
       const startTime = performance.now();
 
-      Logger.log(
-        `Portfolio snapshot calculation of user '${job.data.userId}' has been started`,
-        `PortfolioSnapshotProcessor (${PORTFOLIO_SNAPSHOT_PROCESS_JOB_NAME})`
+      this.logger.log(
+        `Portfolio snapshot calculation of user '${job.data.userId}' has been started`
       );
 
       const { activities } =
@@ -72,12 +72,11 @@ export class PortfolioSnapshotProcessor {
 
       const snapshot = await portfolioCalculator.computeSnapshot();
 
-      Logger.log(
+      this.logger.log(
         `Portfolio snapshot calculation of user '${job.data.userId}' has been completed in ${(
           (performance.now() - startTime) /
           1000
-        ).toFixed(3)} seconds`,
-        `PortfolioSnapshotProcessor (${PORTFOLIO_SNAPSHOT_PROCESS_JOB_NAME})`
+        ).toFixed(3)} seconds`
       );
 
       const expiration = addMilliseconds(
@@ -87,7 +86,7 @@ export class PortfolioSnapshotProcessor {
           : 0
       );
 
-      this.redisCacheService.set(
+      await this.redisCacheService.set(
         this.redisCacheService.getPortfolioSnapshotKey({
           filters: job.data.filters,
           userId: job.data.userId
@@ -95,16 +94,13 @@ export class PortfolioSnapshotProcessor {
         JSON.stringify({
           expiration: expiration.getTime(),
           portfolioSnapshot: snapshot
-        } as unknown as PortfolioSnapshotValue),
+        }),
         CACHE_TTL_INFINITE
       );
 
       return snapshot;
     } catch (error) {
-      Logger.error(
-        error,
-        `PortfolioSnapshotProcessor (${PORTFOLIO_SNAPSHOT_PROCESS_JOB_NAME})`
-      );
+      this.logger.error(error.message);
 
       throw new Error(error);
     }

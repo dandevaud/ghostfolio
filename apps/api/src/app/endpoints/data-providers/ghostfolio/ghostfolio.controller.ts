@@ -8,6 +8,7 @@ import {
   DividendsResponse,
   HistoricalResponse,
   LookupResponse,
+  MarketDataOfMarketsResponse,
   QuotesResponse
 } from '@ghostfolio/common/interfaces';
 import { permissions } from '@ghostfolio/common/permissions';
@@ -19,6 +20,7 @@ import {
   HttpException,
   Inject,
   Param,
+  ParseIntPipe,
   Query,
   UseGuards,
   Version
@@ -46,16 +48,7 @@ export class GhostfolioController {
   public async getAssetProfile(
     @Param('symbol') symbol: string
   ): Promise<DataProviderGhostfolioAssetProfileResponse> {
-    const maxDailyRequests = await this.ghostfolioService.getMaxDailyRequests();
-
-    if (
-      this.request.user.dataProviderGhostfolioDailyRequests > maxDailyRequests
-    ) {
-      throw new HttpException(
-        getReasonPhrase(StatusCodes.TOO_MANY_REQUESTS),
-        StatusCodes.TOO_MANY_REQUESTS
-      );
-    }
+    await this.validateDailyRequestLimit();
 
     try {
       const assetProfile = await this.ghostfolioService.getAssetProfile({
@@ -88,25 +81,16 @@ export class GhostfolioController {
   @Version('2')
   public async getDividends(
     @Param('symbol') symbol: string,
-    @Query() query: GetDividendsDto
+    @Query() { from, granularity, to }: GetDividendsDto
   ): Promise<DividendsResponse> {
-    const maxDailyRequests = await this.ghostfolioService.getMaxDailyRequests();
-
-    if (
-      this.request.user.dataProviderGhostfolioDailyRequests > maxDailyRequests
-    ) {
-      throw new HttpException(
-        getReasonPhrase(StatusCodes.TOO_MANY_REQUESTS),
-        StatusCodes.TOO_MANY_REQUESTS
-      );
-    }
+    await this.validateDailyRequestLimit();
 
     try {
       const dividends = await this.ghostfolioService.getDividends({
+        granularity,
         symbol,
-        from: parseDate(query.from),
-        granularity: query.granularity,
-        to: parseDate(query.to)
+        from: parseDate(from),
+        to: parseDate(to)
       });
 
       await this.ghostfolioService.incrementDailyRequests({
@@ -128,25 +112,16 @@ export class GhostfolioController {
   @Version('2')
   public async getHistorical(
     @Param('symbol') symbol: string,
-    @Query() query: GetHistoricalDto
+    @Query() { from, granularity, to }: GetHistoricalDto
   ): Promise<HistoricalResponse> {
-    const maxDailyRequests = await this.ghostfolioService.getMaxDailyRequests();
-
-    if (
-      this.request.user.dataProviderGhostfolioDailyRequests > maxDailyRequests
-    ) {
-      throw new HttpException(
-        getReasonPhrase(StatusCodes.TOO_MANY_REQUESTS),
-        StatusCodes.TOO_MANY_REQUESTS
-      );
-    }
+    await this.validateDailyRequestLimit();
 
     try {
       const historicalData = await this.ghostfolioService.getHistorical({
+        granularity,
         symbol,
-        from: parseDate(query.from),
-        granularity: query.granularity,
-        to: parseDate(query.to)
+        from: parseDate(from),
+        to: parseDate(to)
       });
 
       await this.ghostfolioService.incrementDailyRequests({
@@ -171,16 +146,7 @@ export class GhostfolioController {
     @Query('query') query = ''
   ): Promise<LookupResponse> {
     const includeIndices = includeIndicesParam === 'true';
-    const maxDailyRequests = await this.ghostfolioService.getMaxDailyRequests();
-
-    if (
-      this.request.user.dataProviderGhostfolioDailyRequests > maxDailyRequests
-    ) {
-      throw new HttpException(
-        getReasonPhrase(StatusCodes.TOO_MANY_REQUESTS),
-        StatusCodes.TOO_MANY_REQUESTS
-      );
-    }
+    await this.validateDailyRequestLimit();
 
     try {
       const result = await this.ghostfolioService.lookup({
@@ -203,27 +169,46 @@ export class GhostfolioController {
     }
   }
 
+  @Get('markets')
+  @HasPermission(permissions.enableDataProviderGhostfolio)
+  @UseGuards(AuthGuard('api-key'), HasPermissionGuard)
+  public async getMarketDataOfMarkets(
+    @Query('includeHistoricalData', new ParseIntPipe({ optional: true }))
+    includeHistoricalData = 0
+  ): Promise<MarketDataOfMarketsResponse> {
+    await this.validateDailyRequestLimit();
+
+    try {
+      const marketDataOfMarkets =
+        await this.ghostfolioService.getMarketDataOfMarkets({
+          includeHistoricalData
+        });
+
+      await this.ghostfolioService.incrementDailyRequests({
+        userId: this.request.user.id
+      });
+
+      return marketDataOfMarkets;
+    } catch {
+      throw new HttpException(
+        getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('quotes')
   @HasPermission(permissions.enableDataProviderGhostfolio)
   @UseGuards(AuthGuard('api-key'), HasPermissionGuard)
   @Version('2')
   public async getQuotes(
-    @Query() query: GetQuotesDto
+    @Query() { symbols }: GetQuotesDto
   ): Promise<QuotesResponse> {
-    const maxDailyRequests = await this.ghostfolioService.getMaxDailyRequests();
-
-    if (
-      this.request.user.dataProviderGhostfolioDailyRequests > maxDailyRequests
-    ) {
-      throw new HttpException(
-        getReasonPhrase(StatusCodes.TOO_MANY_REQUESTS),
-        StatusCodes.TOO_MANY_REQUESTS
-      );
-    }
+    await this.validateDailyRequestLimit();
 
     try {
       const quotes = await this.ghostfolioService.getQuotes({
-        symbols: query.symbols
+        symbols
       });
 
       await this.ghostfolioService.incrementDailyRequests({
@@ -245,5 +230,18 @@ export class GhostfolioController {
   @Version('2')
   public async getStatus(): Promise<DataProviderGhostfolioStatusResponse> {
     return this.ghostfolioService.getStatus({ user: this.request.user });
+  }
+
+  private async validateDailyRequestLimit() {
+    if (
+      await this.ghostfolioService.isDailyRequestLimitExceeded({
+        user: this.request.user
+      })
+    ) {
+      throw new HttpException(
+        getReasonPhrase(StatusCodes.TOO_MANY_REQUESTS),
+        StatusCodes.TOO_MANY_REQUESTS
+      );
+    }
   }
 }

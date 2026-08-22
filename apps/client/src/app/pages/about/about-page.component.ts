@@ -1,20 +1,20 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { TabConfiguration, User } from '@ghostfolio/common/interfaces';
+import { User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { publicRoutes } from '@ghostfolio/common/routes/routes';
+import {
+  GfPageTabsComponent,
+  TabConfiguration
+} from '@ghostfolio/ui/page-tabs';
 import { DataService } from '@ghostfolio/ui/services';
 
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  CUSTOM_ELEMENTS_SCHEMA,
-  DestroyRef,
-  OnInit
+  DestroyRef
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatTabsModule } from '@angular/material/tabs';
-import { RouterModule } from '@angular/router';
-import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   documentTextOutline,
@@ -24,18 +24,16 @@ import {
   shieldCheckmarkOutline,
   sparklesOutline
 } from 'ionicons/icons';
-import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
-  host: { class: 'page has-tabs' },
-  imports: [IonIcon, MatTabsModule, RouterModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
+  imports: [GfPageTabsComponent],
   selector: 'gf-about-page',
   styleUrls: ['./about-page.scss'],
   templateUrl: './about-page.html'
 })
-export class AboutPageComponent implements OnInit {
-  public deviceType: string;
+export class AboutPageComponent {
   public hasPermissionForSubscription: boolean;
   public tabs: TabConfiguration[] = [];
   public user: User;
@@ -44,7 +42,6 @@ export class AboutPageComponent implements OnInit {
     private changeDetectorRef: ChangeDetectorRef,
     private dataService: DataService,
     private destroyRef: DestroyRef,
-    private deviceService: DeviceDetectorService,
     private userService: UserService
   ) {
     const { globalPermissions } = this.dataService.fetchInfo();
@@ -92,8 +89,6 @@ export class AboutPageComponent implements OnInit {
           });
 
           this.user = state.user;
-
-          this.changeDetectorRef.markForCheck();
         }
 
         this.tabs.push({
@@ -101,6 +96,8 @@ export class AboutPageComponent implements OnInit {
           label: publicRoutes.about.subRoutes.ossFriends.title,
           routerLink: publicRoutes.about.subRoutes.ossFriends.routerLink
         });
+
+        this.changeDetectorRef.markForCheck();
       });
 
     addIcons({
@@ -111,9 +108,5 @@ export class AboutPageComponent implements OnInit {
       shieldCheckmarkOutline,
       sparklesOutline
     });
-  }
-
-  public ngOnInit() {
-    this.deviceType = this.deviceService.getDeviceInfo().deviceType;
   }
 }

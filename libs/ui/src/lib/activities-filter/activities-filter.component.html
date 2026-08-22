@@ -1,17 +1,14 @@
 <mat-form-field appearance="outline" class="w-100">
-  <button disabled mat-icon-button matPrefix>
-    <ion-icon name="search-outline" />
-  </button>
+  <ion-icon class="mat-icon" matPrefix name="search-outline" />
   <mat-chip-grid #chipList aria-label="Search keywords">
     @for (filter of selectedFilters; track filter) {
       <mat-chip-row
         class="mx-1 my-0 px-2 py-0"
-        matChipRemove
         [removable]="true"
         (removed)="onRemoveFilter(filter)"
       >
-        {{ filter.label ?? '' | gfSymbol }}
-        <button matChipRemove>
+        {{ filter.label }}
+        <button matChipRemove type="button">
           <ion-icon name="close-outline" />
         </button>
       </mat-chip-row>
@@ -35,19 +32,14 @@
       <mat-optgroup [label]="filterGroup.name">
         @for (filter of filterGroup.filters; track filter) {
           <mat-option [value]="filter.id">
-            {{ filter.label ?? '' | gfSymbol }}
+            {{ filter.label }}
           </mat-option>
         }
       </mat-optgroup>
     }
   </mat-autocomplete>
 
-  <button
-    disabled
-    mat-icon-button
-    matSuffix
-    [ngClass]="{ 'd-none': !isLoading() }"
-  >
-    <mat-spinner matSuffix [diameter]="20" />
-  </button>
+  @if (isLoading()) {
+    <mat-spinner class="mx-2" matSuffix [diameter]="20" />
+  }
 </mat-form-field>

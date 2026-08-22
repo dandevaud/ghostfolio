@@ -1,10 +1,16 @@
-import { AccessPermission } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Filter } from '@ghostfolio/common/interfaces';
+import { Scope, scopes } from '@ghostfolio/common/scopes';
+
+import { IsArray, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class UpdateAccessDto {
   @IsOptional()
   @IsString()
   alias?: string;
+
+  @IsArray()
+  @IsOptional()
+  filters?: Filter[];
 
   @IsOptional()
   @IsUUID()
@@ -13,7 +19,8 @@ export class UpdateAccessDto {
   @IsString()
   id: string;
 
-  @IsEnum(AccessPermission, { each: true })
+  @IsArray()
+  @IsIn(Object.values(scopes), { each: true })
   @IsOptional()
-  permissions?: AccessPermission[];
+  scopes?: Scope[];
 }

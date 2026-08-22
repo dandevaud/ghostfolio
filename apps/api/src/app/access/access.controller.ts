@@ -1,10 +1,12 @@
+import { AllowDuringImpersonation } from '@ghostfolio/api/decorators/allow-during-impersonation.decorator';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { HasPermissionGuard } from '@ghostfolio/api/guards/has-permission.guard';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { CreateAccessDto, UpdateAccessDto } from '@ghostfolio/common/dtos';
 import { SubscriptionType } from '@ghostfolio/common/enums';
-import { Access } from '@ghostfolio/common/interfaces';
+import { Access, AccessSettings } from '@ghostfolio/common/interfaces';
 import { permissions } from '@ghostfolio/common/permissions';
+import { getScopesOfAccess } from '@ghostfolio/common/scopes';
 import type { RequestWithUser } from '@ghostfolio/common/types';
 
 import {
@@ -26,6 +28,7 @@ import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 import { AccessService } from './access.service';
 
+@AllowDuringImpersonation()
 @Controller('access')
 export class AccessController {
   public constructor(
@@ -45,27 +48,30 @@ export class AccessController {
       where: { userId: this.request.user.id }
     });
 
-    return accessesWithGranteeUser.map(
-      ({ alias, granteeUser, id, permissions }) => {
-        if (granteeUser) {
-          return {
-            alias,
-            id,
-            permissions,
-            grantee: granteeUser?.id,
-            type: 'PRIVATE'
-          };
-        }
+    return accessesWithGranteeUser.map((accessItem) => {
+      const { alias, granteeUser, id, settings } = accessItem;
+      const scopes = getScopesOfAccess(accessItem);
 
+      if (granteeUser) {
         return {
           alias,
           id,
-          permissions,
-          grantee: 'Public',
-          type: 'PUBLIC'
+          scopes,
+          grantee: granteeUser?.id,
+          settings: settings as AccessSettings,
+          type: 'PRIVATE'
         };
       }
-    );
+
+      return {
+        alias,
+        id,
+        scopes,
+        grantee: 'Public',
+        settings: settings as AccessSettings,
+        type: 'PUBLIC'
+      };
+    });
   }
 
   @HasPermission(permissions.createAccess)
@@ -76,7 +82,7 @@ export class AccessController {
   ): Promise<AccessModel> {
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
-      this.request.user.subscription.type === SubscriptionType.Basic
+      this.request.user.subscription?.type === SubscriptionType.Basic
     ) {
       throw new HttpException(
         getReasonPhrase(StatusCodes.FORBIDDEN),
@@ -85,12 +91,16 @@ export class AccessController {
     }
 
     try {
-      return this.accessService.createAccess({
+      return await this.accessService.createAccess({
         alias: data.alias || undefined,
         granteeUser: data.granteeUserId
           ? { connect: { id: data.granteeUserId } }
           : undefined,
-        permissions: data.permissions,
+        scopes: getScopesOfAccess({
+          granteeUserId: data.granteeUserId,
+          scopes: data.scopes
+        }),
+        settings: this.accessService.buildSettings(data.filters),
         user: { connect: { id: this.request.user.id } }
       });
     } catch {
@@ -131,7 +141,7 @@ export class AccessController {
   ): Promise<AccessModel> {
     if (
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
-      this.request.user.subscription.type === SubscriptionType.Basic
+      this.request.user.subscription?.type === SubscriptionType.Basic
     ) {
       throw new HttpException(
         getReasonPhrase(StatusCodes.FORBIDDEN),
@@ -152,13 +162,17 @@ export class AccessController {
     }
 
     try {
-      return this.accessService.updateAccess({
+      return await this.accessService.updateAccess({
         data: {
           alias: data.alias,
           granteeUser: data.granteeUserId
             ? { connect: { id: data.granteeUserId } }
             : { disconnect: true },
-          permissions: data.permissions
+          scopes: getScopesOfAccess({
+            granteeUserId: data.granteeUserId,
+            scopes: data.scopes ?? originalAccess.scopes
+          }),
+          settings: this.accessService.buildSettings(data.filters)
         },
         where: { id }
       });

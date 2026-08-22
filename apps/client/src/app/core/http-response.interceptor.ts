@@ -1,5 +1,7 @@
+import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { WebAuthnService } from '@ghostfolio/client/services/web-authn.service';
+import { HTTP_RESPONSE_MESSAGE_IMPERSONATION_UNRESOLVED } from '@ghostfolio/common/config';
 import { InfoItem } from '@ghostfolio/common/interfaces';
 import { internalRoutes, publicRoutes } from '@ghostfolio/common/routes/routes';
 import { DataService } from '@ghostfolio/ui/services';
@@ -12,7 +14,7 @@ import {
   HttpInterceptor,
   HttpRequest
 } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import {
   MatSnackBar,
   MatSnackBarRef,
@@ -22,33 +24,46 @@ import { Router } from '@angular/router';
 import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 
-@Injectable()
+@Service({ autoProvided: false })
 export class HttpResponseInterceptor implements HttpInterceptor {
-  public info: InfoItem;
-  public snackBarRef: MatSnackBarRef<TextOnlySnackBar>;
+  private readonly info: InfoItem;
+  private snackBarRef: MatSnackBarRef<TextOnlySnackBar> | undefined;
 
-  public constructor(
-    private dataService: DataService,
-    private router: Router,
-    private snackBar: MatSnackBar,
-    private userService: UserService,
-    private webAuthnService: WebAuthnService
-  ) {
+  private readonly dataService = inject(DataService);
+  private readonly impersonationStorageService = inject(
+    ImpersonationStorageService
+  );
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly userService = inject(UserService);
+  private readonly webAuthnService = inject(WebAuthnService);
+
+  public constructor() {
     this.info = this.dataService.fetchInfo();
   }
 
-  public intercept(
-    request: HttpRequest<any>,
+  public intercept<T>(
+    request: HttpRequest<T>,
     next: HttpHandler
-  ): Observable<HttpEvent<any>> {
+  ): Observable<HttpEvent<T>> {
     return next.handle(request).pipe(
-      tap((event: HttpEvent<any>) => {
-        return event;
-      }),
       catchError((error: HttpErrorResponse) => {
         if (error.status === StatusCodes.FORBIDDEN) {
+          if (
+            error.error?.message ===
+            HTTP_RESPONSE_MESSAGE_IMPERSONATION_UNRESOLVED
+          ) {
+            // A stale identifier fails every guarded request, hence it is
+            // removed to make the application usable again
+            this.impersonationStorageService.removeId();
+
+            window.location.reload();
+
+            return throwError(error);
+          }
+
           if (!this.snackBarRef) {
             if (this.info.isReadOnlyMode) {
               this.snackBarRef = this.snackBar.open(
@@ -61,7 +76,7 @@ export class HttpResponseInterceptor implements HttpInterceptor {
                 }
               );
             } else if (
-              !error.url.includes(internalRoutes.auth.routerLink.join(''))
+              !error.url?.includes(internalRoutes.auth.routerLink.join(''))
             ) {
               this.snackBarRef = this.snackBar.open(
                 $localize`This action is not allowed.`,
@@ -72,11 +87,11 @@ export class HttpResponseInterceptor implements HttpInterceptor {
               );
             }
 
-            this.snackBarRef.afterDismissed().subscribe(() => {
+            this.snackBarRef?.afterDismissed().subscribe(() => {
               this.snackBarRef = undefined;
             });
 
-            this.snackBarRef.onAction().subscribe(() => {
+            this.snackBarRef?.onAction().subscribe(() => {
               this.router.navigate(publicRoutes.pricing.routerLink);
             });
           }
@@ -92,26 +107,34 @@ export class HttpResponseInterceptor implements HttpInterceptor {
               }
             );
 
-            this.snackBarRef.afterDismissed().subscribe(() => {
+            this.snackBarRef?.afterDismissed().subscribe(() => {
               this.snackBarRef = undefined;
             });
 
-            this.snackBarRef.onAction().subscribe(() => {
+            this.snackBarRef?.onAction().subscribe(() => {
               window.location.reload();
             });
           }
         } else if (error.status === StatusCodes.TOO_MANY_REQUESTS) {
-          if (!this.snackBarRef) {
-            this.snackBarRef = this.snackBar.open(
-              $localize`Oops! It looks like you’re making too many requests. Please slow down a bit.`
-            );
+          // Replace an already visible snack bar so that the rate limiting
+          // feedback is not swallowed
+          const snackBarRef = this.snackBar.open(
+            $localize`Oops! It looks like you’re making too many requests. Please slow down a bit.`,
+            undefined,
+            {
+              duration: ms('6 seconds')
+            }
+          );
 
-            this.snackBarRef.afterDismissed().subscribe(() => {
+          snackBarRef.afterDismissed().subscribe(() => {
+            if (this.snackBarRef === snackBarRef) {
               this.snackBarRef = undefined;
-            });
-          }
+            }
+          });
+
+          this.snackBarRef = snackBarRef;
         } else if (error.status === StatusCodes.UNAUTHORIZED) {
-          if (!error.url.includes('/data-providers/ghostfolio/status')) {
+          if (!error.url?.includes('/data-providers/ghostfolio/status')) {
             if (this.webAuthnService.isEnabled()) {
               this.router.navigate(internalRoutes.webauthn.routerLink);
             } else {

@@ -16,33 +16,26 @@
               class="mat-mdc-cell px-1 py-2"
               mat-cell
             >
-              <div class="d-flex align-items-center">
+              <div class="align-items-center d-flex text-nowrap">
                 <span
                   class="d-none d-sm-inline-block text-monospace"
-                  [ngClass]="{
-                    'text-line-through': element.role === 'INACTIVE'
-                  }"
+                  [class.text-line-through]="element.role === 'INACTIVE'"
                   >{{ element.id }}</span
                 >
                 <span
                   class="d-inline-block d-sm-none text-monospace"
-                  [ngClass]="{
-                    'text-line-through': element.role === 'INACTIVE'
-                  }"
+                  [class.text-line-through]="element.role === 'INACTIVE'"
                   >{{ `${(element.id | slice: 0 : 5)}...` }}</span
                 >
                 @if (element.subscription?.expiresAt) {
                   <gf-premium-indicator
                     class="ml-1"
                     i18n-title
-                    title="{{
-                      `Expires ${formatDistanceToNow(
-                        element.subscription.expiresAt
-                      )} (${
-                        (element.subscription.expiresAt
-                        | date: defaultDateFormat)
-                      })`
-                    }}"
+                    title="Expires {{
+                      formatDistanceToNow(element.subscription.expiresAt)
+                    }} ({{
+                      element.subscription.expiresAt | date: defaultDateFormat
+                    }})"
                     [enableLink]="false"
                   />
                 }
@@ -64,9 +57,11 @@
                 class="mat-mdc-cell px-1 py-2"
                 mat-cell
               >
-                <span class="h5" [title]="element.country">{{
-                  getEmojiFlag(element.country)
-                }}</span>
+                <span
+                  class="h5"
+                  [title]="getCountryName({ code: element.country })"
+                  >{{ getEmojiFlag(element.country) }}</span
+                >
               </td>
             </ng-container>
           }
@@ -81,7 +76,7 @@
             </th>
             <td
               *matCellDef="let element"
-              class="mat-mdc-cell px-1 py-2"
+              class="mat-mdc-cell px-1 py-2 text-nowrap"
               mat-cell
             >
               {{ formatDistanceToNow(element.createdAt) }}
@@ -187,7 +182,7 @@
               </th>
               <td
                 *matCellDef="let element"
-                class="mat-mdc-cell px-1 py-2"
+                class="mat-mdc-cell px-1 py-2 text-nowrap"
                 mat-cell
               >
                 {{ formatDistanceToNow(element.lastActivity) }}
@@ -198,12 +193,12 @@
           <ng-container matColumnDef="actions" stickyEnd>
             <th
               *matHeaderCellDef
-              class="mat-mdc-header-cell px-1 py-2"
+              class="mat-mdc-header-cell px-1 py-2 text-right"
               mat-header-cell
             ></th>
             <td
               *matCellDef="let element"
-              class="mat-mdc-cell px-1 py-2"
+              class="mat-mdc-cell px-1 py-2 text-right"
               mat-cell
             >
               <button
@@ -246,12 +241,17 @@
                 <hr class="m-0" />
                 <button
                   mat-menu-item
-                  [disabled]="element.id === user?.id"
+                  [disabled]="
+                    !canDeleteUser({
+                      currentUserId: user?.id,
+                      userId: element.id
+                    })
+                  "
                   (click)="onDeleteUser(element.id)"
                 >
                   <span class="align-items-center d-flex">
                     <ion-icon class="mr-2" name="trash-outline" />
-                    <span i18n>Delete User</span>
+                    <span i18n>Delete</span>
                   </span>
                 </button>
               </mat-menu>
@@ -273,10 +273,11 @@
       </div>
 
       <mat-paginator
+        [class.d-none]="
+          (isLoading && totalItems === 0) || totalItems <= pageSize
+        "
+        [hidePageSize]="true"
         [length]="totalItems"
-        [ngClass]="{
-          'd-none': (isLoading && totalItems === 0) || totalItems <= pageSize
-        }"
         [pageSize]="pageSize"
         [showFirstLastButtons]="true"
         (page)="onChangePage($event)"

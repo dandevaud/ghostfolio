@@ -1,10 +1,10 @@
 <div class="d-flex flex-column h-100">
-  <div class="d-flex mb-3">
-    <h1 class="flex-grow-1 m-0" mat-dialog-title>
-      {{ assetProfile?.name ?? data.symbol }}
-    </h1>
+  <div class="align-items-center d-flex mb-3" mat-dialog-title>
+    <span class="flex-grow-1 text-truncate">{{
+      assetProfile?.name ?? data.symbol
+    }}</span>
     <button
-      class="mx-1 no-min-width px-2"
+      class="ml-1 no-min-width px-2"
       mat-button
       type="button"
       [matMenuTriggerFor]="assetProfileActionsMenu"
@@ -83,7 +83,7 @@
         mat-menu-item
         type="button"
         [disabled]="
-          !adminMarketDataService.hasPermissionToDeleteAssetProfile({
+          !canDeleteAssetProfile({
             activitiesCount: assetProfile?.activitiesCount,
             isBenchmark: isBenchmark,
             symbol: data.symbol,
@@ -118,6 +118,7 @@
 
     <mat-tab-group
       animationDuration="0ms"
+      [disablePagination]="true"
       [dynamicHeight]="true"
       [mat-stretch-tabs]="false"
     >
@@ -126,7 +127,7 @@
           <ion-icon name="reader-outline" />
           <div class="d-none d-sm-block ml-2" i18n>Overview</div>
         </ng-template>
-        <div class="container mt-3 p-0">
+        <div class="container px-0 py-3">
           <div class="row w-100">
             @if (isEditAssetProfileIdentifierMode) {
               <div class="col-12 mb-4">
@@ -175,10 +176,28 @@
                     <ng-container i18n>Cancel</ng-container>
                   </button>
                 </form>
+                @if (data.dataSource !== DataSource.MANUAL) {
+                  <p class="my-1 px-1 text-muted" i18n>or</p>
+                  <button
+                    color="accent"
+                    mat-flat-button
+                    type="button"
+                    (click)="onConvertToManualDataSource()"
+                  >
+                    <ng-container i18n
+                      >Convert to {{ DataSource.MANUAL }}</ng-container
+                    >
+                  </button>
+                }
               </div>
             } @else {
               <div class="col-6 mb-3">
-                <gf-value i18n size="medium" [value]="assetProfile?.symbol"
+                <gf-value
+                  i18n
+                  size="medium"
+                  [enableCopyToClipboardButton]="true"
+                  [isLoading]="isLoading"
+                  [value]="assetProfile?.symbol"
                   >Symbol</gf-value
                 >
               </div>
@@ -186,6 +205,7 @@
                 <gf-value
                   i18n
                   size="medium"
+                  [isLoading]="isLoading"
                   [value]="
                     assetProfile?.dataProviderInfo?.name ??
                     assetProfile?.dataSource
@@ -208,13 +228,18 @@
               </div>
             }
             <div class="col-6 mb-3">
-              <gf-value i18n size="medium" [value]="assetProfile?.currency"
+              <gf-value
+                i18n
+                size="medium"
+                [isLoading]="isLoading"
+                [value]="assetProfile?.currency"
                 >Currency</gf-value
               >
             </div>
             <div class="col-6 mb-3">
               <gf-value
                 size="medium"
+                [enableCopyToClipboardButton]="true"
                 [hidden]="!assetProfile?.isin"
                 [value]="assetProfile?.isin"
                 >ISIN</gf-value
@@ -225,6 +250,7 @@
                 i18n
                 size="medium"
                 [isDate]="assetProfile?.dateOfFirstActivity ? true : false"
+                [isLoading]="isLoading"
                 [locale]="data.locale"
                 [value]="assetProfile?.dateOfFirstActivity ?? '-'"
                 >First Activity</gf-value
@@ -234,6 +260,7 @@
               <gf-value
                 i18n
                 size="medium"
+                [isLoading]="isLoading"
                 [locale]="data.locale"
                 [value]="assetProfile?.activitiesCount"
                 >Activities</gf-value
@@ -271,7 +298,7 @@
                       i18n
                       size="medium"
                       [locale]="data.locale"
-                      [value]="assetProfile?.sectors[0].name"
+                      [value]="translate(assetProfile?.sectors[0].name)"
                       >Sector</gf-value
                     >
                   </div>
@@ -282,7 +309,11 @@
                       i18n
                       size="medium"
                       [locale]="data.locale"
-                      [value]="assetProfile?.countries[0].name"
+                      [value]="
+                        getCountryName({
+                          code: assetProfile?.countries[0].code
+                        })
+                      "
                       >Country</gf-value
                     >
                   </div>
@@ -475,7 +506,7 @@
                 <input formControlName="url" matInput type="text" />
                 @if (assetProfileForm.controls.url.value) {
                   <gf-entity-logo
-                    class="mr-3"
+                    class="mat-icon"
                     matSuffix
                     [url]="assetProfileForm.controls.url.value"
                   />
@@ -492,6 +523,21 @@
                   matInput
                   (keyup.enter)="$event.stopPropagation()"
                 ></textarea>
+              </mat-form-field>
+            </div>
+            <div>
+              <mat-form-field appearance="outline" class="w-100 without-hint">
+                <mat-label i18n>Data Gathering Frequency</mat-label>
+                <mat-select formControlName="dataGatheringFrequency">
+                  @for (
+                    dataGatheringFrequencyValue of dataGatheringFrequencyValues;
+                    track dataGatheringFrequencyValue.value
+                  ) {
+                    <mat-option [value]="dataGatheringFrequencyValue.value">{{
+                      dataGatheringFrequencyValue.viewValue
+                    }}</mat-option>
+                  }
+                </mat-select>
               </mat-form-field>
             </div>
           </form>
@@ -519,6 +565,122 @@
           </div>
         </div>
       </mat-tab>
+      @if (user?.settings?.isExperimentalFeatures) {
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <ion-icon name="git-compare-outline" />
+            <div class="d-none d-sm-block ml-2" i18n>Splits</div>
+          </ng-template>
+          <div class="container mt-3 p-0">
+            <div class="no-gutters row w-100">
+              <div class="col-12">
+                @if (splits.length > 0) {
+                  <table class="gf-table mb-3 w-100">
+                    <thead>
+                      <tr class="mat-mdc-header-row">
+                        <th class="mat-mdc-header-cell px-1 py-2" i18n>Date</th>
+                        <th
+                          class="mat-mdc-header-cell px-1 py-2 text-right"
+                          i18n
+                        >
+                          Split Ratio
+                        </th>
+                        <th class="mat-mdc-header-cell px-1 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (split of splits; track split.id) {
+                        <tr class="mat-mdc-row">
+                          <td class="mat-mdc-cell px-1 py-2">
+                            {{ split.date | date: defaultDateFormat }}
+                          </td>
+                          <td class="mat-mdc-cell px-1 py-2 text-right">
+                            {{ split.numerator }}:{{ split.denominator }}
+                          </td>
+                          <td class="mat-mdc-cell px-1 py-2 text-right">
+                            <button
+                              mat-icon-button
+                              type="button"
+                              [disabled]="!canEditAssetProfile"
+                              (click)="onDeleteSplit(split.id)"
+                            >
+                              <ion-icon name="trash-outline" />
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+                <form
+                  [formGroup]="assetProfileSplitForm"
+                  (ngSubmit)="onAddSplit()"
+                >
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label i18n>Date</mat-label>
+                    <input
+                      formControlName="date"
+                      matInput
+                      [matDatepicker]="dateOfSplit"
+                    />
+                    <mat-datepicker-toggle
+                      class="mr-2"
+                      matSuffix
+                      [for]="dateOfSplit"
+                    >
+                      <ion-icon
+                        class="text-muted"
+                        matDatepickerToggleIcon
+                        name="calendar-clear-outline"
+                      />
+                    </mat-datepicker-toggle>
+                    <mat-datepicker #dateOfSplit />
+                  </mat-form-field>
+                  <div class="align-items-center d-flex mb-3">
+                    <mat-form-field
+                      appearance="outline"
+                      class="w-100 without-hint"
+                    >
+                      <mat-label i18n>Shares After</mat-label>
+                      <input
+                        formControlName="numerator"
+                        matInput
+                        step="1"
+                        type="number"
+                      />
+                    </mat-form-field>
+                    <div class="mx-2">:</div>
+                    <mat-form-field
+                      appearance="outline"
+                      class="w-100 without-hint"
+                    >
+                      <mat-label i18n>Shares Before</mat-label>
+                      <input
+                        formControlName="denominator"
+                        matInput
+                        step="1"
+                        type="number"
+                      />
+                    </mat-form-field>
+                  </div>
+                  <div class="text-right">
+                    <button
+                      color="primary"
+                      mat-flat-button
+                      type="submit"
+                      [disabled]="
+                        !assetProfileSplitForm.valid || !canEditAssetProfile
+                      "
+                    >
+                      <ng-container i18n>Add</ng-container>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+      }
       @if (assetProfile?.dataSource === 'MANUAL') {
         <mat-tab>
           <ng-template mat-tab-label>

@@ -2,7 +2,10 @@ import { GfAdminPlatformComponent } from '@ghostfolio/client/components/admin-pl
 import { GfAdminTagComponent } from '@ghostfolio/client/components/admin-tag/admin-tag.component';
 import { GfDataProviderStatusComponent } from '@ghostfolio/client/components/data-provider-status/data-provider-status.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { PROPERTY_API_KEY_GHOSTFOLIO } from '@ghostfolio/common/config';
+import {
+  E_MAIL_LINE_BREAK,
+  PROPERTY_API_KEY_GHOSTFOLIO
+} from '@ghostfolio/common/config';
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
 import { getDateFormatString } from '@ghostfolio/common/helper';
 import {
@@ -33,6 +36,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -58,6 +62,7 @@ import { catchError, filter, of } from 'rxjs';
     MatProgressBarModule,
     MatSortModule,
     MatTableModule,
+    MatTooltipModule,
     NgxSkeletonLoaderModule,
     RouterModule
   ],
@@ -78,8 +83,17 @@ export class GfAdminSettingsComponent implements OnInit {
     'actions'
   ];
   public ghostfolioApiStatus: DataProviderGhostfolioStatusResponse;
+  public readonly ghostfolioApiStatusTooltip = $localize`Additional requests are granted while you are setting up your instance`;
+  public hasGhostfolioApiKey: boolean;
   public isGhostfolioApiKeyValid: boolean;
   public isLoading = false;
+  public readonly premiumDataProviderMailHref = `mailto:hi@ghostfol.io?subject=Ghostfolio Premium Data Provider&body=${[
+    'Hello,',
+    '',
+    'I am interested in the Ghostfolio Premium data provider. Could you please give me access so I can try it for some time?',
+    '',
+    'Kind regards'
+  ].join(E_MAIL_LINE_BREAK)}`;
   public pricingUrl: string;
   public user: User;
 
@@ -173,6 +187,8 @@ export class GfAdminSettingsComponent implements OnInit {
         const ghostfolioApiKey = settings[
           PROPERTY_API_KEY_GHOSTFOLIO
         ] as string;
+
+        this.hasGhostfolioApiKey = !!ghostfolioApiKey;
 
         if (ghostfolioApiKey) {
           this.adminService

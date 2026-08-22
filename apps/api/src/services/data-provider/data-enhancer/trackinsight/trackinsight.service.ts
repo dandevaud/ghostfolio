@@ -1,28 +1,44 @@
+import { getCountryCodeByName } from '@ghostfolio/api/helper/country.helper';
+import { getSectorName } from '@ghostfolio/api/helper/sector.helper';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { DataEnhancerInterface } from '@ghostfolio/api/services/data-provider/interfaces/data-enhancer.interface';
+import { FetchService } from '@ghostfolio/api/services/fetch/fetch.service';
 import { Holding } from '@ghostfolio/common/interfaces';
 import { Country } from '@ghostfolio/common/interfaces/country.interface';
 import { Sector } from '@ghostfolio/common/interfaces/sector.interface';
+import { SectorName } from '@ghostfolio/common/types';
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SymbolProfile } from '@prisma/client';
-import { countries } from 'countries-list';
 
 @Injectable()
 export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
-  private static baseUrl = 'https://www.trackinsight.com/data-api';
+  private static baseUrl = 'https://www.trackinsight.com';
+
   private static countriesMapping = {
-    'Russian Federation': 'Russia'
-  };
-  private static sectorsMapping = {
-    'Consumer Discretionary': 'Consumer Cyclical',
-    'Consumer Defensive': 'Consumer Staples',
-    'Health Care': 'Healthcare',
-    'Information Technology': 'Technology'
+    'Czech Republic': 'CZ',
+    Macau: 'MO',
+    'Republic of Korea': 'KR',
+    'Russian Federation': 'RU',
+    Turkey: 'TR',
+    USA: 'US',
+    'Virgin Islands, British': 'VG'
   };
 
+  private static sectorsMapping: Record<string, SectorName> = {
+    'Consumer Discretionary': 'Consumer Cyclical',
+    'Consumer Staples': 'Consumer Defensive',
+    Financials: 'Financial Services',
+    'Health Care': 'Healthcare',
+    'Information Technology': 'Technology',
+    Materials: 'Basic Materials'
+  };
+
+  private readonly logger = new Logger(TrackinsightDataEnhancerService.name);
+
   public constructor(
-    private readonly configurationService: ConfigurationService
+    private readonly configurationService: ConfigurationService,
+    private readonly fetchService: FetchService
   ) {}
 
   public async enhance({
@@ -34,12 +50,10 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
     response: Partial<SymbolProfile>;
     symbol: string;
   }): Promise<Partial<SymbolProfile>> {
-    if (
-      !(
-        response.assetClass === 'EQUITY' &&
-        ['ETF', 'MUTUALFUND'].includes(response.assetSubClass)
-      )
-    ) {
+    if (!(
+      response.assetClass === 'EQUITY' &&
+      ['ETF', 'MUTUALFUND'].includes(response.assetSubClass)
+    )) {
       return response;
     }
 
@@ -59,12 +73,13 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
       return response;
     }
 
-    const profile = await fetch(
-      `${TrackinsightDataEnhancerService.baseUrl}/funds/${trackinsightSymbol}.json`,
-      {
-        signal: AbortSignal.timeout(requestTimeout)
-      }
-    )
+    const profile = await this.fetchService
+      .fetch(
+        `${TrackinsightDataEnhancerService.baseUrl}/data-api/funds/${trackinsightSymbol}.json`,
+        {
+          signal: AbortSignal.timeout(requestTimeout)
+        }
+      )
       .then((res) => res.json())
       .catch(() => {
         return {};
@@ -82,12 +97,13 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
       response.isin = isin;
     }
 
-    const holdings = await fetch(
-      `${TrackinsightDataEnhancerService.baseUrl}/holdings/${trackinsightSymbol}.json`,
-      {
-        signal: AbortSignal.timeout(requestTimeout)
-      }
-    )
+    const holdings = await this.fetchService
+      .fetch(
+        `${TrackinsightDataEnhancerService.baseUrl}/data-api/holdings/${trackinsightSymbol}.json`,
+        {
+          signal: AbortSignal.timeout(requestTimeout)
+        }
+      )
       .then((res) => res.json())
       .catch(() => {
         return {};
@@ -107,23 +123,15 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
       for (const [name, value] of Object.entries<any>(
         holdings?.countries ?? {}
       )) {
-        let countryCode: string;
-
-        for (const [code, country] of Object.entries(countries)) {
-          if (
-            country.name === name ||
-            country.name ===
-              TrackinsightDataEnhancerService.countriesMapping[name]
-          ) {
-            countryCode = code;
-            break;
-          }
-        }
-
-        response.countries.push({
-          code: countryCode,
-          weight: value.weight
+        const code = getCountryCodeByName({
+          name,
+          aliases: TrackinsightDataEnhancerService.countriesMapping,
+          dataSource: this.getName()
         });
+
+        if (code) {
+          response.countries.push({ code, weight: value.weight });
+        }
       }
     }
 
@@ -155,7 +163,10 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
         holdings?.sectors ?? {}
       )) {
         response.sectors.push({
-          name: TrackinsightDataEnhancerService.sectorsMapping[name] ?? name,
+          name: getSectorName({
+            name,
+            aliases: TrackinsightDataEnhancerService.sectorsMapping
+          }),
           weight: value.weight
         });
       }
@@ -179,12 +190,13 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
     requestTimeout: number;
     symbol: string;
   }) {
-    return fetch(
-      `https://www.trackinsight.com/search-api/search_v2/${symbol}/_/ticker/default/0/3`,
-      {
-        signal: AbortSignal.timeout(requestTimeout)
-      }
-    )
+    return this.fetchService
+      .fetch(
+        `${TrackinsightDataEnhancerService.baseUrl}/search-api/search_v2/${symbol}/_/ticker/default/0/3`,
+        {
+          signal: AbortSignal.timeout(requestTimeout)
+        }
+      )
       .then((res) => res.json())
       .then((jsonRes) => {
         if (
@@ -200,9 +212,8 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
         return undefined;
       })
       .catch(({ message }) => {
-        Logger.error(
-          `Failed to search Trackinsight symbol for ${symbol} (${message})`,
-          'TrackinsightDataEnhancerService'
+        this.logger.warn(
+          `Could not search Trackinsight symbol for "${symbol}": ${message}`
         );
 
         return undefined;

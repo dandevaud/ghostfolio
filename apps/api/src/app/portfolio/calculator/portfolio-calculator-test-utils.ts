@@ -12,7 +12,6 @@ export const activityDummyData = {
   feeInAssetProfileCurrency: undefined,
   feeInBaseCurrency: undefined,
   id: undefined,
-  isDraft: false,
   symbolProfileId: undefined,
   unitPrice: undefined,
   unitPriceInAssetProfileCurrency: undefined,
@@ -22,7 +21,7 @@ export const activityDummyData = {
   valueInBaseCurrency: undefined
 };
 
-export const symbolProfileDummyData = {
+export const assetProfileDummyData = {
   activitiesCount: undefined,
   assetClass: undefined,
   assetSubClass: undefined,

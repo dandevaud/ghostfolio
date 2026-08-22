@@ -1,7 +1,13 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
 import { CreateTagDto, UpdateTagDto } from '@ghostfolio/common/dtos';
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
-import { getLocale } from '@ghostfolio/common/helper';
+import {
+  getLocale,
+  getLowercase,
+  isSystemTag
+} from '@ghostfolio/common/helper';
+import { translate } from '@ghostfolio/ui/i18n';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { DataService } from '@ghostfolio/ui/services';
 import { GfValueComponent } from '@ghostfolio/ui/value';
@@ -10,15 +16,18 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
-  Input,
+  inject,
+  input,
   OnInit,
-  ViewChild
+  viewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -30,7 +39,6 @@ import {
   ellipsisHorizontal,
   trashOutline
 } from 'ionicons/icons';
-import { get } from 'lodash';
 import { DeviceDetectorService } from 'ngx-device-detector';
 
 import { GfCreateOrUpdateTagDialogComponent } from './create-or-update-tag-dialog/create-or-update-tag-dialog.component';
@@ -43,6 +51,7 @@ import { CreateOrUpdateTagDialogParams } from './create-or-update-tag-dialog/int
     IonIcon,
     MatButtonModule,
     MatMenuModule,
+    MatPaginatorModule,
     MatSortModule,
     MatTableModule,
     RouterModule
@@ -52,32 +61,38 @@ import { CreateOrUpdateTagDialogParams } from './create-or-update-tag-dialog/int
   templateUrl: './admin-tag.component.html'
 })
 export class GfAdminTagComponent implements OnInit {
-  @Input() locale = getLocale();
+  public readonly locale = input(getLocale());
 
-  @ViewChild(MatSort) sort: MatSort;
-
-  public dataSource = new MatTableDataSource<Tag>();
-  public deviceType: string;
-  public displayedColumns = [
+  protected dataSource = new MatTableDataSource<Tag>();
+  protected readonly displayedColumns = [
     'name',
     'userId',
+    'accounts',
     'activities',
-    'holdings',
     'actions'
   ];
-  public tags: Tag[];
+  protected readonly isSystemTag = isSystemTag;
+  protected readonly pageSize = DEFAULT_PAGE_SIZE;
+  protected tags: Tag[];
+  protected readonly translate = translate;
 
-  public constructor(
-    private changeDetectorRef: ChangeDetectorRef,
-    private dataService: DataService,
-    private destroyRef: DestroyRef,
-    private deviceService: DeviceDetectorService,
-    private dialog: MatDialog,
-    private notificationService: NotificationService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private userService: UserService
-  ) {
+  private readonly deviceType = computed(
+    () => this.deviceDetectorService.deviceInfo().deviceType
+  );
+  private readonly paginator = viewChild.required(MatPaginator);
+  private readonly sort = viewChild.required(MatSort);
+
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
+  private readonly dataService = inject(DataService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly deviceDetectorService = inject(DeviceDetectorService);
+  private readonly dialog = inject(MatDialog);
+  private readonly notificationService = inject(NotificationService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly userService = inject(UserService);
+
+  public constructor() {
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
@@ -89,7 +104,9 @@ export class GfAdminTagComponent implements OnInit {
               return id === params['tagId'];
             });
 
-            this.openUpdateTagDialog(tag);
+            if (tag && !isSystemTag(tag)) {
+              this.openUpdateTagDialog(tag);
+            }
           } else {
             this.router.navigate(['.'], { relativeTo: this.route });
           }
@@ -100,12 +117,10 @@ export class GfAdminTagComponent implements OnInit {
   }
 
   public ngOnInit() {
-    this.deviceType = this.deviceService.getDeviceInfo().deviceType;
-
     this.fetchTags();
   }
 
-  public onDeleteTag(aId: string) {
+  protected onDeleteTag(aId: string) {
     this.notificationService.confirm({
       confirmFn: () => {
         this.deleteTag(aId);
@@ -115,7 +130,7 @@ export class GfAdminTagComponent implements OnInit {
     });
   }
 
-  public onUpdateTag({ id }: Tag) {
+  protected onUpdateTag({ id }: Tag) {
     this.router.navigate([], {
       queryParams: { editTagDialog: true, tagId: id }
     });
@@ -145,8 +160,14 @@ export class GfAdminTagComponent implements OnInit {
         this.tags = tags;
 
         this.dataSource = new MatTableDataSource(this.tags);
-        this.dataSource.sort = this.sort;
-        this.dataSource.sortingDataAccessor = get;
+        this.dataSource.paginator = this.paginator();
+        this.dataSource.sort = this.sort();
+
+        this.dataSource.sortingDataAccessor = (tag, path) => {
+          return path === 'name'
+            ? translate(tag.name).toLocaleLowerCase()
+            : (getLowercase(tag, path) as number | string);
+        };
 
         this.dataService.updateInfo();
 
@@ -159,14 +180,9 @@ export class GfAdminTagComponent implements OnInit {
       GfCreateOrUpdateTagDialogComponent,
       CreateOrUpdateTagDialogParams
     >(GfCreateOrUpdateTagDialogComponent, {
-      data: {
-        tag: {
-          id: null,
-          name: null
-        }
-      },
-      height: this.deviceType === 'mobile' ? '98vh' : undefined,
-      width: this.deviceType === 'mobile' ? '100vw' : '50rem'
+      data: {} satisfies CreateOrUpdateTagDialogParams,
+      height: this.deviceType() === 'mobile' ? '98vh' : undefined,
+      width: this.deviceType() === 'mobile' ? '100vw' : '50rem'
     });
 
     dialogRef
@@ -203,9 +219,9 @@ export class GfAdminTagComponent implements OnInit {
           id,
           name
         }
-      },
-      height: this.deviceType === 'mobile' ? '98vh' : undefined,
-      width: this.deviceType === 'mobile' ? '100vw' : '50rem'
+      } satisfies CreateOrUpdateTagDialogParams,
+      height: this.deviceType() === 'mobile' ? '98vh' : undefined,
+      width: this.deviceType() === 'mobile' ? '100vw' : '50rem'
     });
 
     dialogRef

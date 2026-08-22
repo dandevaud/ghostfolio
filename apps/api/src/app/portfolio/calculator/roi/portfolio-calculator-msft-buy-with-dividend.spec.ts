@@ -1,6 +1,7 @@
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
-  symbolProfileDummyData,
+  assetProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
@@ -68,6 +69,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+  let activitiesService: ActivitiesService;
 
   beforeEach(() => {
     configurationService = new ConfigurationService();
@@ -81,9 +83,24 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    portfolioSnapshotService = new PortfolioSnapshotService(null);
+    portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     redisCacheService = new RedisCacheService(null, null);
+
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
@@ -91,7 +108,7 @@ describe('PortfolioCalculator', () => {
       exchangeRateDataService,
       portfolioSnapshotService,
       redisCacheService,
-      null
+      activitiesService
     );
   });
 
@@ -106,8 +123,8 @@ describe('PortfolioCalculator', () => {
           feeInAssetProfileCurrency: 19,
           feeInBaseCurrency: 19,
           quantity: 1,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'USD',
             dataSource: 'YAHOO',
             name: 'Microsoft Inc.',
@@ -122,8 +139,8 @@ describe('PortfolioCalculator', () => {
           feeInAssetProfileCurrency: 0,
           feeInBaseCurrency: 0,
           quantity: 1,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'USD',
             dataSource: 'YAHOO',
             name: 'Microsoft Inc.',

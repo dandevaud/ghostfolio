@@ -1,7 +1,7 @@
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
-  symbolProfileDummyData,
+  assetProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
@@ -66,9 +66,12 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
-  let activitiesServiceMock: ActivitiesService;
+  let activitiesService: ActivitiesService;
 
   beforeEach(() => {
+    PortfolioSnapshotServiceMock.reset();
+    RedisCacheServiceMock.reset();
+
     configurationService = new ConfigurationService();
 
     currentRateService = new CurrentRateService(null, null, null, null);
@@ -80,11 +83,15 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    portfolioSnapshotService = new PortfolioSnapshotService(null);
+    portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     redisCacheService = new RedisCacheService(null, null);
 
-    activitiesServiceMock = new ActivitiesService(
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
       null,
       null,
       null,
@@ -101,7 +108,7 @@ describe('PortfolioCalculator', () => {
       exchangeRateDataService,
       portfolioSnapshotService,
       redisCacheService,
-      activitiesServiceMock
+      activitiesService
     );
   });
 
@@ -112,17 +119,17 @@ describe('PortfolioCalculator', () => {
       const activities: Activity[] = [
         {
           ...activityDummyData,
-          date: new Date('2023-01-01'), // Date in future
-          feeInAssetProfileCurrency: 0,
-          feeInBaseCurrency: 0,
-          quantity: 1,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: 'USD',
             dataSource: 'MANUAL',
             name: 'Loan',
             symbol: '55196015-1365-4560-aa60-8751ae6d18f8'
           },
+          date: new Date('2023-01-01'), // Date in future
+          feeInAssetProfileCurrency: 0,
+          feeInBaseCurrency: 0,
+          quantity: 1,
           type: 'LIABILITY',
           unitPriceInAssetProfileCurrency: 3000
         }

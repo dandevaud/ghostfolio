@@ -1,7 +1,8 @@
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
+  assetProfileDummyData,
   loadExportFile,
-  symbolProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
@@ -11,6 +12,7 @@ import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.s
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
@@ -47,6 +49,18 @@ jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   };
 });
 
+jest.mock(
+  '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service',
+  () => {
+    return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      ExchangeRateDataService: jest.fn().mockImplementation(() => {
+        return ExchangeRateDataServiceMock;
+      })
+    };
+  }
+);
+
 describe('PortfolioCalculator', () => {
   let exportResponse: ExportResponse;
 
@@ -56,6 +70,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+  let activitiesService: ActivitiesService;
 
   beforeAll(() => {
     exportResponse = loadExportFile(
@@ -67,6 +82,9 @@ describe('PortfolioCalculator', () => {
   });
 
   beforeEach(() => {
+    PortfolioSnapshotServiceMock.reset();
+    RedisCacheServiceMock.reset();
+
     configurationService = new ConfigurationService();
 
     currentRateService = new CurrentRateService(null, null, null, null);
@@ -78,9 +96,24 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    portfolioSnapshotService = new PortfolioSnapshotService(null);
+    portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     redisCacheService = new RedisCacheService(null, null);
+
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
@@ -88,7 +121,7 @@ describe('PortfolioCalculator', () => {
       exchangeRateDataService,
       portfolioSnapshotService,
       redisCacheService,
-      null
+      activitiesService
     );
   });
 
@@ -100,16 +133,16 @@ describe('PortfolioCalculator', () => {
         (activity) => ({
           ...activityDummyData,
           ...activity,
-          date: parseDate(activity.date),
-          feeInAssetProfileCurrency: activity.fee,
-          feeInBaseCurrency: activity.fee,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: activity.currency,
             dataSource: activity.dataSource,
             name: 'Direxion Daily Junior Gold Miners Index Bull 2X Shares',
             symbol: activity.symbol
           },
+          date: parseDate(activity.date),
+          feeInAssetProfileCurrency: activity.fee,
+          feeInBaseCurrency: activity.fee,
           unitPriceInAssetProfileCurrency: activity.unitPrice
         })
       );

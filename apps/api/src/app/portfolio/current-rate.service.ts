@@ -2,7 +2,10 @@ import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.ser
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
-import { resetHours } from '@ghostfolio/common/helper';
+import {
+  getAssetProfileIdentifier,
+  resetHours
+} from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   DataProviderInfo,
@@ -48,13 +51,13 @@ export class CurrentRateService {
     const values: GetValueObject[] = [];
 
     if (includesToday) {
-      const quotesBySymbol = await this.dataProviderService.getQuotes({
+      const quotes = await this.dataProviderService.getQuotes({
         items: dataGatheringItems,
         user: this.request?.user
       });
 
       for (const { dataSource, symbol } of dataGatheringItems) {
-        const quote = quotesBySymbol[symbol];
+        const quote = quotes[getAssetProfileIdentifier({ dataSource, symbol })];
 
         if (quote?.dataProviderInfo) {
           dataProviderInfos.push(quote.dataProviderInfo);
@@ -113,8 +116,8 @@ export class CurrentRateService {
       errors: quoteErrors.map(({ dataSource, symbol }) => {
         return { dataSource, symbol };
       }),
-      values: uniqBy(values, ({ date, symbol }) => {
-        return `${date}-${symbol}`;
+      values: uniqBy(values, ({ dataSource, date, symbol }) => {
+        return `${date}-${getAssetProfileIdentifier({ dataSource, symbol })}`;
       })
     };
 
@@ -123,7 +126,11 @@ export class CurrentRateService {
         try {
           // If missing quote, fallback to the latest available historical market price
           let value: GetValueObject = response.values.find((currentValue) => {
-            return currentValue.symbol === symbol && isToday(currentValue.date);
+            return (
+              currentValue.dataSource === dataSource &&
+              currentValue.symbol === symbol &&
+              isToday(currentValue.date)
+            );
           });
 
           if (!value) {
@@ -146,7 +153,11 @@ export class CurrentRateService {
 
           const [latestValue] = response.values
             .filter((currentValue) => {
-              return currentValue.symbol === symbol && currentValue.marketPrice;
+              return (
+                currentValue.dataSource === dataSource &&
+                currentValue.marketPrice &&
+                currentValue.symbol === symbol
+              );
             })
             .sort((a, b) => {
               if (a.date < b.date) {

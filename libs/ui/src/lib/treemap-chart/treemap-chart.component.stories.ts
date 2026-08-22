@@ -1,5 +1,6 @@
+import { DEFAULT_COLOR_SCHEME } from '@ghostfolio/common/config';
+
 import { CommonModule } from '@angular/common';
-import '@angular/localize/init';
 import { moduleMetadata } from '@storybook/angular';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -37,7 +38,7 @@ export const Default: Story = {
   args: {
     holdings,
     baseCurrency: 'USD',
-    colorScheme: 'LIGHT',
+    colorScheme: DEFAULT_COLOR_SCHEME,
     cursor: undefined,
     dateRange: 'mtd',
     locale: 'en-US'

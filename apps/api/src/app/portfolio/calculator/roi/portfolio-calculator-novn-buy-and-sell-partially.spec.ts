@@ -1,7 +1,8 @@
+import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
   loadExportFile,
-  symbolProfileDummyData,
+  assetProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
@@ -72,6 +73,7 @@ describe('PortfolioCalculator', () => {
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+  let activitiesService: ActivitiesService;
 
   beforeAll(() => {
     exportResponse = loadExportFile(
@@ -94,9 +96,24 @@ describe('PortfolioCalculator', () => {
       null
     );
 
-    portfolioSnapshotService = new PortfolioSnapshotService(null);
+    portfolioSnapshotService = new PortfolioSnapshotService(null, null);
 
     redisCacheService = new RedisCacheService(null, null);
+
+    activitiesService = new ActivitiesService(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    );
 
     portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
@@ -104,7 +121,7 @@ describe('PortfolioCalculator', () => {
       exchangeRateDataService,
       portfolioSnapshotService,
       redisCacheService,
-      null
+      activitiesService
     );
   });
 
@@ -119,8 +136,8 @@ describe('PortfolioCalculator', () => {
           date: parseDate(activity.date),
           feeInAssetProfileCurrency: activity.fee,
           feeInBaseCurrency: activity.fee,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
+          assetProfile: {
+            ...assetProfileDummyData,
             currency: activity.currency,
             dataSource: activity.dataSource,
             name: 'Novartis AG',
