@@ -58,7 +58,7 @@ export class GfAccountSelectorComponent
     const selectedAccountId = this.selectedAccountId();
 
     return this.accounts().filter(({ id }) => {
-      return selectedAccountId?.some((e) => e == id);
+      return selectedAccountId?.some((e) => e === id);
     });
   });
 
