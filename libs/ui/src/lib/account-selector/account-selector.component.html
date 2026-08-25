@@ -7,20 +7,17 @@
   <mat-select
     [errorStateMatcher]="errorStateMatcher"
     [formControl]="control"
+    [multiple]="multiple()"
     [required]="isRequired()"
     (closed)="onPanelClosed()"
   >
     <mat-select-trigger>
       <div class="d-flex">
-        @if (selectedAccount()) {
-          <gf-entity-logo
-            class="mr-1"
-            [hasPlaceholder]="true"
-            [tooltip]="selectedAccount()?.platform?.name ?? ''"
-            [url]="selectedAccount()?.platform?.url ?? ''"
-          />
-        }
-        <span>{{ selectedAccount()?.name }}</span>
+        <span>{{
+          selectedAccount()
+            .map((a) => a.name)
+            .join(', ')
+        }}</span>
       </div>
     </mat-select-trigger>
 
