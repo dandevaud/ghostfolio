@@ -38,7 +38,7 @@ export class GfAccountSelectorComponent
   implements ControlValueAccessor, OnInit
 {
   public readonly accounts = input.required<AccountWithPlatform[]>();
-  public readonly control = new FormControl<string | null>(null);
+  public readonly control = new FormControl<string[] | null>(null);
 
   public readonly errorStateMatcher: ErrorStateMatcher = {
     isErrorState: () => {
@@ -52,12 +52,13 @@ export class GfAccountSelectorComponent
   public readonly hasNullOption = input(false);
   public readonly isRequired = signal(false);
   public readonly label = input.required<string>();
+  public readonly multiple = input(false);
 
   public readonly selectedAccount = computed(() => {
     const selectedAccountId = this.selectedAccountId();
 
-    return this.accounts().find(({ id }) => {
-      return id === selectedAccountId;
+    return this.accounts().filter(({ id }) => {
+      return selectedAccountId?.some((e) => e == id);
     });
   });
 
@@ -74,7 +75,7 @@ export class GfAccountSelectorComponent
     self: true
   });
 
-  private readonly selectedAccountId = signal<string | null>(null);
+  private readonly selectedAccountId = signal<string[] | null>(null);
 
   public constructor() {
     // Register as the value accessor manually, because injecting NgControl
@@ -85,9 +86,9 @@ export class GfAccountSelectorComponent
 
     this.control.valueChanges
       .pipe(takeUntilDestroyed())
-      .subscribe((accountId) => {
-        this.selectedAccountId.set(accountId);
-        this.onChange(accountId);
+      .subscribe((accountIds) => {
+        this.selectedAccountId.set(accountIds ?? null);
+        this.onChange(accountIds);
       });
   }
 
@@ -101,7 +102,7 @@ export class GfAccountSelectorComponent
     this.onTouched();
   }
 
-  public registerOnChange(fn: (accountId: string | null) => void) {
+  public registerOnChange(fn: (accountIds: string[] | null) => void) {
     this.onChange = fn;
   }
 
@@ -117,12 +118,12 @@ export class GfAccountSelectorComponent
     }
   }
 
-  public writeValue(accountId: string | null) {
-    this.control.setValue(accountId ?? null, { emitEvent: false });
-    this.selectedAccountId.set(accountId ?? null);
+  public writeValue(accountIds: string[] | null) {
+    this.control.setValue(accountIds ?? null, { emitEvent: false });
+    this.selectedAccountId.set(accountIds ?? null);
   }
 
-  private onChange: (accountId: string | null) => void = () => {
+  private onChange: (accountIds: string[] | null) => void = () => {
     // ControlValueAccessor onChange callback
   };
 

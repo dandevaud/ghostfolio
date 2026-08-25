@@ -478,6 +478,10 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         ?.sort((a, b) => {
           return a.label.localeCompare(b.label);
         }) ?? [];
+
+    if (this.tags.length === 0) {
+      this.portfolioFilterFormControl.get('tag')?.disable({ emitEvent: false });
+    }
   }
 
   public hasFilter(aFormValue: { [key: string]: string[] }) {
