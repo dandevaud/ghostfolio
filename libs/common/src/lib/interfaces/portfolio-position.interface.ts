@@ -20,6 +20,7 @@ export interface PortfolioPosition {
     | 'sectors'
     | 'symbol'
     | 'url'
+    | 'tags'
   > & {
     assetClassLabel?: string;
     assetSubClassLabel?: string;
