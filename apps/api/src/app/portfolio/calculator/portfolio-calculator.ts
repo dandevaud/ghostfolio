@@ -526,97 +526,101 @@ export abstract class PortfolioCalculator {
     }
 
     for (const dateString of chartDates) {
+      let investmentValueWithCurrencyEffect = new Big(0);
+      let totalCashValueWithCurrencyEffect = new Big(0);
+      let totalCurrentValue = new Big(0);
+      let totalCurrentValueWithCurrencyEffect = new Big(0);
+      let totalInvestmentValue = new Big(0);
+      let totalInvestmentValueWithCurrencyEffect = new Big(0);
+      let totalNetPerformanceValue = new Big(0);
+      let totalNetPerformanceValueWithCurrencyEffect = new Big(0);
+      let totalNetWorthValueWithCurrencyEffect = new Big(0);
+      let totalTimeWeightedInvestmentValue = new Big(0);
+      let totalTimeWeightedInvestmentValueWithCurrencyEffect = new Big(0);
+
       for (const symbol of Object.keys(valuesBySymbol)) {
         const symbolValues = valuesBySymbol[symbol];
 
         const currentValue =
           symbolValues.currentValues?.[dateString] ?? new Big(0);
-
         const currentValueWithCurrencyEffect =
           symbolValues.currentValuesWithCurrencyEffect?.[dateString] ??
           new Big(0);
-
         const investmentValueAccumulated =
           symbolValues.investmentValuesAccumulated?.[dateString] ?? new Big(0);
-
         const investmentValueAccumulatedWithCurrencyEffect =
           symbolValues.investmentValuesAccumulatedWithCurrencyEffect?.[
             dateString
           ] ?? new Big(0);
-
-        const investmentValueWithCurrencyEffect =
+        const investmentValueWithCurrencyEffectForSymbol =
           symbolValues.investmentValuesWithCurrencyEffect?.[dateString] ??
           new Big(0);
-
         const netPerformanceValue =
           symbolValues.netPerformanceValues?.[dateString] ?? new Big(0);
-
         const netPerformanceValueWithCurrencyEffect =
           symbolValues.netPerformanceValuesWithCurrencyEffect?.[dateString] ??
           new Big(0);
-
         const netWorthValueWithCurrencyEffect =
           symbolValues.netWorthValuesWithCurrencyEffect?.[dateString] ??
           new Big(0);
-
         const timeWeightedInvestmentValue =
           symbolValues.timeWeightedInvestmentValues?.[dateString] ?? new Big(0);
-
         const timeWeightedInvestmentValueWithCurrencyEffect =
           symbolValues.timeWeightedInvestmentValuesWithCurrencyEffect?.[
             dateString
           ] ?? new Big(0);
 
-        accumulatedValuesByDate[dateString] = {
-          investmentValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.investmentValueWithCurrencyEffect ?? new Big(0)
-          ).add(investmentValueWithCurrencyEffect),
-          totalCashValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.totalCashValueWithCurrencyEffect ?? new Big(0)
-          ).add(
-            cashSymbols.has(symbol)
-              ? netWorthValueWithCurrencyEffect
-              : new Big(0)
-          ),
-          totalCurrentValue: (
-            accumulatedValuesByDate[dateString]?.totalCurrentValue ?? new Big(0)
-          ).add(currentValue),
-          totalCurrentValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.totalCurrentValueWithCurrencyEffect ?? new Big(0)
-          ).add(currentValueWithCurrencyEffect),
-          totalInvestmentValue: (
-            accumulatedValuesByDate[dateString]?.totalInvestmentValue ??
-            new Big(0)
-          ).add(investmentValueAccumulated),
-          totalInvestmentValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.totalInvestmentValueWithCurrencyEffect ?? new Big(0)
-          ).add(investmentValueAccumulatedWithCurrencyEffect),
-          totalNetPerformanceValue: (
-            accumulatedValuesByDate[dateString]?.totalNetPerformanceValue ??
-            new Big(0)
-          ).add(netPerformanceValue),
-          totalNetPerformanceValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.totalNetPerformanceValueWithCurrencyEffect ?? new Big(0)
-          ).add(netPerformanceValueWithCurrencyEffect),
-          totalNetWorthValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.totalNetWorthValueWithCurrencyEffect ?? new Big(0)
-          ).add(netWorthValueWithCurrencyEffect),
-          totalTimeWeightedInvestmentValue: (
-            accumulatedValuesByDate[dateString]
-              ?.totalTimeWeightedInvestmentValue ?? new Big(0)
-          ).add(timeWeightedInvestmentValue),
-          totalTimeWeightedInvestmentValueWithCurrencyEffect: (
-            accumulatedValuesByDate[dateString]
-              ?.totalTimeWeightedInvestmentValueWithCurrencyEffect ?? new Big(0)
-          ).add(timeWeightedInvestmentValueWithCurrencyEffect)
-        };
+        investmentValueWithCurrencyEffect =
+          investmentValueWithCurrencyEffect.add(
+            investmentValueWithCurrencyEffectForSymbol
+          );
+        totalCashValueWithCurrencyEffect = totalCashValueWithCurrencyEffect.add(
+          cashSymbols.has(symbol) ? netWorthValueWithCurrencyEffect : new Big(0)
+        );
+        totalCurrentValue = totalCurrentValue.add(currentValue);
+        totalCurrentValueWithCurrencyEffect =
+          totalCurrentValueWithCurrencyEffect.add(
+            currentValueWithCurrencyEffect
+          );
+        totalInvestmentValue = totalInvestmentValue.add(
+          investmentValueAccumulated
+        );
+        totalInvestmentValueWithCurrencyEffect =
+          totalInvestmentValueWithCurrencyEffect.add(
+            investmentValueAccumulatedWithCurrencyEffect
+          );
+        totalNetPerformanceValue =
+          totalNetPerformanceValue.add(netPerformanceValue);
+        totalNetPerformanceValueWithCurrencyEffect =
+          totalNetPerformanceValueWithCurrencyEffect.add(
+            netPerformanceValueWithCurrencyEffect
+          );
+        totalNetWorthValueWithCurrencyEffect =
+          totalNetWorthValueWithCurrencyEffect.add(
+            netWorthValueWithCurrencyEffect
+          );
+        totalTimeWeightedInvestmentValue = totalTimeWeightedInvestmentValue.add(
+          timeWeightedInvestmentValue
+        );
+        totalTimeWeightedInvestmentValueWithCurrencyEffect =
+          totalTimeWeightedInvestmentValueWithCurrencyEffect.add(
+            timeWeightedInvestmentValueWithCurrencyEffect
+          );
       }
+
+      accumulatedValuesByDate[dateString] = {
+        investmentValueWithCurrencyEffect,
+        totalCashValueWithCurrencyEffect,
+        totalCurrentValue,
+        totalCurrentValueWithCurrencyEffect,
+        totalInvestmentValue,
+        totalInvestmentValueWithCurrencyEffect,
+        totalNetPerformanceValue,
+        totalNetPerformanceValueWithCurrencyEffect,
+        totalNetWorthValueWithCurrencyEffect,
+        totalTimeWeightedInvestmentValue,
+        totalTimeWeightedInvestmentValueWithCurrencyEffect
+      };
     }
 
     const historicalData: HistoricalDataItem[] = this.getHistoricalDataItems(
@@ -655,6 +659,9 @@ export abstract class PortfolioCalculator {
       withExcludedAccountsAndActivities: true
     });
     const orders = this.activitiesToPortfolioOrder(activities.activities);
+    const activitiesBySymbol = groupBy(orders, ({ assetProfile }) => {
+      return assetProfile.symbol;
+    });
     const start = orders.reduce(
       (date, order) =>
         parseDate(date.date).getTime() < parseDate(order.date).getTime()
@@ -671,9 +678,13 @@ export abstract class PortfolioCalculator {
       dateQuery: { in: [end] }
     });
     const endString = format(end, DATE_FORMAT);
+
     const exchangeRates = await Promise.all(
       Object.keys(holdings[endString]).map(async (holding) => {
-        const symbolCurrency = this.getCurrencyFromActivities(orders, holding);
+        const symbolCurrency = this.getCurrencyFromActivities(
+          activitiesBySymbol,
+          holding
+        );
         const exchangeRate =
           await this.exchangeRateDataService.toCurrencyAtDate(
             1,
@@ -997,35 +1008,16 @@ export abstract class PortfolioCalculator {
   }
 
   protected getCurrency(symbol: string) {
-    return this.getCurrencyFromActivities(this.activities, symbol);
+    return this.getCurrencyFromActivities(this.activitiesBySymbol, symbol);
   }
 
   protected getCurrencyFromActivities(
-    activities: PortfolioOrder[],
+    activities: { [symbol: string]: PortfolioOrder[] },
     symbol: string
   ) {
     if (!this.holdingCurrencies[symbol]) {
-      this.holdingCurrencies[symbol] = activities.find(
-        (a) => a.assetProfile.symbol === symbol
-      ).assetProfile.currency;
-    }
-
-    // Make sure the first and last date of each calendar year is present
-    const interval = { start: this.startDate, end: this.endDate };
-
-    for (const date of eachYearOfInterval(interval)) {
-      const yearStart = startOfYear(date);
-      const yearEnd = endOfYear(date);
-
-      if (isWithinInterval(yearStart, interval)) {
-        // Add start of year (YYYY-01-01)
-        this.chartDateMap[format(yearStart, DATE_FORMAT)] = true;
-      }
-
-      if (isWithinInterval(yearEnd, interval)) {
-        // Add end of year (YYYY-12-31)
-        this.chartDateMap[format(yearEnd, DATE_FORMAT)] = true;
-      }
+      this.holdingCurrencies[symbol] =
+        activities[symbol][0].assetProfile.currency;
     }
 
     return this.holdingCurrencies[symbol];
@@ -1344,7 +1336,7 @@ export abstract class PortfolioCalculator {
       return this.holdings;
     }
 
-    this.computeHoldings(activities, start, end);
+    await this.computeHoldings(activities, start, end);
     return this.holdings;
   }
 
@@ -1588,9 +1580,28 @@ export abstract class PortfolioCalculator {
       }
     }
 
+    // Make sure the first and last date of each calendar year is present
+    const interval = { start: this.startDate, end: this.endDate };
+
+    for (const date of eachYearOfInterval(interval)) {
+      const yearStart = startOfYear(date);
+      const yearEnd = endOfYear(date);
+
+      if (isWithinInterval(yearStart, interval)) {
+        // Add start of year (YYYY-01-01)
+        this.chartDateMap[format(yearStart, DATE_FORMAT)] = true;
+      }
+
+      if (isWithinInterval(yearEnd, interval)) {
+        // Add end of year (YYYY-12-31)
+        this.chartDateMap[format(yearEnd, DATE_FORMAT)] = true;
+      }
+    }
+
     return chartDateMap;
   }
 
+  @LogPerformance
   private handleTimeWeightedPerformance(
     accumulatedValuesByDate: {
       [date: string]: {
