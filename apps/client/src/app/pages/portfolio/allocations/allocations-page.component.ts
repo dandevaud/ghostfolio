@@ -507,6 +507,24 @@ export class GfAllocationsPageComponent implements OnInit {
         }
       }
 
+      if (position.tags?.length ?? 0 > 0) {
+        const value =
+          (isNumber(position.valueInBaseCurrency)
+            ? position.valueInBaseCurrency
+            : position.valueInPercentage) ?? 0;
+        for (const tag of position.tags ?? []) {
+          const tagHoldings = this.tagHoldingsMap[tag.id];
+          if (tagHoldings) {
+            tagHoldings.value += value;
+          } else {
+            this.tagHoldingsMap[tag.id] = {
+              name: tag.name,
+              value
+            };
+          }
+        }
+      }
+
       if (this.holdings[symbol].assetSubClass === 'ETF') {
         this.totalValueInEtf += this.holdings[symbol].value;
       }
