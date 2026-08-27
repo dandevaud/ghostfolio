@@ -1131,7 +1131,6 @@ export class ActivitiesService {
               }
             }
           },
-
           {
             SymbolProfile: {
               tags: {

@@ -9,71 +9,52 @@ import { PerformanceCalculationType } from '@ghostfolio/common/types/performance
 
 import { Logger } from '@nestjs/common';
 import { Big } from 'big.js';
-import { cloneDeep } from 'lodash';
 
 import { PortfolioOrderItem } from '../../interfaces/portfolio-order-item.interface';
+import { PerformanceAccumulator } from './portfolio-accumulator';
 import { RoiPortfolioCalculatorSymbolMetricsHelper } from './portfolio-calculator-symbolmetrics-helper';
 
 export class RoiPortfolioCalculator extends PortfolioCalculator {
   private chartDates: string[];
+  private static readonly ACTIVITY_TYPES_FOR_COUNT = new Set([
+    'BUY',
+    'SELL',
+    'STAKE'
+  ]);
 
   @LogPerformance
   protected calculateOverallPerformance(
     positions: TimelinePosition[]
   ): PortfolioSnapshot {
-    let currentValueInBaseCurrency = new Big(0);
-    let grossPerformance = new Big(0);
-    let grossPerformanceWithCurrencyEffect = new Big(0);
-    let hasErrors = false;
-    let netPerformance = new Big(0);
-    let totalFeesWithCurrencyEffect = new Big(0);
-    const totalInterestWithCurrencyEffect = new Big(0);
-    let totalInvestment = new Big(0);
-    let totalInvestmentWithCurrencyEffect = new Big(0);
-    let totalTimeWeightedInvestment = new Big(0);
-    let totalTimeWeightedInvestmentWithCurrencyEffect = new Big(0);
-    let totalCashInBaseCurrency = new Big(0);
+    const acc: PerformanceAccumulator = {
+      currentValueInBaseCurrency: new Big(0),
+      grossPerformance: new Big(0),
+      grossPerformanceWithCurrencyEffect: new Big(0),
+      hasErrors: false,
+      netPerformance: new Big(0),
+      totalCashInBaseCurrency: new Big(0),
+      totalFeesWithCurrencyEffect: new Big(0),
+      totalInvestment: new Big(0),
+      totalInvestmentWithCurrencyEffect: new Big(0),
+      totalTimeWeightedInvestment: new Big(0),
+      totalTimeWeightedInvestmentWithCurrencyEffect: new Big(0)
+    };
 
     for (const currentPosition of positions) {
-      ({
-        totalFeesWithCurrencyEffect,
-        currentValueInBaseCurrency,
-        hasErrors,
-        totalInvestment,
-        totalInvestmentWithCurrencyEffect,
-        grossPerformance,
-        grossPerformanceWithCurrencyEffect,
-        netPerformance,
-        totalTimeWeightedInvestment,
-        totalTimeWeightedInvestmentWithCurrencyEffect,
-        totalCashInBaseCurrency
-      } = this.calculatePositionMetrics(
-        currentPosition,
-        totalFeesWithCurrencyEffect,
-        currentValueInBaseCurrency,
-        hasErrors,
-        totalInvestment,
-        totalInvestmentWithCurrencyEffect,
-        grossPerformance,
-        grossPerformanceWithCurrencyEffect,
-        netPerformance,
-        totalTimeWeightedInvestment,
-        totalTimeWeightedInvestmentWithCurrencyEffect,
-        totalCashInBaseCurrency
-      ));
+      this.calculatePositionMetrics(currentPosition, acc);
     }
 
     return {
-      currentValueInBaseCurrency,
-      hasErrors,
+      currentValueInBaseCurrency: acc.currentValueInBaseCurrency,
+      hasErrors: acc.hasErrors,
       positions,
-      totalFeesWithCurrencyEffect,
-      totalInterestWithCurrencyEffect,
-      totalInvestment,
-      totalInvestmentWithCurrencyEffect,
-      totalCashInBaseCurrency,
+      totalFeesWithCurrencyEffect: acc.totalFeesWithCurrencyEffect,
+      totalInterestWithCurrencyEffect: new Big(0),
+      totalInvestment: acc.totalInvestment,
+      totalInvestmentWithCurrencyEffect: acc.totalInvestmentWithCurrencyEffect,
+      totalCashInBaseCurrency: acc.totalCashInBaseCurrency,
       activitiesCount: this.activities.filter(({ type }) => {
-        return ['BUY', 'SELL', 'STAKE'].includes(type);
+        return RoiPortfolioCalculator.ACTIVITY_TYPES_FOR_COUNT.has(type);
       }).length,
       createdAt: new Date(),
       errors: [],
@@ -117,11 +98,9 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
         symbol
       );
 
-    let orders: PortfolioOrderItem[] = cloneDeep(
-      this.activities.filter(({ assetProfile }) => {
-        return assetProfile.symbol === symbol;
-      })
-    );
+    let orders: PortfolioOrderItem[] = this.activities
+      .filter(({ assetProfile }) => assetProfile.symbol === symbol)
+      .map((activity) => ({ ...activity }));
 
     if (!orders.length) {
       return symbolMetricsHelper.symbolMetrics;
@@ -192,65 +171,59 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
 
   private calculatePositionMetrics(
     currentPosition: TimelinePosition,
-    totalFeesWithCurrencyEffect: Big,
-    currentValueInBaseCurrency: Big,
-    hasErrors: boolean,
-    totalInvestment: Big,
-    totalInvestmentWithCurrencyEffect: Big,
-    grossPerformance: Big,
-    grossPerformanceWithCurrencyEffect: Big,
-    netPerformance: Big,
-    totalTimeWeightedInvestment: Big,
-    totalTimeWeightedInvestmentWithCurrencyEffect: Big,
-    totalCashInBaseCurrency: Big
+    acc: PerformanceAccumulator
   ) {
     if (currentPosition.feeInBaseCurrency) {
-      totalFeesWithCurrencyEffect = totalFeesWithCurrencyEffect.plus(
+      acc.totalFeesWithCurrencyEffect = acc.totalFeesWithCurrencyEffect.plus(
         currentPosition.feeInBaseCurrency
       );
     }
 
     if (currentPosition.valueInBaseCurrency) {
-      currentValueInBaseCurrency = currentValueInBaseCurrency.plus(
+      acc.currentValueInBaseCurrency = acc.currentValueInBaseCurrency.plus(
         currentPosition.valueInBaseCurrency
       );
     } else {
-      hasErrors = true;
+      acc.hasErrors = true;
     }
 
     if (currentPosition.investment) {
-      totalInvestment = totalInvestment.plus(currentPosition.investment);
+      acc.totalInvestment = acc.totalInvestment.plus(
+        currentPosition.investment
+      );
 
-      totalInvestmentWithCurrencyEffect =
-        totalInvestmentWithCurrencyEffect.plus(
+      acc.totalInvestmentWithCurrencyEffect =
+        acc.totalInvestmentWithCurrencyEffect.plus(
           currentPosition.investmentWithCurrencyEffect
         );
     } else {
-      hasErrors = true;
+      acc.hasErrors = true;
     }
 
     if (currentPosition.grossPerformance) {
-      grossPerformance = grossPerformance.plus(
+      acc.grossPerformance = acc.grossPerformance.plus(
         currentPosition.grossPerformance
       );
 
-      grossPerformanceWithCurrencyEffect =
-        grossPerformanceWithCurrencyEffect.plus(
+      acc.grossPerformanceWithCurrencyEffect =
+        acc.grossPerformanceWithCurrencyEffect.plus(
           currentPosition.grossPerformanceWithCurrencyEffect
         );
 
-      netPerformance = netPerformance.plus(currentPosition.netPerformance);
+      acc.netPerformance = acc.netPerformance.plus(
+        currentPosition.netPerformance
+      );
     } else if (!currentPosition.quantity.eq(0)) {
-      hasErrors = true;
+      acc.hasErrors = true;
     }
 
     if (currentPosition.timeWeightedInvestment) {
-      totalTimeWeightedInvestment = totalTimeWeightedInvestment.plus(
+      acc.totalTimeWeightedInvestment = acc.totalTimeWeightedInvestment.plus(
         currentPosition.timeWeightedInvestment
       );
 
-      totalTimeWeightedInvestmentWithCurrencyEffect =
-        totalTimeWeightedInvestmentWithCurrencyEffect.plus(
+      acc.totalTimeWeightedInvestmentWithCurrencyEffect =
+        acc.totalTimeWeightedInvestmentWithCurrencyEffect.plus(
           currentPosition.timeWeightedInvestmentWithCurrencyEffect
         );
     } else if (!currentPosition.quantity.eq(0)) {
@@ -259,20 +232,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
         'PortfolioCalculator'
       );
 
-      hasErrors = true;
+      acc.hasErrors = true;
     }
-    return {
-      totalFeesWithCurrencyEffect,
-      currentValueInBaseCurrency,
-      hasErrors,
-      totalInvestment,
-      totalInvestmentWithCurrencyEffect,
-      grossPerformance,
-      grossPerformanceWithCurrencyEffect,
-      netPerformance,
-      totalTimeWeightedInvestment,
-      totalTimeWeightedInvestmentWithCurrencyEffect,
-      totalCashInBaseCurrency
-    };
   }
 }

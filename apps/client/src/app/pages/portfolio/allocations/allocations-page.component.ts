@@ -585,9 +585,10 @@ export class GfAllocationsPageComponent implements OnInit {
         return {
           name,
           allocationInPercentage:
-            this.portfolioDetails.summary!.currentValueInBaseCurrency > 0
+            (this.portfolioDetails.summary!.filteredValueInBaseCurrency ?? 0) >
+            0
               ? value /
-                this.portfolioDetails.summary!.currentValueInBaseCurrency
+                this.portfolioDetails.summary!.filteredValueInBaseCurrency!
               : 0,
           valueInBaseCurrency: value
         };
