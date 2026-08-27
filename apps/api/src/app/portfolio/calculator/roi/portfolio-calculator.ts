@@ -27,17 +27,17 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
     positions: TimelinePosition[]
   ): PortfolioSnapshot {
     const acc: PerformanceAccumulator = {
-      currentValueInBaseCurrency: new Big(0),
-      grossPerformance: new Big(0),
-      grossPerformanceWithCurrencyEffect: new Big(0),
+      currentValueInBaseCurrency: this.ZERO,
+      grossPerformance: this.ZERO,
+      grossPerformanceWithCurrencyEffect: this.ZERO,
       hasErrors: false,
-      netPerformance: new Big(0),
-      totalCashInBaseCurrency: new Big(0),
-      totalFeesWithCurrencyEffect: new Big(0),
-      totalInvestment: new Big(0),
-      totalInvestmentWithCurrencyEffect: new Big(0),
-      totalTimeWeightedInvestment: new Big(0),
-      totalTimeWeightedInvestmentWithCurrencyEffect: new Big(0)
+      netPerformance: this.ZERO,
+      totalCashInBaseCurrency: this.ZERO,
+      totalFeesWithCurrencyEffect: this.ZERO,
+      totalInvestment: this.ZERO,
+      totalInvestmentWithCurrencyEffect: this.ZERO,
+      totalTimeWeightedInvestment: this.ZERO,
+      totalTimeWeightedInvestmentWithCurrencyEffect: this.ZERO
     };
 
     for (const currentPosition of positions) {
@@ -49,7 +49,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       hasErrors: acc.hasErrors,
       positions,
       totalFeesWithCurrencyEffect: acc.totalFeesWithCurrencyEffect,
-      totalInterestWithCurrencyEffect: new Big(0),
+      totalInterestWithCurrencyEffect: this.ZERO,
       totalInvestment: acc.totalInvestment,
       totalInvestmentWithCurrencyEffect: acc.totalInvestmentWithCurrencyEffect,
       totalCashInBaseCurrency: acc.totalCashInBaseCurrency,
@@ -59,7 +59,7 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
       createdAt: new Date(),
       errors: [],
       historicalData: [],
-      totalLiabilitiesWithCurrencyEffect: new Big(0)
+      totalLiabilitiesWithCurrencyEffect: this.ZERO
     };
   }
 
