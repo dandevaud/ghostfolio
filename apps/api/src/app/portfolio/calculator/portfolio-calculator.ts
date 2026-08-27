@@ -72,6 +72,9 @@ export abstract class PortfolioCalculator {
 
   private static readonly MAX_INITIALIZATION_ATTEMPTS = 3;
 
+  protected readonly ONE = new Big(1);
+  protected readonly ZERO = new Big(0);
+
   protected readonly logger = new Logger(PortfolioCalculator.name);
 
   protected accountBalanceItems: HistoricalDataItem[];
@@ -219,17 +222,17 @@ export abstract class PortfolioCalculator {
       return {
         activitiesCount: 0,
         createdAt: new Date(),
-        currentValueInBaseCurrency: new Big(0),
+        currentValueInBaseCurrency: this.ZERO,
         errors: [],
         hasErrors: false,
         historicalData: [],
         positions: [],
-        totalCashInBaseCurrency: new Big(0),
-        totalFeesWithCurrencyEffect: new Big(0),
-        totalInterestWithCurrencyEffect: new Big(0),
-        totalInvestment: new Big(0),
-        totalInvestmentWithCurrencyEffect: new Big(0),
-        totalLiabilitiesWithCurrencyEffect: new Big(0)
+        totalCashInBaseCurrency: this.ZERO,
+        totalFeesWithCurrencyEffect: this.ZERO,
+        totalInterestWithCurrencyEffect: this.ZERO,
+        totalInvestment: this.ZERO,
+        totalInvestmentWithCurrencyEffect: this.ZERO,
+        totalLiabilitiesWithCurrencyEffect: this.ZERO
       };
     }
 
@@ -238,9 +241,9 @@ export abstract class PortfolioCalculator {
     const dataGatheringItems: DataGatheringItem[] = [];
     let firstIndex = transactionPoints.length;
     let firstTransactionPoint: TransactionPoint = null;
-    let totalCashInBaseCurrency = new Big(0);
-    let totalInterestWithCurrencyEffect = new Big(0);
-    let totalLiabilitiesWithCurrencyEffect = new Big(0);
+    let totalCashInBaseCurrency = this.ZERO;
+    let totalInterestWithCurrencyEffect = this.ZERO;
+    let totalLiabilitiesWithCurrencyEffect = this.ZERO;
 
     for (const {
       assetSubClass,
@@ -526,56 +529,56 @@ export abstract class PortfolioCalculator {
     }
 
     for (const dateString of chartDates) {
-      let investmentValueWithCurrencyEffect = new Big(0);
-      let totalCashValueWithCurrencyEffect = new Big(0);
-      let totalCurrentValue = new Big(0);
-      let totalCurrentValueWithCurrencyEffect = new Big(0);
-      let totalInvestmentValue = new Big(0);
-      let totalInvestmentValueWithCurrencyEffect = new Big(0);
-      let totalNetPerformanceValue = new Big(0);
-      let totalNetPerformanceValueWithCurrencyEffect = new Big(0);
-      let totalNetWorthValueWithCurrencyEffect = new Big(0);
-      let totalTimeWeightedInvestmentValue = new Big(0);
-      let totalTimeWeightedInvestmentValueWithCurrencyEffect = new Big(0);
+      let investmentValueWithCurrencyEffect = this.ZERO;
+      let totalCashValueWithCurrencyEffect = this.ZERO;
+      let totalCurrentValue = this.ZERO;
+      let totalCurrentValueWithCurrencyEffect = this.ZERO;
+      let totalInvestmentValue = this.ZERO;
+      let totalInvestmentValueWithCurrencyEffect = this.ZERO;
+      let totalNetPerformanceValue = this.ZERO;
+      let totalNetPerformanceValueWithCurrencyEffect = this.ZERO;
+      let totalNetWorthValueWithCurrencyEffect = this.ZERO;
+      let totalTimeWeightedInvestmentValue = this.ZERO;
+      let totalTimeWeightedInvestmentValueWithCurrencyEffect = this.ZERO;
 
       for (const symbol of Object.keys(valuesBySymbol)) {
         const symbolValues = valuesBySymbol[symbol];
 
         const currentValue =
-          symbolValues.currentValues?.[dateString] ?? new Big(0);
+          symbolValues.currentValues?.[dateString] ?? this.ZERO;
         const currentValueWithCurrencyEffect =
           symbolValues.currentValuesWithCurrencyEffect?.[dateString] ??
-          new Big(0);
+          this.ZERO;
         const investmentValueAccumulated =
-          symbolValues.investmentValuesAccumulated?.[dateString] ?? new Big(0);
+          symbolValues.investmentValuesAccumulated?.[dateString] ?? this.ZERO;
         const investmentValueAccumulatedWithCurrencyEffect =
           symbolValues.investmentValuesAccumulatedWithCurrencyEffect?.[
             dateString
-          ] ?? new Big(0);
+          ] ?? this.ZERO;
         const investmentValueWithCurrencyEffectForSymbol =
           symbolValues.investmentValuesWithCurrencyEffect?.[dateString] ??
-          new Big(0);
+          this.ZERO;
         const netPerformanceValue =
-          symbolValues.netPerformanceValues?.[dateString] ?? new Big(0);
+          symbolValues.netPerformanceValues?.[dateString] ?? this.ZERO;
         const netPerformanceValueWithCurrencyEffect =
           symbolValues.netPerformanceValuesWithCurrencyEffect?.[dateString] ??
-          new Big(0);
+          this.ZERO;
         const netWorthValueWithCurrencyEffect =
           symbolValues.netWorthValuesWithCurrencyEffect?.[dateString] ??
-          new Big(0);
+          this.ZERO;
         const timeWeightedInvestmentValue =
-          symbolValues.timeWeightedInvestmentValues?.[dateString] ?? new Big(0);
+          symbolValues.timeWeightedInvestmentValues?.[dateString] ?? this.ZERO;
         const timeWeightedInvestmentValueWithCurrencyEffect =
           symbolValues.timeWeightedInvestmentValuesWithCurrencyEffect?.[
             dateString
-          ] ?? new Big(0);
+          ] ?? this.ZERO;
 
         investmentValueWithCurrencyEffect =
           investmentValueWithCurrencyEffect.add(
             investmentValueWithCurrencyEffectForSymbol
           );
         totalCashValueWithCurrencyEffect = totalCashValueWithCurrencyEffect.add(
-          cashSymbols.has(symbol) ? netWorthValueWithCurrencyEffect : new Big(0)
+          cashSymbols.has(symbol) ? netWorthValueWithCurrencyEffect : this.ZERO
         );
         totalCurrentValue = totalCurrentValue.add(currentValue);
         totalCurrentValueWithCurrencyEffect =
@@ -722,7 +725,7 @@ export abstract class PortfolioCalculator {
         );
         return sum.plus(new Big(price).mul(holdings[endString][holding]));
       }
-    }, new Big(0));
+    }, this.ZERO);
   }
 
   @LogPerformance
@@ -767,7 +770,7 @@ export abstract class PortfolioCalculator {
         investment: transactionPoint.items.reduce(
           (investment, transactionPointSymbol) =>
             investment.plus(transactionPointSymbol.investment),
-          new Big(0)
+          this.ZERO
         )
       };
     });
@@ -786,7 +789,7 @@ export abstract class PortfolioCalculator {
     for (const { date, investmentValueWithCurrencyEffect } of data) {
       const dateGroup =
         groupBy === 'month' ? date.substring(0, 7) : date.substring(0, 4);
-      groupedData[dateGroup] = (groupedData[dateGroup] ?? new Big(0)).plus(
+      groupedData[dateGroup] = (groupedData[dateGroup] ?? this.ZERO).plus(
         investmentValueWithCurrencyEffect
       );
     }
@@ -929,8 +932,8 @@ export abstract class PortfolioCalculator {
     };
   }): HistoricalDataItem[] {
     let previousDateString = '';
-    let timeWeightedPerformancePreviousPeriod = new Big(0);
-    let timeWeightedPerformancePreviousPeriodWithCurrencyEffect = new Big(0);
+    let timeWeightedPerformancePreviousPeriod = this.ZERO;
+    let timeWeightedPerformancePreviousPeriodWithCurrencyEffect = this.ZERO;
     return Object.entries(accumulatedValuesByDate).map(([date, values]) => {
       const {
         investmentValueWithCurrencyEffect,
@@ -1083,8 +1086,8 @@ export abstract class PortfolioCalculator {
 
         if (newQuantity.abs().lt(Number.EPSILON)) {
           // Reset to zero if quantity is (almost) zero to avoid rounding issues
-          investment = new Big(0);
-          newQuantity = new Big(0);
+          investment = this.ZERO;
+          newQuantity = this.ZERO;
         }
 
         currentTransactionPointItem = {
@@ -1096,10 +1099,10 @@ export abstract class PortfolioCalculator {
           symbol,
           activitiesCount: oldAccumulatedSymbol.activitiesCount + 1,
           averagePrice: newQuantity.eq(0)
-            ? new Big(0)
+            ? this.ZERO
             : investment.div(newQuantity).abs(),
           dateOfFirstActivity: oldAccumulatedSymbol.dateOfFirstActivity,
-          dividend: new Big(0),
+          dividend: this.ZERO,
           fee: oldAccumulatedSymbol.fee.plus(fee),
           feeInBaseCurrency:
             oldAccumulatedSymbol.feeInBaseCurrency.plus(feeInBaseCurrency),
@@ -1120,7 +1123,7 @@ export abstract class PortfolioCalculator {
           activitiesCount: 1,
           averagePrice: unitPrice,
           dateOfFirstActivity: date,
-          dividend: new Big(0),
+          dividend: this.ZERO,
           includeInHoldings: INVESTMENT_ACTIVITY_TYPES.includes(type),
           investment: unitPrice.mul(quantity).mul(factor),
           quantity: quantity.mul(factor)
@@ -1146,19 +1149,19 @@ export abstract class PortfolioCalculator {
         return a.symbol?.localeCompare(b.symbol);
       });
 
-      let fees = new Big(0);
+      let fees = this.ZERO;
 
       if (type === 'FEE') {
         fees = fee;
       }
 
-      let interest = new Big(0);
+      let interest = this.ZERO;
 
       if (type === 'INTEREST') {
         interest = quantity.mul(unitPrice);
       }
 
-      let liabilities = new Big(0);
+      let liabilities = this.ZERO;
 
       if (type === 'LIABILITY') {
         liabilities = quantity.mul(unitPrice);
@@ -1376,7 +1379,7 @@ export abstract class PortfolioCalculator {
       const trades: PortfolioOrder[] = preRangeTrades[symbol];
       const startQuantity = trades.reduce((sum, trade) => {
         return sum.plus(trade.quantity.mul(getFactor(trade.type)));
-      }, new Big(0));
+      }, this.ZERO);
       currentHoldings[format(start, DATE_FORMAT)][symbol] = startQuantity;
     }
   }
@@ -1500,7 +1503,7 @@ export abstract class PortfolioCalculator {
       if (transactionDates.some((d) => d === dateString)) {
         const holdings = { ...currentHoldings[previousDateString] };
         investmentByDate[dateString].forEach((trade) => {
-          holdings[trade.assetProfile.symbol] ??= new Big(0);
+          holdings[trade.assetProfile.symbol] ??= this.ZERO;
           holdings[trade.assetProfile.symbol] = holdings[
             trade.assetProfile.symbol
           ].plus(trade.quantity.mul(getFactor(trade.type)));
@@ -1601,7 +1604,6 @@ export abstract class PortfolioCalculator {
     return chartDateMap;
   }
 
-  @LogPerformance
   private handleTimeWeightedPerformance(
     accumulatedValuesByDate: {
       [date: string]: {
@@ -1630,12 +1632,12 @@ export abstract class PortfolioCalculator {
     timeWeightedPerformancePreviousPeriodWithCurrencyEffect: Big;
   } {
     const previousValues = accumulatedValuesByDate[previousDateString] ?? {
-      totalNetPerformanceValue: new Big(0),
-      totalNetPerformanceValueWithCurrencyEffect: new Big(0),
-      totalTimeWeightedInvestmentValue: new Big(0),
-      totalTimeWeightedInvestmentValueWithCurrencyEffect: new Big(0),
-      totalCurrentValue: new Big(0),
-      totalCurrentValueWithCurrencyEffect: new Big(0)
+      totalNetPerformanceValue: this.ZERO,
+      totalNetPerformanceValueWithCurrencyEffect: this.ZERO,
+      totalTimeWeightedInvestmentValue: this.ZERO,
+      totalTimeWeightedInvestmentValueWithCurrencyEffect: this.ZERO,
+      totalCurrentValue: this.ZERO,
+      totalCurrentValueWithCurrencyEffect: this.ZERO
     };
 
     const timeWeightedPerformanceCurrentPeriod = this.divideByOrZero(
@@ -1654,14 +1656,16 @@ export abstract class PortfolioCalculator {
         previousValues.totalCurrentValueWithCurrencyEffect
       );
 
-    const timeWeightedPerformanceInPercentage = new Big(1)
-      .plus(timeWeightedPerformancePreviousPeriod)
-      .mul(new Big(1).plus(timeWeightedPerformanceCurrentPeriod))
+    const timeWeightedPerformanceInPercentage = this.ONE.plus(
+      timeWeightedPerformancePreviousPeriod
+    )
+      .mul(this.ONE.plus(timeWeightedPerformanceCurrentPeriod))
       .minus(1);
-    const timeWeightedPerformanceInPercentageWithCurrencyEffect = new Big(1)
-      .plus(timeWeightedPerformancePreviousPeriodWithCurrencyEffect)
+    const timeWeightedPerformanceInPercentageWithCurrencyEffect = this.ONE.plus(
+      timeWeightedPerformancePreviousPeriodWithCurrencyEffect
+    )
       .mul(
-        new Big(1).plus(timeWeightedPerformanceCurrentPeriodWithCurrencyEffect)
+        this.ONE.plus(timeWeightedPerformanceCurrentPeriodWithCurrencyEffect)
       )
       .minus(1);
 
@@ -1680,7 +1684,7 @@ export abstract class PortfolioCalculator {
 
   private divideByOrZero(fn: (big: Big) => Big, divisor: Big): Big {
     if (divisor.eq(0)) {
-      return new Big(0);
+      return this.ZERO;
     } else {
       return fn(divisor);
     }
