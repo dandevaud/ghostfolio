@@ -17,6 +17,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   private baseCurrencySuffix = 'InBaseCurrency';
   private chartDates: string[];
   private marketSymbolMap: { [date: string]: { [symbol: string]: Big } };
+  private static readonly BUY_SELL_ORDER_TYPES = new Set(['BUY', 'SELL']);
   public constructor(
     ENABLE_LOGGING: boolean,
     marketSymbolMap: { [date: string]: { [symbol: string]: Big } },
@@ -221,13 +222,11 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     );
 
     symbolMetricsHelper.symbolMetrics.investmentValuesAccumulated[order.date] =
-      new Big(symbolMetricsHelper.symbolMetrics.totalInvestment.toNumber());
+      symbolMetricsHelper.symbolMetrics.totalInvestment;
 
     symbolMetricsHelper.symbolMetrics.investmentValuesAccumulatedWithCurrencyEffect[
       order.date
-    ] = new Big(
-      symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect.toNumber()
-    );
+    ] = symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect;
 
     symbolMetricsHelper.symbolMetrics.investmentValuesWithCurrencyEffect[
       order.date
@@ -264,20 +263,18 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     valueOfInvestment: Big,
     valueOfInvestmentWithCurrencyEffect: Big
   ) {
-    symbolMetricsHelper.symbolMetrics.currentValues[order.date] = new Big(
-      valueOfInvestment
-    );
+    symbolMetricsHelper.symbolMetrics.currentValues[order.date] =
+      valueOfInvestment;
     symbolMetricsHelper.symbolMetrics.currentValuesWithCurrencyEffect[
       order.date
-    ] = new Big(valueOfInvestmentWithCurrencyEffect);
+    ] = valueOfInvestmentWithCurrencyEffect;
 
     symbolMetricsHelper.symbolMetrics.timeWeightedInvestmentValues[order.date] =
-      new Big(symbolMetricsHelper.totalInvestmentFromBuyTransactions);
+      symbolMetricsHelper.totalInvestmentFromBuyTransactions;
     symbolMetricsHelper.symbolMetrics.timeWeightedInvestmentValuesWithCurrencyEffect[
       order.date
-    ] = new Big(
-      symbolMetricsHelper.totalInvestmentFromBuyTransactionsWithCurrencyEffect
-    );
+    ] =
+      symbolMetricsHelper.totalInvestmentFromBuyTransactionsWithCurrencyEffect;
 
     symbolMetricsHelper.symbolMetrics.netPerformanceValues[order.date] =
       symbolMetricsHelper.symbolMetrics.grossPerformance
@@ -349,31 +346,29 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     transactionInvestment: Big,
     transactionInvestmentWithCurrencyEffect: Big
   ) {
-    if (symbolMetricsHelper.totalUnits.toNumber() === 0) {
+    if (symbolMetricsHelper.totalUnits.eq(0)) {
       symbolMetricsHelper.symbolMetrics.totalInvestment = new Big(0);
       symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect =
         new Big(0);
       return;
     }
 
-    symbolMetricsHelper.symbolMetrics.totalInvestment = new Big(
-      Math.max(
-        symbolMetricsHelper.symbolMetrics.totalInvestment
-          .plus(transactionInvestment)
-          .toNumber(),
-        0
-      )
-    );
-
-    symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect =
-      new Big(
-        Math.max(
-          symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect
-            .plus(transactionInvestmentWithCurrencyEffect)
-            .toNumber(),
-          0
-        )
+    const newTotalInvestment =
+      symbolMetricsHelper.symbolMetrics.totalInvestment.plus(
+        transactionInvestment
       );
+    symbolMetricsHelper.symbolMetrics.totalInvestment = newTotalInvestment.lt(0)
+      ? new Big(0)
+      : newTotalInvestment;
+
+    const newTotalInvestmentWithCurrencyEffect =
+      symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect.plus(
+        transactionInvestmentWithCurrencyEffect
+      );
+    symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect =
+      newTotalInvestmentWithCurrencyEffect.lt(0)
+        ? new Big(0)
+        : newTotalInvestmentWithCurrencyEffect;
   }
 
   public setInitialValueIfNecessary(
@@ -476,21 +471,18 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       !symbolMetricsHelper.investmentAtStartDate &&
       i >= symbolMetricsHelper.indexOfStartOrder
     ) {
-      symbolMetricsHelper.investmentAtStartDate = new Big(
-        symbolMetricsHelper.symbolMetrics.totalInvestment.toNumber()
-      );
-      symbolMetricsHelper.investmentAtStartDateWithCurrencyEffect = new Big(
-        symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect.toNumber()
-      );
+      symbolMetricsHelper.investmentAtStartDate =
+        symbolMetricsHelper.symbolMetrics.totalInvestment;
+      symbolMetricsHelper.investmentAtStartDateWithCurrencyEffect =
+        symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect;
 
-      symbolMetricsHelper.valueAtStartDate = new Big(
-        symbolMetricsHelper.investmentValueBeforeTransaction.toNumber()
-      );
+      symbolMetricsHelper.valueAtStartDate =
+        symbolMetricsHelper.investmentValueBeforeTransaction;
 
-      symbolMetricsHelper.valueAtStartDateWithCurrencyEffect = new Big(
-        symbolMetricsHelper.investmentValueBeforeTransactionWithCurrencyEffect.toNumber()
-      );
+      symbolMetricsHelper.valueAtStartDateWithCurrencyEffect =
+        symbolMetricsHelper.investmentValueBeforeTransactionWithCurrencyEffect;
     }
+
     if (order.itemType === 'start') {
       symbolMetricsHelper.feesAtStartDate = symbolMetricsHelper.fees;
       symbolMetricsHelper.feesAtStartDateWithCurrencyEffect =
@@ -510,13 +502,11 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
         i === symbolMetricsHelper.indexOfStartOrder &&
         !symbolMetricsHelper.symbolMetrics.totalInvestment.eq(0)
       ) {
-        symbolMetricsHelper.initialValue = new Big(
-          symbolMetricsHelper.symbolMetrics.totalInvestment.toNumber()
-        );
+        symbolMetricsHelper.initialValue =
+          symbolMetricsHelper.symbolMetrics.totalInvestment;
 
-        symbolMetricsHelper.initialValueWithCurrencyEffect = new Big(
-          symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect.toNumber()
-        );
+        symbolMetricsHelper.initialValueWithCurrencyEffect =
+          symbolMetricsHelper.symbolMetrics.totalInvestmentWithCurrencyEffect;
       }
     }
   }
@@ -549,9 +539,12 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     order: PortfolioOrderItem,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
-    const unitprice = ['BUY', 'SELL'].includes(order.type)
-      ? order.unitPrice
-      : order.unitPriceFromMarketData;
+    const unitprice =
+      RoiPortfolioCalculatorSymbolMetricsHelper.BUY_SELL_ORDER_TYPES.has(
+        order.type
+      )
+        ? order.unitPrice
+        : order.unitPriceFromMarketData;
     if (unitprice) {
       order.unitPriceInBaseCurrency = unitprice.mul(
         symbolMetricsHelper.currentExchangeRate ?? 1
@@ -628,20 +621,14 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       symbolMetricsHelper.symbolMetrics[stringKey] as Big
     ).plus(value);
 
-    if (
-      Object.keys(symbolMetricsHelper.symbolMetrics).includes(
-        stringKey + this.baseCurrencySuffix
-      )
-    ) {
-      symbolMetricsHelper.symbolMetrics[stringKey + this.baseCurrencySuffix] = (
-        symbolMetricsHelper.symbolMetrics[
-          stringKey + this.baseCurrencySuffix
-        ] as Big
+    const baseCurrencyKey = stringKey + this.baseCurrencySuffix;
+
+    if (baseCurrencyKey in symbolMetricsHelper.symbolMetrics) {
+      symbolMetricsHelper.symbolMetrics[baseCurrencyKey] = (
+        symbolMetricsHelper.symbolMetrics[baseCurrencyKey] as Big
       ).plus(value.mul(symbolMetricsHelper.exchangeRateAtOrderDate ?? 1));
     } else {
-      throw new Error(
-        `Key ${stringKey + this.baseCurrencySuffix} not found in symbolMetrics`
-      );
+      throw new Error(`Key ${baseCurrencyKey} not found in symbolMetrics`);
     }
   }
 
@@ -707,6 +694,11 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     dataSource: DataSource
   ) {
     let lastUnitPrice: Big;
+
+    const isCash = orders.some(
+      (order) => order.assetProfile.assetSubClass === 'CASH'
+    );
+
     for (const dateString of this.chartDates) {
       if (dateString < symbolMetricsHelper.startDateString) {
         continue;
@@ -727,7 +719,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
             symbol,
             marketSymbolMap,
             lastUnitPrice,
-            orders.some((order) => order.assetProfile.assetSubClass === 'CASH')
+            isCash
           )
         );
       }
