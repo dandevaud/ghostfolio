@@ -57,6 +57,10 @@ export class GfAccountSelectorComponent
   public readonly selectedAccount = computed(() => {
     const selectedAccountId = this.selectedAccountId();
 
+    if (typeof selectedAccountId === 'string') {
+      return [this.accounts().find(({ id }) => id === selectedAccountId)!];
+    }
+
     return this.accounts().filter(({ id }) => {
       return selectedAccountId?.some((e) => e === id);
     });
