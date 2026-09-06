@@ -20,7 +20,8 @@ import {
 import {
   CreateAccountWithBalancesDto,
   CreateAssetProfileDto,
-  CreateOrderDto
+  CreateOrderDto,
+  CreateTagDto
 } from '@ghostfolio/common/dtos';
 import {
   getAssetProfileIdentifier,
@@ -345,6 +346,8 @@ export class ImportService {
         permissions.createOwnTag
       );
 
+      const tagsToCreate: CreateTagDto[] = [];
+
       for (const tag of tagsDto) {
         const existingTagOfUser = existingTagsOfUser.find(({ id }) => {
           return id === tag.id;
@@ -358,10 +361,32 @@ export class ImportService {
           }
 
           if (!isDryRun) {
-            const existingTag = await this.tagService.getTag({ id: tag.id });
+            tagsToCreate.push(tag);
+          }
+        }
+      }
+
+      if (tagsToCreate.length > 0) {
+        const existingTags = await this.tagService.getTags({
+          where: {
+            id: {
+              in: tagsToCreate.map(({ id }) => {
+                return id;
+              })
+            }
+          }
+        });
+        const existingTagIds = new Set(
+          existingTags.map(({ id }) => {
+            return id;
+          })
+        );
+
+        await Promise.all(
+          tagsToCreate.map(async (tag) => {
             let oldTagId: string;
 
-            if (existingTag) {
+            if (existingTagIds.has(tag.id)) {
               oldTagId = tag.id;
               delete tag.id;
             }
@@ -373,7 +398,7 @@ export class ImportService {
 
             const newTag = await this.tagService.createTag(tagObject);
 
-            if (existingTag && oldTagId) {
+            if (oldTagId) {
               tagIdMapping[oldTagId] = newTag.id;
             }
 
@@ -383,8 +408,8 @@ export class ImportService {
               name: newTag.name,
               userId: newTag.userId
             });
-          }
-        }
+          })
+        );
       }
     }
 

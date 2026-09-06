@@ -2,42 +2,54 @@
 
 :host {
   display: block;
-  .activities {
+  .overflow-x-auto {
     overflow-x: auto;
-    .mat-mdc-table {
-      th {
-        ::ng-deep {
-          .mat-sort-header-container {
-            justify-content: inherit;
-          }
+  }
+  .mat-mdc-table {
+    th {
+      ::ng-deep {
+        .mat-sort-header-container {
+          justify-content: inherit;
         }
       }
-      .mat-mdc-row {
-        .type-badge {
-          background-color: rgba(var(--palette-foreground-text), 0.05);
-          border-radius: 1rem;
-          line-height: 1em;
-          ion-icon {
-            font-size: 1rem;
-          }
-          &.buy {
-            color: var(--green);
-          }
-          &.dividend {
-            color: var(--blue);
-          }
-          &.stake {
-            color: var(--blue);
-          }
-          &.item {
-            color: var(--purple);
-          }
-          &.liability {
-            color: var(--red);
-          }
-          &.sell {
-            color: var(--orange);
-          }
+    }
+    .mat-column-nameWithSymbol {
+      max-width: 300px;
+      overflow: hidden;
+
+      .d-flex {
+        min-width: 0;
+
+        .text-truncate {
+          min-width: 0;
+        }
+      }
+    }
+    .mat-mdc-row {
+      .type-badge {
+        background-color: rgba(var(--palette-foreground-text), 0.05);
+        border-radius: 1rem;
+        line-height: 1em;
+        ion-icon {
+          font-size: 1rem;
+        }
+        &.buy {
+          color: var(--green);
+        }
+        &.dividend {
+          color: var(--blue);
+        }
+        &.stake {
+          color: var(--blue);
+        }
+        &.item {
+          color: var(--purple);
+        }
+        &.liability {
+          color: var(--red);
+        }
+        &.sell {
+          color: var(--orange);
         }
       }
     }

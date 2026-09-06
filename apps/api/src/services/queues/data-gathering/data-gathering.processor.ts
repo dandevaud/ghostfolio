@@ -34,8 +34,7 @@ import {
   getYear,
   isBefore,
   parseISO,
-  eachDayOfInterval,
-  isEqual
+  eachDayOfInterval
 } from 'date-fns';
 
 import { DataGatheringService } from './data-gathering.service';
@@ -247,7 +246,10 @@ export class DataGatheringProcessor {
         )}`,
         `DataGatheringProcessor (${GATHER_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME})`
       );
-      const entries = await this.marketDataService.marketDataItems({
+      const marketDataDates = await this.marketDataService.marketDataItems({
+        select: {
+          date: true
+        },
         where: {
           AND: {
             symbol: {
@@ -257,23 +259,23 @@ export class DataGatheringProcessor {
               equals: dataSource
             }
           }
-        },
-        orderBy: {
-          date: 'asc'
-        },
-        take: 1
+        }
       });
-      const firstEntry = entries[0];
-      const marketData = await this.marketDataService
-        .getRange({
-          assetProfileIdentifiers: [{ dataSource, symbol }],
-          dateQuery: {
-            gte: addDays(firstEntry.date, -10)
-          }
-        })
-        .then((md) => md.map((m) => m.date));
+      const firstEntry = marketDataDates[0];
 
-      let dates = eachDayOfInterval(
+      if (!firstEntry) {
+        this.logger.log(
+          `Historical market data gathering for missing values has been skipped for ${symbol} (${dataSource}) because no market data exists yet`
+        );
+
+        return;
+      }
+
+      const existingDates = new Set(
+        marketDataDates.map(({ date }) => format(date, DATE_FORMAT))
+      );
+
+      const dates = eachDayOfInterval(
         {
           start: firstEntry.date,
           end: new Date()
@@ -281,8 +283,7 @@ export class DataGatheringProcessor {
         {
           step: 1
         }
-      );
-      dates = dates.filter((d) => !marketData.some((md) => isEqual(md, d)));
+      ).filter((d) => !existingDates.has(format(d, DATE_FORMAT)));
 
       const historicalData = await this.dataProviderService.getHistoricalRaw({
         assetProfileIdentifiers: [{ dataSource, symbol }],
@@ -296,7 +297,7 @@ export class DataGatheringProcessor {
           historicalData,
           symbol,
           dataSource
-        );
+        ).filter((data) => data !== undefined);
 
       await this.marketDataService.updateMany({ data });
 
@@ -344,7 +345,9 @@ export class DataGatheringProcessor {
     return missingMarketData.map((date) => {
       if (
         isNumber(
-          historicalData[symbol]?.[format(date, DATE_FORMAT)]?.marketPrice
+          historicalData[getAssetProfileIdentifier({ dataSource, symbol })]?.[
+            format(date, DATE_FORMAT)
+          ]?.marketPrice
         )
       ) {
         return {
@@ -352,15 +355,18 @@ export class DataGatheringProcessor {
           symbol,
           dataSource,
           marketPrice:
-            historicalData[symbol]?.[format(date, DATE_FORMAT)]?.marketPrice
+            historicalData[getAssetProfileIdentifier({ dataSource, symbol })]?.[
+              format(date, DATE_FORMAT)
+            ]?.marketPrice
         };
       } else {
         let earlierDate = date;
         let index = 0;
         while (
           !isNumber(
-            historicalData[symbol]?.[format(earlierDate, DATE_FORMAT)]
-              ?.marketPrice
+            historicalData[getAssetProfileIdentifier({ dataSource, symbol })]?.[
+              format(earlierDate, DATE_FORMAT)
+            ]?.marketPrice
           )
         ) {
           earlierDate = addDays(earlierDate, -1);
@@ -371,8 +377,9 @@ export class DataGatheringProcessor {
         }
         if (
           isNumber(
-            historicalData[symbol]?.[format(earlierDate, DATE_FORMAT)]
-              ?.marketPrice
+            historicalData[getAssetProfileIdentifier({ dataSource, symbol })]?.[
+              format(earlierDate, DATE_FORMAT)
+            ]?.marketPrice
           )
         ) {
           return {
@@ -380,8 +387,9 @@ export class DataGatheringProcessor {
             symbol,
             dataSource,
             marketPrice:
-              historicalData[symbol]?.[format(earlierDate, DATE_FORMAT)]
-                ?.marketPrice
+              historicalData[
+                getAssetProfileIdentifier({ dataSource, symbol })
+              ]?.[format(earlierDate, DATE_FORMAT)]?.marketPrice
           };
         }
       }

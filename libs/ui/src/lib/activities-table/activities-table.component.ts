@@ -175,6 +175,20 @@ export class GfActivitiesTableComponent implements AfterViewInit, OnInit {
     return routerLinks;
   });
 
+  protected readonly canDeleteActivities = computed(() => {
+    return (
+      (this.dataSource()?.data.length ?? 0) > 0 &&
+      this.hasPermissionToDeleteActivity
+    );
+  });
+
+  protected readonly canExportActivities = computed(() => {
+    return (
+      (this.dataSource()?.data.length ?? 0) > 0 &&
+      this.hasPermissionToExportActivities
+    );
+  });
+
   protected readonly displayedColumns = computed(() => {
     let columns = [
       'select',
@@ -220,6 +234,8 @@ export class GfActivitiesTableComponent implements AfterViewInit, OnInit {
   });
 
   private readonly notificationService = inject(NotificationService);
+
+  private readonly canClickActivityCache = new WeakMap<Activity, boolean>();
 
   public constructor(private destroyRef: DestroyRef) {
     for (const type of Object.keys(ActivityType) as ActivityType[]) {
@@ -281,26 +297,20 @@ export class GfActivitiesTableComponent implements AfterViewInit, OnInit {
   }
 
   public canClickActivity(activity: Activity) {
-    return (
+    const cachedValue = this.canClickActivityCache.get(activity);
+
+    if (cachedValue !== undefined) {
+      return cachedValue;
+    }
+
+    const canClick =
       this.hasPermissionToOpenDetails &&
       this.isExcludedFromAnalysis(activity) === false &&
       isDraftActivity(activity) === false &&
-      ['BUY', 'DIVIDEND', 'SELL'].includes(activity.type)
-    );
-  }
+      ['BUY', 'DIVIDEND', 'SELL'].includes(activity.type);
+    this.canClickActivityCache.set(activity, canClick);
 
-  public canDeleteActivities() {
-    return (
-      (this.dataSource()?.data.length ?? 0) > 0 &&
-      this.hasPermissionToDeleteActivity
-    );
-  }
-
-  public canExportActivities() {
-    return (
-      (this.dataSource()?.data.length ?? 0) > 0 &&
-      this.hasPermissionToExportActivities
-    );
+    return canClick;
   }
 
   public isExcludedFromAnalysis(activity: Activity) {

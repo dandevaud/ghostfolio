@@ -96,15 +96,48 @@ export class GfBenchmarkComponent {
   });
 
   protected readonly isNumber = isNumber;
-  protected readonly resolveMarketCondition = resolveMarketCondition;
   protected readonly round = round;
-  protected readonly translate = translate;
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly notificationService = inject(NotificationService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  private readonly marketConditionEmoji = new Map<
+    Benchmark['marketCondition'],
+    string | undefined
+  >();
+  private readonly marketConditionLabel = new Map<
+    Benchmark['marketCondition'],
+    string
+  >();
+
+  protected getMarketConditionEmoji(
+    aMarketCondition: Benchmark['marketCondition']
+  ) {
+    if (!this.marketConditionEmoji.has(aMarketCondition)) {
+      this.marketConditionEmoji.set(
+        aMarketCondition,
+        resolveMarketCondition(aMarketCondition).emoji
+      );
+    }
+
+    return this.marketConditionEmoji.get(aMarketCondition);
+  }
+
+  protected getMarketConditionLabel(
+    aMarketCondition: Benchmark['marketCondition']
+  ) {
+    if (!this.marketConditionLabel.has(aMarketCondition)) {
+      this.marketConditionLabel.set(
+        aMarketCondition,
+        translate(aMarketCondition)
+      );
+    }
+
+    return this.marketConditionLabel.get(aMarketCondition);
+  }
 
   public constructor() {
     effect(() => {

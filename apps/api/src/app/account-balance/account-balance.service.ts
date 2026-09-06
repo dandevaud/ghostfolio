@@ -143,11 +143,13 @@ export class AccountBalanceService {
 
   @LogPerformance
   public async getAccountBalances({
+    accountIds,
     filters,
     userCurrency,
     userId,
     withExcludedAccounts
   }: {
+    accountIds?: string[];
     filters?: Filter[];
     userCurrency: string;
     userId: string;
@@ -155,12 +157,19 @@ export class AccountBalanceService {
   }): Promise<AccountBalancesResponse> {
     const where: Prisma.AccountBalanceWhereInput = { userId };
 
-    const { ACCOUNT: [filterByAccount] = [] } = groupBy(filters, ({ type }) => {
-      return type;
-    });
+    if (accountIds?.length > 0) {
+      where.accountId = { in: accountIds };
+    } else {
+      const { ACCOUNT: [filterByAccount] = [] } = groupBy(
+        filters,
+        ({ type }) => {
+          return type;
+        }
+      );
 
-    if (filterByAccount) {
-      where.accountId = filterByAccount.id;
+      if (filterByAccount) {
+        where.accountId = filterByAccount.id;
+      }
     }
 
     if (withExcludedAccounts === false) {

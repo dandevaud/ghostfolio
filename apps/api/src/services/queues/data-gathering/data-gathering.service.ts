@@ -92,6 +92,15 @@ export class DataGatheringService {
     });
   }
 
+  public async gatherMissing() {
+    const dataGatheringItems = await this.getSymbolsMax();
+
+    await this.gatherMissingDataSymbols({
+      dataGatheringItems,
+      priority: DATA_GATHERING_QUEUE_PRIORITY_HIGH
+    });
+  }
+
   public async gatherSymbolMissingOnly({
     dataSource,
     symbol

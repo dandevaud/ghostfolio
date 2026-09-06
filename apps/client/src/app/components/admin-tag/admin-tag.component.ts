@@ -81,6 +81,15 @@ export class GfAdminTagComponent implements OnInit {
   );
   private readonly paginator = viewChild.required(MatPaginator);
   private readonly sort = viewChild.required(MatSort);
+  private readonly translatedTagNames = new Map<string, string>();
+
+  protected translateTagName(aName: string) {
+    if (!this.translatedTagNames.has(aName)) {
+      this.translatedTagNames.set(aName, translate(aName));
+    }
+
+    return this.translatedTagNames.get(aName);
+  }
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly dataService = inject(DataService);

@@ -270,21 +270,24 @@ export class GfCreateOrUpdateActivityDialogComponent {
         this.changeDetectorRef.markForCheck();
       });
 
-    this.activityForm.get('accountId')?.valueChanges.subscribe((accountId) => {
-      const type = this.activityForm.get('type')?.value;
+    this.activityForm
+      .get('accountId')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((accountId) => {
+        const type = this.activityForm.get('type')?.value;
 
-      if (['FEE', 'INTEREST', 'LIABILITY', 'VALUABLE'].includes(type)) {
-        const currency =
-          this.data.accounts.find(({ id }) => {
-            return id === accountId;
-          })?.currency ?? this.data.user.settings.baseCurrency;
+        if (['FEE', 'INTEREST', 'LIABILITY', 'VALUABLE'].includes(type)) {
+          const currency =
+            this.data.accounts.find(({ id }) => {
+              return id === accountId;
+            })?.currency ?? this.data.user.settings.baseCurrency;
 
-        this.activityForm.get('currency')?.setValue(currency);
-        this.activityForm.get('currencyOfUnitPrice')?.setValue(currency);
-      }
+          this.activityForm.get('currency')?.setValue(currency);
+          this.activityForm.get('currencyOfUnitPrice')?.setValue(currency);
+        }
 
-      this.syncUpdateAccountBalanceControl();
-    });
+        this.syncUpdateAccountBalanceControl();
+      });
 
     this.activityForm
       .get('assetClass')
@@ -306,25 +309,31 @@ export class GfCreateOrUpdateActivityDialogComponent {
         this.changeDetectorRef.markForCheck();
       });
 
-    this.activityForm.get('date')?.valueChanges.subscribe(() => {
-      this.syncUpdateAccountBalanceControl();
+    this.activityForm
+      .get('date')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.syncUpdateAccountBalanceControl();
 
-      this.changeDetectorRef.markForCheck();
-    });
+        this.changeDetectorRef.markForCheck();
+      });
 
-    this.activityForm.get('searchSymbol')?.valueChanges.subscribe(() => {
-      if (this.activityForm.get('searchSymbol')?.invalid) {
-        this.data.activity.assetProfile = null;
-      } else if (
-        ['BUY', 'DIVIDEND', 'SELL', 'STAKE'].includes(
-          this.activityForm.get('type')?.value
-        )
-      ) {
-        this.updateAssetProfile();
-      }
+    this.activityForm
+      .get('searchSymbol')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.activityForm.get('searchSymbol')?.invalid) {
+          this.data.activity.assetProfile = null;
+        } else if (
+          ['BUY', 'DIVIDEND', 'SELL', 'STAKE'].includes(
+            this.activityForm.get('type')?.value
+          )
+        ) {
+          this.updateAssetProfile();
+        }
 
-      this.changeDetectorRef.markForCheck();
-    });
+        this.changeDetectorRef.markForCheck();
+      });
 
     this.activityForm.get('tags')?.valueChanges.subscribe((tags: Tag[]) => {
       const newTag = tags.find(({ id }) => {
