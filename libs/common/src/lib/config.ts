@@ -268,7 +268,8 @@ export const GATHER_MISSING_HISTORICAL_MARKET_DATA_PROCESS_JOB_OPTIONS: JobOptio
       delay: ms('1 minute'),
       type: 'exponential'
     },
-    removeOnComplete: true
+    removeOnComplete: true,
+    removeOnFail: true
   };
 
 export const PORTFOLIO_SNAPSHOT_PROCESS_JOB_NAME = 'PORTFOLIO';

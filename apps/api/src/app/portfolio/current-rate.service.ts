@@ -122,6 +122,9 @@ export class CurrentRateService {
     };
 
     if (!isEmpty(quoteErrors)) {
+      const latestActivities =
+        await this.activitiesService.getLatestActivities(quoteErrors);
+
       for (const { dataSource, symbol } of quoteErrors) {
         try {
           // If missing quote, fallback to the latest available historical market price
@@ -135,11 +138,9 @@ export class CurrentRateService {
 
           if (!value) {
             // Fallback to unit price of latest activity
-            const latestActivity =
-              await this.activitiesService.getLatestActivity({
-                dataSource,
-                symbol
-              });
+            const latestActivity = latestActivities.get(
+              getAssetProfileIdentifier({ dataSource, symbol })
+            );
 
             value = {
               dataSource,

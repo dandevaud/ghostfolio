@@ -144,21 +144,32 @@ export class ExportService {
       }
     );
 
-    const marketDataByAssetProfile = Object.fromEntries(
-      await Promise.all(
-        customAssetProfiles.map(async ({ dataSource, id, symbol }) => {
-          const marketData = (
-            await this.marketDataService.marketDataItems({
-              where: { dataSource, symbol }
-            })
-          ).map(({ date, marketPrice }) => ({
-            date: date.toISOString(),
-            marketPrice
-          }));
-
-          return [id, marketData] as const;
+    const marketData = await this.marketDataService.marketDataItems({
+      where: {
+        OR: customAssetProfiles.map(({ dataSource, symbol }) => {
+          return { dataSource, symbol };
         })
-      )
+      }
+    });
+
+    const marketDataByAssetProfile = Object.fromEntries(
+      customAssetProfiles.map(({ dataSource, id, symbol }) => {
+        return [
+          id,
+          marketData
+            .filter(
+              ({ dataSource: dataSourceOfItem, symbol: symbolOfItem }) => {
+                return (
+                  dataSourceOfItem === dataSource && symbolOfItem === symbol
+                );
+              }
+            )
+            .map(({ date, marketPrice }) => ({
+              date: date.toISOString(),
+              marketPrice
+            }))
+        ] as const;
+      })
     );
 
     const tags = (await this.tagService.getTagsForUser(userId))

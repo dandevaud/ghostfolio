@@ -55,6 +55,15 @@ export class GfTopHoldingsComponent implements OnChanges {
   ];
   public isLoading = true;
 
+  private readonly prettifiedAssetNames = new WeakMap<
+    HoldingWithParents,
+    string
+  >();
+  private readonly canShowDetailsCache = new WeakMap<
+    { position?: PortfolioPosition },
+    boolean
+  >();
+
   public ngOnChanges() {
     this.isLoading = true;
 
@@ -62,12 +71,31 @@ export class GfTopHoldingsComponent implements OnChanges {
     this.dataSource.paginator = this.paginator;
 
     if (this.topHoldings) {
+      for (const holding of this.topHoldings) {
+        if (!this.prettifiedAssetNames.has(holding)) {
+          this.prettifiedAssetNames.set(
+            holding,
+            this.toPrettifiedAssetName(holding?.name)
+          );
+        }
+      }
+
       this.isLoading = false;
     }
   }
 
   public canShowDetails(holding: { position?: PortfolioPosition }): boolean {
-    return !!holding?.position && canOpenHoldingDetail(holding.position);
+    const cachedValue = this.canShowDetailsCache.get(holding);
+
+    if (cachedValue !== undefined) {
+      return cachedValue;
+    }
+
+    const canShowDetails =
+      !!holding?.position && canOpenHoldingDetail(holding.position);
+    this.canShowDetailsCache.set(holding, canShowDetails);
+
+    return canShowDetails;
   }
 
   public onClickHolding({ position }: { position?: PortfolioPosition }) {
@@ -89,7 +117,20 @@ export class GfTopHoldingsComponent implements OnChanges {
     });
   }
 
-  public prettifyAssetName(name: string) {
+  public prettifyAssetName(holding: HoldingWithParents) {
+    const prettifiedAssetName = this.prettifiedAssetNames.get(holding);
+
+    if (prettifiedAssetName !== undefined) {
+      return prettifiedAssetName;
+    }
+
+    const prettified = this.toPrettifiedAssetName(holding?.name);
+    this.prettifiedAssetNames.set(holding, prettified);
+
+    return prettified;
+  }
+
+  private toPrettifiedAssetName(name: string) {
     if (!name) {
       return '';
     }

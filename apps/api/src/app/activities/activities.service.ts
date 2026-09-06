@@ -494,17 +494,26 @@ export class ActivitiesService {
     const activities: Activity[] = [];
     const endOfTodayDate = endOfToday();
 
-    for (const account of cashDetails.accounts) {
-      const { balances } = await this.accountBalanceService.getAccountBalances({
-        userCurrency,
-        userId,
-        filters: [{ id: account.id, type: 'ACCOUNT' }]
-      });
+    const accountIds = cashDetails.accounts.map(({ id }) => {
+      return id;
+    });
 
+    const { balances } = await this.accountBalanceService.getAccountBalances({
+      accountIds,
+      userCurrency,
+      userId,
+      filters
+    });
+
+    const balancesByAccountId = groupBy(balances, ({ accountId }) => {
+      return accountId;
+    });
+
+    for (const account of cashDetails.accounts) {
       let currentBalance = 0;
       let currentBalanceInBaseCurrency = 0;
 
-      for (const balanceItem of balances) {
+      for (const balanceItem of balancesByAccountId[account.id] ?? []) {
         if (
           isAccountBalanceInFuture({
             endOfTodayDate,
@@ -586,18 +595,43 @@ export class ActivitiesService {
     };
   }
 
-  public async getLatestActivity({
-    dataSource,
-    symbol
-  }: AssetProfileIdentifier) {
-    return this.prismaService.order.findFirst({
+  public async getLatestActivities(
+    identifiers: AssetProfileIdentifier[]
+  ): Promise<Map<string, Order>> {
+    if (identifiers.length === 0) {
+      return new Map();
+    }
+
+    const orders = await this.prismaService.order.findMany({
+      include: {
+        SymbolProfile: true
+      },
       orderBy: {
         date: 'desc'
       },
       where: {
-        SymbolProfile: { dataSource, symbol }
+        SymbolProfile: {
+          OR: identifiers.map(({ dataSource, symbol }) => {
+            return { dataSource, symbol };
+          })
+        }
       }
     });
+
+    const latestActivitiesByAssetProfileIdentifier = new Map<string, Order>();
+
+    for (const order of orders) {
+      const key = getAssetProfileIdentifier({
+        dataSource: order.SymbolProfile.dataSource,
+        symbol: order.SymbolProfile.symbol
+      });
+
+      if (!latestActivitiesByAssetProfileIdentifier.has(key)) {
+        latestActivitiesByAssetProfileIdentifier.set(key, order);
+      }
+    }
+
+    return latestActivitiesByAssetProfileIdentifier;
   }
 
   @LogPerformance
@@ -704,60 +738,95 @@ export class ActivitiesService {
       assetProfileIdentifiers
     );
 
-    const activities = await Promise.all(
-      orders.map(async (order) => {
-        const assetProfile = assetProfiles.find(({ dataSource, symbol }) => {
-          return (
-            dataSource === order.SymbolProfile.dataSource &&
-            symbol === order.SymbolProfile.symbol
-          );
-        });
+    const conversions: {
+      value: number;
+      fromCurrency: string;
+      toCurrency: string;
+      date: Date;
+    }[] = [];
 
-        const value = new Big(order.quantity).mul(order.unitPrice).toNumber();
+    for (const order of orders) {
+      const value = new Big(order.quantity).mul(order.unitPrice).toNumber();
+      const fromCurrency = order.currency ?? order.SymbolProfile.currency;
 
-        const [
-          feeInAssetProfileCurrency = 0,
-          feeInBaseCurrency = 0,
-          unitPriceInAssetProfileCurrency = 0,
-          valueInBaseCurrency = 0
-        ] = await Promise.all([
-          this.exchangeRateDataService.toCurrencyAtDate(
-            order.fee,
-            order.currency ?? order.SymbolProfile.currency,
-            order.SymbolProfile.currency,
-            order.date
-          ),
-          this.exchangeRateDataService.toCurrencyAtDate(
-            order.fee,
-            order.currency ?? order.SymbolProfile.currency,
-            userCurrency,
-            order.date
-          ),
-          this.exchangeRateDataService.toCurrencyAtDate(
-            order.unitPrice,
-            order.currency ?? order.SymbolProfile.currency,
-            order.SymbolProfile.currency,
-            order.date
-          ),
-          this.exchangeRateDataService.toCurrencyAtDate(
-            value,
-            order.currency ?? order.SymbolProfile.currency,
-            userCurrency,
-            order.date
-          )
-        ]);
-
-        return {
-          ...order,
-          assetProfile,
-          feeInAssetProfileCurrency,
-          feeInBaseCurrency,
-          unitPriceInAssetProfileCurrency,
+      conversions.push(
+        {
+          value: order.fee,
+          fromCurrency,
+          toCurrency: order.SymbolProfile.currency,
+          date: order.date
+        },
+        {
+          value: order.fee,
+          fromCurrency,
+          toCurrency: userCurrency,
+          date: order.date
+        },
+        {
+          value: order.unitPrice,
+          fromCurrency,
+          toCurrency: order.SymbolProfile.currency,
+          date: order.date
+        },
+        {
           value,
-          valueInBaseCurrency
-        };
+          fromCurrency,
+          toCurrency: userCurrency,
+          date: order.date
+        }
+      );
+    }
+
+    const convertedValues =
+      conversions.length > 0
+        ? await this.exchangeRateDataService.toCurrencyAtDateBulk(conversions)
+        : [];
+
+    const assetProfilesByKey = new Map(
+      assetProfiles.map((assetProfile) => {
+        return [
+          getAssetProfileIdentifier({
+            dataSource: assetProfile.dataSource,
+            symbol: assetProfile.symbol
+          }),
+          assetProfile
+        ] as const;
       })
     );
+
+    const activities = orders.map((order, index) => {
+      const assetProfile = assetProfilesByKey.get(
+        getAssetProfileIdentifier({
+          dataSource: order.SymbolProfile.dataSource,
+          symbol: order.SymbolProfile.symbol
+        })
+      );
+
+      const value = new Big(order.quantity).mul(order.unitPrice).toNumber();
+      const offset = index * 4;
+
+      const [
+        feeInAssetProfileCurrency = 0,
+        feeInBaseCurrency = 0,
+        unitPriceInAssetProfileCurrency = 0,
+        valueInBaseCurrency = 0
+      ] = [
+        convertedValues[offset],
+        convertedValues[offset + 1],
+        convertedValues[offset + 2],
+        convertedValues[offset + 3]
+      ];
+
+      return {
+        ...order,
+        assetProfile,
+        feeInAssetProfileCurrency,
+        feeInBaseCurrency,
+        unitPriceInAssetProfileCurrency,
+        value,
+        valueInBaseCurrency
+      };
+    });
 
     return { activities, count };
   }

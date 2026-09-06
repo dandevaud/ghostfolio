@@ -130,17 +130,7 @@ export class AdminController {
   @Post('gather/missing')
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   public async gatherMissing(): Promise<void> {
-    const assetProfileIdentifiers =
-      await this.dataGatheringService.getActiveAssetProfileIdentifiers();
-
-    const promises = assetProfileIdentifiers.map(({ dataSource, symbol }) => {
-      return this.dataGatheringService.gatherSymbolMissingOnly({
-        dataSource,
-        symbol
-      });
-    });
-
-    await Promise.all(promises);
+    await this.dataGatheringService.gatherMissing();
   }
 
   @HasPermission(permissions.accessAdminControl)

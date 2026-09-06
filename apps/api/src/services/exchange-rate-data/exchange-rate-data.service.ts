@@ -116,7 +116,11 @@ export class ExchangeRateDataService {
           exchangeRatesByCurrency[`${currency}${targetCurrency}`][dateString] =
             previousExchangeRate;
 
-          if (currency === DEFAULT_CURRENCY && isBefore(date, new Date())) {
+          if (
+            currency === DEFAULT_CURRENCY &&
+            currency !== targetCurrency &&
+            isBefore(date, new Date())
+          ) {
             this.logger.error(
               `No exchange rate has been found for ${currency}${targetCurrency} at ${dateString}`
             );
@@ -428,6 +432,133 @@ export class ExchangeRateDataService {
     );
 
     return undefined;
+  }
+
+  public async toCurrencyAtDateBulk(
+    conversions: {
+      value: number;
+      fromCurrency: string;
+      toCurrency: string;
+      date: Date;
+    }[]
+  ): Promise<(number | undefined)[]> {
+    const dataSource = this.dataProviderService.getDataSourceForExchangeRates();
+    const dbConversions: {
+      index: number;
+      fromCurrency: string;
+      toCurrency: string;
+    }[] = [];
+    const symbols = new Set<string>();
+    const dates = new Set<number>();
+    const result: (number | undefined)[] = new Array(conversions.length);
+
+    for (const [
+      index,
+      { value, fromCurrency, toCurrency, date }
+    ] of conversions.entries()) {
+      if (value === 0) {
+        result[index] = 0;
+        continue;
+      }
+
+      if (isToday(date)) {
+        result[index] = this.toCurrency(value, fromCurrency, toCurrency);
+        continue;
+      }
+
+      const derivedCurrencyFactor =
+        this.derivedCurrencyFactors[`${fromCurrency}${toCurrency}`];
+
+      if (fromCurrency === toCurrency) {
+        result[index] = value;
+      } else if (derivedCurrencyFactor) {
+        result[index] = derivedCurrencyFactor * value;
+      } else {
+        dbConversions.push({ index, fromCurrency, toCurrency });
+        symbols.add(`${fromCurrency}${toCurrency}`);
+
+        if (fromCurrency !== DEFAULT_CURRENCY) {
+          symbols.add(`${DEFAULT_CURRENCY}${fromCurrency}`);
+        }
+
+        if (toCurrency !== DEFAULT_CURRENCY) {
+          symbols.add(`${DEFAULT_CURRENCY}${toCurrency}`);
+        }
+
+        dates.add(resetHours(date).getTime());
+      }
+    }
+
+    if (dbConversions.length > 0) {
+      const marketData = await this.marketDataService.marketDataItems({
+        where: {
+          dataSource,
+          date: {
+            in: Array.from(dates, (time) => new Date(time))
+          },
+          symbol: {
+            in: Array.from(symbols)
+          }
+        }
+      });
+
+      const marketDataByKey = new Map<string, number>();
+
+      for (const { date, marketPrice, symbol } of marketData) {
+        marketDataByKey.set(
+          `${symbol}|${resetHours(date).getTime()}`,
+          marketPrice
+        );
+      }
+
+      for (const { index, fromCurrency, toCurrency } of dbConversions) {
+        const date = conversions[index].date;
+        const dateKey = resetHours(date).getTime();
+        const directFactor = marketDataByKey.get(
+          `${fromCurrency}${toCurrency}|${dateKey}`
+        );
+
+        if (directFactor) {
+          result[index] = directFactor * conversions[index].value;
+          continue;
+        }
+
+        const marketPriceBaseCurrencyFromCurrency =
+          fromCurrency === DEFAULT_CURRENCY
+            ? 1
+            : marketDataByKey.get(
+                `${DEFAULT_CURRENCY}${fromCurrency}|${dateKey}`
+              );
+        const marketPriceBaseCurrencyToCurrency =
+          toCurrency === DEFAULT_CURRENCY
+            ? 1
+            : marketDataByKey.get(
+                `${DEFAULT_CURRENCY}${toCurrency}|${dateKey}`
+              );
+
+        const factor =
+          marketPriceBaseCurrencyFromCurrency &&
+          marketPriceBaseCurrencyToCurrency
+            ? (1 / marketPriceBaseCurrencyFromCurrency) *
+              marketPriceBaseCurrencyToCurrency
+            : undefined;
+
+        if (isNumber(factor) && !isNaN(factor)) {
+          result[index] = factor * conversions[index].value;
+        } else {
+          this.logger.error(
+            `No exchange rate has been found for ${fromCurrency}${toCurrency} at ${format(
+              date,
+              DATE_FORMAT
+            )}`
+          );
+
+          result[index] = undefined;
+        }
+      }
+    }
+
+    return result;
   }
 
   private async getExchangeRates({

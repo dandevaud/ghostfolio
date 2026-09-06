@@ -617,12 +617,20 @@ export class DataProviderService implements OnModuleInit {
     // Get items from cache
     const itemsToFetch: AssetProfileIdentifier[] = [];
 
-    for (const { dataSource, symbol } of items) {
-      if (useCache) {
-        const quoteString = await this.redisCacheService.get(
-          this.redisCacheService.getQuoteKey({ dataSource, symbol })
-        );
+    if (useCache) {
+      const cacheEntries = await Promise.all(
+        items.map(async ({ dataSource, symbol }) => {
+          return {
+            dataSource,
+            symbol,
+            quoteString: await this.redisCacheService.get(
+              this.redisCacheService.getQuoteKey({ dataSource, symbol })
+            )
+          };
+        })
+      );
 
+      for (const { dataSource, symbol, quoteString } of cacheEntries) {
         if (quoteString) {
           try {
             const cachedDataProviderResponse = JSON.parse(
@@ -635,9 +643,11 @@ export class DataProviderService implements OnModuleInit {
             continue;
           } catch {}
         }
-      }
 
-      itemsToFetch.push({ dataSource, symbol });
+        itemsToFetch.push({ dataSource, symbol });
+      }
+    } else {
+      itemsToFetch.push(...items);
     }
 
     const numberOfItemsInCache = Object.keys(response)?.length;

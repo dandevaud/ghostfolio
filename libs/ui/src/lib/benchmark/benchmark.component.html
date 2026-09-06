@@ -161,8 +161,11 @@
       <th *matHeaderCellDef mat-header-cell></th>
       <td *matCellDef="let element" class="px-0" mat-cell>
         @if (element?.marketCondition) {
-          <div class="text-center" [title]="translate(element.marketCondition)">
-            {{ resolveMarketCondition(element.marketCondition).emoji }}
+          <div
+            class="text-center"
+            [title]="getMarketConditionLabel(element.marketCondition)"
+          >
+            {{ getMarketConditionEmoji(element.marketCondition) }}
           </div>
         }
       </td>

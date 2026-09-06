@@ -206,81 +206,110 @@ export class PortfolioService {
 
     const userCurrency = this.getUserCurrency(user);
 
-    return Promise.all(
-      accounts.map(async (account) => {
-        let activitiesCount = 0;
-        let dividendInBaseCurrency = 0;
-        let interestInBaseCurrency = 0;
+    const conversions: {
+      value: number;
+      fromCurrency: string;
+      toCurrency: string;
+      date: Date;
+      accountId: string;
+      type: ActivityType;
+    }[] = [];
 
-        for (const {
-          currency,
-          date,
-          quantity,
-          SymbolProfile,
-          tags,
-          type,
-          unitPrice
-        } of account.activities) {
-          activitiesCount += 1;
-
-          if (isDraftActivity({ tags })) {
-            continue;
-          }
-
-          switch (type) {
-            case ActivityType.DIVIDEND:
-              dividendInBaseCurrency +=
-                (await this.exchangeRateDataService.toCurrencyAtDate(
-                  new Big(quantity).mul(unitPrice).toNumber(),
-                  currency ?? SymbolProfile.currency,
-                  userCurrency,
-                  date
-                )) ?? 0;
-              break;
-            case ActivityType.INTEREST:
-              interestInBaseCurrency +=
-                (await this.exchangeRateDataService.toCurrencyAtDate(
-                  unitPrice,
-                  currency ?? SymbolProfile.currency,
-                  userCurrency,
-                  date
-                )) ?? 0;
-              break;
-          }
+    for (const account of accounts) {
+      for (const {
+        currency,
+        date,
+        quantity,
+        SymbolProfile,
+        tags,
+        type,
+        unitPrice
+      } of account.activities) {
+        if (isDraftActivity({ tags })) {
+          continue;
         }
 
-        const quantityOfHolding = filterBySymbol
-          ? (details.accounts[account.id]?.quantity ?? 0)
-          : undefined;
+        if (type === ActivityType.DIVIDEND || type === ActivityType.INTEREST) {
+          conversions.push({
+            value:
+              type === ActivityType.DIVIDEND
+                ? new Big(quantity).mul(unitPrice).toNumber()
+                : unitPrice,
+            fromCurrency: currency ?? SymbolProfile.currency,
+            toCurrency: userCurrency,
+            date,
+            accountId: account.id,
+            type
+          });
+        }
+      }
+    }
 
-        const valueInBaseCurrency =
-          details.accounts[account.id]?.valueInBaseCurrency ?? 0;
+    const convertedValues =
+      conversions.length > 0
+        ? await this.exchangeRateDataService.toCurrencyAtDateBulk(conversions)
+        : [];
 
-        const result = {
-          ...account,
-          activitiesCount,
-          dividendInBaseCurrency,
-          interestInBaseCurrency,
-          valueInBaseCurrency,
-          allocationInPercentage: 0,
-          balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
-            account.balance,
-            account.currency,
-            userCurrency
-          ),
-          quantity: quantityOfHolding,
-          value: this.exchangeRateDataService.toCurrency(
-            valueInBaseCurrency,
-            userCurrency,
-            account.currency
-          )
+    const dividendAndInterestByAccount: {
+      [accountId: string]: {
+        dividendInBaseCurrency: number;
+        interestInBaseCurrency: number;
+      };
+    } = {};
+
+    for (const [index, { accountId, type }] of conversions.entries()) {
+      if (!dividendAndInterestByAccount[accountId]) {
+        dividendAndInterestByAccount[accountId] = {
+          dividendInBaseCurrency: 0,
+          interestInBaseCurrency: 0
         };
+      }
 
-        delete result.activities;
+      const convertedValue = convertedValues[index] ?? 0;
 
-        return result;
-      })
-    );
+      if (type === ActivityType.DIVIDEND) {
+        dividendAndInterestByAccount[accountId].dividendInBaseCurrency +=
+          convertedValue;
+      } else {
+        dividendAndInterestByAccount[accountId].interestInBaseCurrency +=
+          convertedValue;
+      }
+    }
+
+    return accounts.map((account) => {
+      const activitiesCount = account.activities.length;
+
+      const valueInBaseCurrency =
+        details.accounts[account.id]?.valueInBaseCurrency ?? 0;
+
+      const result = {
+        ...account,
+        activitiesCount,
+        dividendInBaseCurrency:
+          dividendAndInterestByAccount[account.id]?.dividendInBaseCurrency ?? 0,
+        interestInBaseCurrency:
+          dividendAndInterestByAccount[account.id]?.interestInBaseCurrency ?? 0,
+        valueInBaseCurrency,
+        allocationInPercentage: 0,
+        balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
+          account.balance,
+          account.currency,
+          userCurrency
+        ),
+        quantity: filterBySymbol
+          ? (details.accounts[account.id]?.quantity ?? 0)
+          : undefined,
+        value: this.exchangeRateDataService.toCurrency(
+          valueInBaseCurrency,
+          userCurrency,
+          account.currency
+        )
+      };
+
+      delete result.activities;
+
+      return result;
+    });
   }
 
   @LogPerformance
