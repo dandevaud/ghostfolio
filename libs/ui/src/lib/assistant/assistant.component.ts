@@ -714,33 +714,25 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   private searchHoldings(aSearchTerm: string): Observable<SearchResultItem[]> {
-    return this.dataService
-      .fetchPortfolioHoldings({
-        filters: [
-          {
-            id: aSearchTerm,
-            type: 'SEARCH_QUERY'
-          }
-        ]
-      })
-      .pipe(
-        catchError(() => {
-          return EMPTY;
-        }),
-        map(({ holdings }) => {
-          return holdings.map(({ assetProfile }) => {
-            return {
-              assetSubClassString: translate(assetProfile.assetSubClass ?? ''),
-              currency: assetProfile.currency ?? '',
-              dataSource: assetProfile.dataSource,
-              mode: SearchMode.HOLDING as const,
-              name: assetProfile.name ?? '',
-              symbol: assetProfile.symbol
-            };
-          });
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      );
+    const fuse = new Fuse(this.holdings, {
+      keys: ['assetProfile.isin', 'assetProfile.name', 'assetProfile.symbol'],
+      threshold: 0.3
+    });
+
+    const results = fuse
+      .search(aSearchTerm)
+      .map(({ item: { assetProfile } }) => {
+        return {
+          assetSubClassString: translate(assetProfile.assetSubClass ?? ''),
+          currency: assetProfile.currency ?? '',
+          dataSource: assetProfile.dataSource,
+          mode: SearchMode.HOLDING as const,
+          name: assetProfile.name ?? '',
+          symbol: assetProfile.symbol
+        };
+      });
+
+    return of(results);
   }
 
   private searchQuickLinks(aSearchTerm: string): SearchResultItem[] {
