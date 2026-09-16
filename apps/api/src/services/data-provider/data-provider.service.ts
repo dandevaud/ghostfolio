@@ -623,9 +623,12 @@ export class DataProviderService implements OnModuleInit {
           return {
             dataSource,
             symbol,
-            quoteString: await this.redisCacheService.get(
-              this.redisCacheService.getQuoteKey({ dataSource, symbol })
-            )
+            quoteString:
+              dataSource === DataSource.MANUAL
+                ? undefined
+                : await this.redisCacheService.get(
+                    this.redisCacheService.getQuoteKey({ dataSource, symbol })
+                  )
           };
         })
       );

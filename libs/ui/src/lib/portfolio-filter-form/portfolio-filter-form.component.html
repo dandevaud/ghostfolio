@@ -15,22 +15,32 @@
       <mat-select
         formControlName="holding"
         [compareWith]="holdingComparisonFunction"
+        (openedChange)="holdingSelectOpened.emit()"
       >
         <mat-select-trigger>{{
           filterForm.get('holding')?.value?.assetProfile?.name
         }}</mat-select-trigger>
-        <mat-option [value]="null" />
-        @for (holding of holdings(); track holding.assetProfile.name) {
-          <mat-option [value]="holding">
-            <div class="line-height-1 text-truncate">
-              <span>{{ holding.assetProfile.name }}</span>
-              <br />
-              <small class="text-muted"
-                >{{ holding.assetProfile.symbol }} ·
-                {{ holding.assetProfile.currency }}</small
-              >
-            </div>
+        @if (isHoldingsLoading()) {
+          <mat-option disabled>
+            <span class="align-items-center d-flex">
+              <mat-spinner class="mr-2" [diameter]="20" />
+              <span i18n>Loading...</span>
+            </span>
           </mat-option>
+        } @else {
+          <mat-option [value]="null" />
+          @for (holding of holdings(); track holding.assetProfile.name) {
+            <mat-option [value]="holding">
+              <div class="line-height-1 text-truncate">
+                <span>{{ holding.assetProfile.name }}</span>
+                <br />
+                <small class="text-muted"
+                  >{{ holding.assetProfile.symbol }} ·
+                  {{ holding.assetProfile.currency }}</small
+                >
+              </div>
+            </mat-option>
+          }
         }
       </mat-select>
     </mat-form-field>

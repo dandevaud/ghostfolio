@@ -190,7 +190,9 @@
         [assetClasses]="assetClasses"
         [formControl]="portfolioFilterFormControl"
         [holdings]="holdings"
+        [isHoldingsLoading]="isLoading.holdings"
         [tags]="tags"
+        (holdingSelectOpened)="loadHoldingsIfNeeded()"
       />
       <div class="d-flex w-100">
         <button

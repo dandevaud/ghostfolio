@@ -99,6 +99,7 @@ export abstract class PortfolioCalculator {
   private redisCacheService: RedisCacheService;
   private startDate: Date;
   private transactionPoints: TransactionPoint[];
+  private transactionPointsHaveBeenComputed = false;
   private holdings: { [date: string]: { [symbol: string]: Big } } = {};
   private holdingCurrencies: { [symbol: string]: string } = {};
   private chartDateMap: { [date: string]: boolean } = {};
@@ -196,8 +197,6 @@ export abstract class PortfolioCalculator {
     this.endDate = endOfDay(endDate);
     this.startDate = startOfDay(startDate);
 
-    this.computeTransactionPoints();
-
     this.snapshotPromise = this.initialize();
 
     // Mark the rejection as handled to prevent an unhandled promise rejection
@@ -212,6 +211,8 @@ export abstract class PortfolioCalculator {
 
   @LogPerformance
   public async computeSnapshot(): Promise<PortfolioSnapshot> {
+    this.ensureTransactionPoints();
+
     const lastTransactionPoint = this.transactionPoints.at(-1);
 
     const transactionPoints = this.transactionPoints?.filter(({ date }) => {
@@ -760,6 +761,8 @@ export abstract class PortfolioCalculator {
 
   @LogPerformance
   public getInvestments(): { date: string; investment: Big }[] {
+    this.ensureTransactionPoints();
+
     if (this.transactionPoints.length === 0) {
       return [];
     }
@@ -1028,6 +1031,10 @@ export abstract class PortfolioCalculator {
 
   @LogPerformance
   protected computeTransactionPoints() {
+    if (this.transactionPointsHaveBeenComputed) {
+      return;
+    }
+
     this.transactionPoints = [];
     const symbols: { [symbol: string]: TransactionPointSymbol } = {};
 
@@ -1188,6 +1195,12 @@ export abstract class PortfolioCalculator {
 
       lastDate = date;
     }
+
+    this.transactionPointsHaveBeenComputed = true;
+  }
+
+  private ensureTransactionPoints() {
+    this.computeTransactionPoints();
   }
 
   @LogPerformance
@@ -1417,6 +1430,8 @@ export abstract class PortfolioCalculator {
   }
 
   public getStartDate() {
+    this.ensureTransactionPoints();
+
     let firstAccountBalanceDate: Date;
     let firstActivityDate: Date;
 
@@ -1442,6 +1457,8 @@ export abstract class PortfolioCalculator {
   }
 
   public getTransactionPoints() {
+    this.ensureTransactionPoints();
+
     return this.transactionPoints;
   }
 

@@ -174,7 +174,9 @@ export class PortfolioService {
       return type !== 'SEARCH_QUERY';
     });
 
-    const [accounts, details, user] = await Promise.all([
+    const user = await this.userService.user({ id: userId });
+
+    const [accounts, details] = await Promise.all([
       this.accountService.accounts({
         where,
         include: {
@@ -198,10 +200,10 @@ export class PortfolioService {
       }),
       this.getDetails({
         userId,
+        user,
         withExcludedAccounts,
         filters: filtersWithoutSearchQueryFilter
-      }),
-      this.userService.user({ id: userId })
+      })
     ]);
 
     const userCurrency = this.getUserCurrency(user);
@@ -421,10 +423,12 @@ export class PortfolioService {
   public async getHoldings({
     dateRange = 'max',
     filters,
+    user: userFromCaller,
     userId
   }: {
     dateRange: DateRange;
     filters?: Filter[];
+    user?: UserWithSettings;
     userId: string;
   }) {
     const { SEARCH_QUERY: [filterBySearchQuery] = [] } = groupBy(
@@ -441,6 +445,7 @@ export class PortfolioService {
     const { holdings: holdingsMap } = await this.getDetails({
       dateRange,
       userId,
+      user: userFromCaller,
       filters: filtersWithoutSearchQueryFilter
     });
 
@@ -1080,14 +1085,17 @@ export class PortfolioService {
   public async getPerformance({
     dateRange = DEFAULT_DATE_RANGE,
     filters,
+    user: userFromCaller,
     userId
   }: {
     dateRange?: DateRange;
     filters?: Filter[];
+    user?: UserWithSettings;
     userId: string;
     withExcludedAccounts?: boolean;
   }): Promise<PortfolioPerformanceResponse> {
-    const user = await this.userService.user({ id: userId });
+    const user =
+      userFromCaller ?? (await this.userService.user({ id: userId }));
     const userCurrency = this.getUserCurrency(user);
 
     const [accountBalanceItems, { activities }] = await Promise.all([

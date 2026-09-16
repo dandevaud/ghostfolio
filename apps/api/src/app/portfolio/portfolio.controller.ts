@@ -1,4 +1,5 @@
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
+import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { Impersonation } from '@ghostfolio/api/decorators/impersonation.decorator';
 import { RequiresScope } from '@ghostfolio/api/decorators/requires-scope.decorator';
@@ -66,6 +67,7 @@ export class PortfolioController {
     private readonly apiService: ApiService,
     private readonly configurationService: ConfigurationService,
     private readonly portfolioService: PortfolioService,
+    private readonly userService: UserService,
     @Inject(REQUEST) private readonly request: RequestWithUser
   ) {}
 
@@ -76,7 +78,11 @@ export class PortfolioController {
   @UseInterceptors(TransformDataSourceInResponseInterceptor)
   public async getDetails(
     @Impersonation()
-    { scopes: impersonationScopes, userId }: ImpersonationContext,
+    {
+      isActive: hasImpersonation,
+      scopes: impersonationScopes,
+      userId
+    }: ImpersonationContext,
     @Query()
     {
       accounts: filterByAccounts,
@@ -104,6 +110,10 @@ export class PortfolioController {
       filterByTags
     });
 
+    const user = hasImpersonation
+      ? await this.userService.user({ id: userId })
+      : this.request.user;
+
     const {
       accounts,
       createdAt,
@@ -115,6 +125,7 @@ export class PortfolioController {
       summary
     } = await this.portfolioService.getDetails({
       filters,
+      user,
       userId,
       withMarkets,
       dateRange: range,
@@ -457,15 +468,19 @@ export class PortfolioController {
       filterByTags: tags
     });
 
+    const user = await this.userService.user({ id: userId });
+
     const { performance } = await this.portfolioService.getPerformance({
       dateRange: range,
       filters,
+      user,
       withExcludedAccounts: false,
       userId
     });
 
     const holdings = await this.portfolioService.getHoldings({
       filters,
+      user,
       userId,
       dateRange: range
     });
@@ -554,7 +569,11 @@ export class PortfolioController {
   @LogPerformance
   public async getPerformanceV2(
     @Impersonation()
-    { scopes: impersonationScopes, userId }: ImpersonationContext,
+    {
+      isActive: hasImpersonation,
+      scopes: impersonationScopes,
+      userId
+    }: ImpersonationContext,
     @Query()
     {
       accounts,
@@ -574,8 +593,13 @@ export class PortfolioController {
       filterByTags: tags
     });
 
+    const user = hasImpersonation
+      ? await this.userService.user({ id: userId })
+      : this.request.user;
+
     const performanceInformation = await this.portfolioService.getPerformance({
       filters,
+      user,
       userId,
       withExcludedAccounts,
       dateRange: range

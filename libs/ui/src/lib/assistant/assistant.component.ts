@@ -40,7 +40,7 @@ import {
 } from 'ionicons/icons';
 import { isFunction, sample } from 'lodash';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
-import { EMPTY, Observable, merge, of } from 'rxjs';
+import { EMPTY, Observable, firstValueFrom, from, merge, of } from 'rxjs';
 import {
   catchError,
   debounceTime,
@@ -108,6 +108,8 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   public dateRangeFormControl = new FormControl<string | null>(null);
   public dateRangeOptions: DateRangeOption[] = [];
   public holdings: PortfolioPosition[] = [];
+
+  private holdingsPromise: Promise<PortfolioPosition[]> | null = null;
 
   public isLoading = {
     accounts: false,
@@ -523,6 +525,8 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       this.searchElement?.nativeElement?.focus();
     });
 
+    this.setPortfolioFilterFormValues();
+
     this.isLoading = {
       accounts: false,
       assetProfiles: false,
@@ -530,18 +534,11 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       quickLinks: false
     };
 
+    this.holdingsPromise = null;
+
+    this.holdings = [];
+
     this.setIsOpen(true);
-
-    this.dataService
-      .fetchPortfolioHoldings()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ holdings }) => {
-        this.holdings = getHoldingsForFilter(holdings);
-
-        this.setPortfolioFilterFormValues();
-
-        this.changeDetectorRef.markForCheck();
-      });
   }
 
   public onApplyFilters() {
@@ -583,6 +580,12 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
 
   public setIsOpen(aIsOpen: boolean) {
     this.isOpen = aIsOpen;
+  }
+
+  public loadHoldingsIfNeeded() {
+    this.loadHoldings().catch(() => {
+      // Silently ignore errors when no user interaction is pending
+    });
   }
 
   public ngOnDestroy() {
@@ -714,25 +717,62 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   private searchHoldings(aSearchTerm: string): Observable<SearchResultItem[]> {
-    const fuse = new Fuse(this.holdings, {
-      keys: ['assetProfile.isin', 'assetProfile.name', 'assetProfile.symbol'],
-      threshold: 0.3
-    });
+    return from(this.loadHoldings()).pipe(
+      map((holdings) => {
+        const fuse = new Fuse(holdings, {
+          keys: [
+            'assetProfile.isin',
+            'assetProfile.name',
+            'assetProfile.symbol'
+          ],
+          threshold: 0.3
+        });
 
-    const results = fuse
-      .search(aSearchTerm)
-      .map(({ item: { assetProfile } }) => {
-        return {
-          assetSubClassString: translate(assetProfile.assetSubClass ?? ''),
-          currency: assetProfile.currency ?? '',
-          dataSource: assetProfile.dataSource,
-          mode: SearchMode.HOLDING as const,
-          name: assetProfile.name ?? '',
-          symbol: assetProfile.symbol
-        };
-      });
+        return fuse.search(aSearchTerm).map(({ item: { assetProfile } }) => {
+          return {
+            assetSubClassString: translate(assetProfile.assetSubClass ?? ''),
+            currency: assetProfile.currency ?? '',
+            dataSource: assetProfile.dataSource,
+            mode: SearchMode.HOLDING as const,
+            name: assetProfile.name ?? '',
+            symbol: assetProfile.symbol
+          };
+        });
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    );
+  }
 
-    return of(results);
+  private loadHoldings(): Promise<PortfolioPosition[]> {
+    if (!this.holdingsPromise) {
+      this.isLoading.holdings = true;
+      this.changeDetectorRef.markForCheck();
+
+      this.holdingsPromise = firstValueFrom(
+        this.dataService.fetchPortfolioHoldings().pipe(
+          map(({ holdings }) => {
+            this.holdings = getHoldingsForFilter(holdings);
+            this.setPortfolioFilterFormValues();
+            this.finishLoadingHoldings();
+
+            return this.holdings;
+          }),
+          catchError(() => {
+            this.finishLoadingHoldings();
+            this.holdingsPromise = null;
+
+            return of([] as PortfolioPosition[]);
+          })
+        )
+      );
+    }
+
+    return this.holdingsPromise;
+  }
+
+  private finishLoadingHoldings() {
+    this.isLoading.holdings = false;
+    this.changeDetectorRef.markForCheck();
   }
 
   private searchQuickLinks(aSearchTerm: string): SearchResultItem[] {
