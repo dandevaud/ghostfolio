@@ -13,7 +13,8 @@ import {
   forwardRef,
   inject,
   input,
-  model
+  model,
+  output
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -26,6 +27,7 @@ import {
   ReactiveFormsModule
 } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 
 import { GfAccountSelectorComponent } from '../account-selector/account-selector.component';
@@ -38,6 +40,7 @@ import { PortfolioFilterFormValue } from './interfaces';
     FormsModule,
     GfAccountSelectorComponent,
     MatFormFieldModule,
+    MatProgressSpinnerModule,
     MatSelectModule,
     ReactiveFormsModule
   ],
@@ -60,6 +63,7 @@ export class GfPortfolioFilterFormComponent
   public readonly assetClasses = input<Filter[]>([]);
   public readonly disabled = model(false);
   public readonly holdings = input<PortfolioPosition[]>([]);
+  public readonly isHoldingsLoading = input(false);
   public readonly tags = input<Filter[]>([]);
 
   public filterForm: FormGroup<{
@@ -70,6 +74,8 @@ export class GfPortfolioFilterFormComponent
   }>;
 
   public readonly labelAccount = translate('ACCOUNT');
+
+  protected readonly holdingSelectOpened = output<void>();
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
