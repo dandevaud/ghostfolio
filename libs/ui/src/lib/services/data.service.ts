@@ -3,7 +3,9 @@ import {
   CreateAccountBalanceDto,
   CreateAccountDto,
   CreateOrderDto,
+  CreatePlatformDto,
   CreateTagDto,
+  CreateUserDto,
   CreateWatchlistItemDto,
   DeleteOwnUserDto,
   TransferBalanceDto,
@@ -12,19 +14,23 @@ import {
   UpdateBulkMarketDataDto,
   UpdateOrderDto,
   UpdateOwnAccessTokenDto,
+  UpdatePlatformDto,
   UpdatePropertyDto,
   UpdateTagDto,
   UpdateUserSettingDto
 } from '@ghostfolio/common/dtos';
 import { DATE_FORMAT } from '@ghostfolio/common/helper';
 import {
-  Access,
+  AccessResponse,
   AccessTokenResponse,
+  AccessesResponse,
+  AccountBalanceResponse,
   AccountBalancesResponse,
   AccountResponse,
   AccountsResponse,
   ActivitiesResponse,
   ActivityResponse,
+  AiActivitiesResponse,
   AiPromptResponse,
   ApiKeyResponse,
   AssetProfileIdentifier,
@@ -33,9 +39,10 @@ import {
   AssetResponse,
   BenchmarkMarketDataDetailsResponse,
   BenchmarkResponse,
+  CreateActivityResponse,
   CreateStripeCheckoutSessionResponse,
   DataProviderHealthResponse,
-  DataProviderHistoricalResponse,
+  DeleteOrUpdateActivityResponse,
   ExportResponse,
   Filter,
   ImportResponse,
@@ -43,6 +50,7 @@ import {
   LookupResponse,
   MarketDataOfMarketsResponse,
   OAuthResponse,
+  PlatformResponse,
   PlatformsResponse,
   PortfolioDetails,
   PortfolioDividendsResponse,
@@ -52,7 +60,8 @@ import {
   PortfolioPerformanceResponse,
   PortfolioReportResponse,
   PublicPortfolioResponse,
-  SymbolItem,
+  RedeemCouponResponse,
+  SymbolResponse,
   User,
   UserItem,
   WatchlistResponse
@@ -61,27 +70,25 @@ import { filterGlobalPermissions } from '@ghostfolio/common/permissions';
 import type {
   AiPromptMode,
   DateRange,
-  GroupBy
+  GroupBy,
+  TagWithAccountAndActivityCount
 } from '@ghostfolio/common/types';
+import type {
+  Account,
+  MarketData,
+  SymbolProfile,
+  Tag,
+  User as UserModel
+} from '@ghostfolio/prisma/browser';
+import { DataSource } from '@ghostfolio/prisma/enums';
 import { translate } from '@ghostfolio/ui/i18n';
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { SortDirection } from '@angular/material/sort';
 import { utc } from '@date-fns/utc';
-import {
-  Access as AccessModel,
-  Account,
-  AccountBalance,
-  DataSource,
-  MarketData,
-  Order,
-  SymbolProfile,
-  Tag,
-  User as UserModel
-} from '@prisma/client';
 import { format, parseISO } from 'date-fns';
-import { cloneDeep, groupBy, isNumber } from 'lodash';
+import { cloneDeep, groupBy, isNumber } from 'lodash-es';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -192,19 +199,19 @@ export class DataService {
   }
 
   public fetchAccount(aAccountId: string) {
-    return this.http.get<AccountResponse>(`/api/v1/account/${aAccountId}`);
+    return this.http.get<AccountResponse>(`/api/v1/accounts/${aAccountId}`);
   }
 
   public fetchAccountBalances(aAccountId: string) {
     return this.http.get<AccountBalancesResponse>(
-      `/api/v1/account/${aAccountId}/balances`
+      `/api/v1/accounts/${aAccountId}/balances`
     );
   }
 
   public fetchAccounts({ filters }: { filters?: Filter[] } = {}) {
     const params = this.buildFiltersAsQueryParams({ filters });
 
-    return this.http.get<AccountsResponse>('/api/v1/account', { params });
+    return this.http.get<AccountsResponse>('/api/v1/accounts', { params });
   }
 
   public fetchActivities({
@@ -303,28 +310,24 @@ export class DataService {
     );
   }
 
-  public fetchExchangeRateForDate({
-    date,
-    symbol
-  }: {
-    date: Date;
-    symbol: string;
-  }) {
-    return this.http.get<DataProviderHistoricalResponse>(
-      `/api/v1/exchange-rate/${encodeURIComponent(symbol)}/${format(date, DATE_FORMAT, { in: utc })}`
-    );
-  }
-
   public deleteAccess(aId: string) {
-    return this.http.delete<AccessModel>(`/api/v1/access/${aId}`);
+    return this.http.delete<void>(`/api/v1/accesses/${aId}`);
   }
 
   public deleteAccount(aId: string) {
-    return this.http.delete<Account>(`/api/v1/account/${aId}`);
+    return this.http.delete<Account>(`/api/v1/accounts/${aId}`);
   }
 
-  public deleteAccountBalance(aId: string) {
-    return this.http.delete<AccountBalance>(`/api/v1/account-balance/${aId}`);
+  public deleteAccountBalance({
+    accountId,
+    id
+  }: {
+    accountId: string;
+    id: string;
+  }) {
+    return this.http.delete<void>(
+      `/api/v1/accounts/${accountId}/balances/${id}`
+    );
   }
 
   public deleteActivities({
@@ -350,7 +353,9 @@ export class DataService {
   }
 
   public deleteActivity(aId: string) {
-    return this.http.delete<Order>(`/api/v1/activities/${aId}`);
+    return this.http.delete<DeleteOrUpdateActivityResponse>(
+      `/api/v1/activities/${aId}`
+    );
   }
 
   public deleteBenchmark({ dataSource, symbol }: AssetProfileIdentifier) {
@@ -363,12 +368,16 @@ export class DataService {
     return this.http.delete<UserModel>(`/api/v1/user`, { body: aData });
   }
 
+  public deletePlatform(aId: string) {
+    return this.http.delete<void>(`/api/v1/platforms/${aId}`);
+  }
+
   public deleteTag(aId: string) {
     return this.http.delete<Tag>(`/api/v1/tags/${aId}`);
   }
 
   public deleteUser(aId: string) {
-    return this.http.delete<UserModel>(`/api/v1/user/${aId}`);
+    return this.http.delete<void>(`/api/v1/users/${aId}`);
   }
 
   public deleteWatchlistItem({ dataSource, symbol }: AssetProfileIdentifier) {
@@ -378,7 +387,7 @@ export class DataService {
   }
 
   public fetchAccesses() {
-    return this.http.get<Access[]>('/api/v1/access');
+    return this.http.get<AccessesResponse>('/api/v1/accesses');
   }
 
   public fetchAsset({
@@ -651,24 +660,22 @@ export class DataService {
       .pipe(
         map((response) => {
           if (response.holdings) {
-            for (const symbol of Object.keys(response.holdings)) {
-              response.holdings[symbol].assetProfile.assetClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetClass);
+            for (const holding of response.holdings) {
+              holding.assetProfile.assetClassLabel = translate(
+                holding.assetProfile.assetClass
+              );
 
-              response.holdings[symbol].assetProfile.assetSubClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetSubClass);
+              holding.assetProfile.assetSubClassLabel = translate(
+                holding.assetProfile.assetSubClass
+              );
 
-              response.holdings[symbol].dateOfFirstActivity = response.holdings[
-                symbol
-              ].dateOfFirstActivity
-                ? parseISO(response.holdings[symbol].dateOfFirstActivity)
+              holding.dateOfFirstActivity = holding.dateOfFirstActivity
+                ? parseISO(holding.dateOfFirstActivity)
                 : undefined;
 
-              response.holdings[symbol].value = isNumber(
-                response.holdings[symbol].value
-              )
-                ? response.holdings[symbol].value
-                : response.holdings[symbol].valueInPercentage;
+              holding.value = isNumber(holding.value)
+                ? holding.value
+                : holding.valueInPercentage;
             }
           }
 
@@ -731,16 +738,23 @@ export class DataService {
 
   public fetchPortfolioPerformance({
     filters,
+    groupBy,
     range,
     withExcludedAccounts = false,
     timeWeightedPerformance = false
   }: {
     filters?: Filter[];
+    groupBy?: Extract<GroupBy, 'year'>;
     range: DateRange;
     withExcludedAccounts?: boolean;
     timeWeightedPerformance?: boolean;
   }): Observable<PortfolioPerformanceResponse> {
     let params = this.buildFiltersAsQueryParams({ filters });
+
+    if (groupBy) {
+      params = params.append('groupBy', groupBy);
+    }
+
     params = params.append('range', range);
 
     if (withExcludedAccounts) {
@@ -794,18 +808,14 @@ export class DataService {
       .pipe(
         map((response) => {
           if (response.holdings) {
-            for (const symbol of Object.keys(response.holdings)) {
-              response.holdings[symbol].assetProfile.assetClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetClass);
+            for (const holding of response.holdings) {
+              holding.assetProfile.assetClassLabel = translate(
+                holding.assetProfile.assetClass
+              );
 
-              response.holdings[symbol].assetProfile.assetSubClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetSubClass);
-
-              response.holdings[symbol].valueInBaseCurrency = isNumber(
-                response.holdings[symbol].valueInBaseCurrency
-              )
-                ? response.holdings[symbol].valueInBaseCurrency
-                : response.holdings[symbol].valueInPercentage;
+              holding.assetProfile.assetSubClassLabel = translate(
+                holding.assetProfile.assetSubClass
+              );
             }
           }
 
@@ -829,8 +839,8 @@ export class DataService {
       params = params.append('includeHistoricalData', includeHistoricalData);
     }
 
-    return this.http.get<SymbolItem>(
-      `/api/v1/symbol/${dataSource}/${encodeURIComponent(symbol)}`,
+    return this.http.get<SymbolResponse>(
+      `/api/v1/symbols/${dataSource}/${encodeURIComponent(symbol)}`,
       {
         params
       }
@@ -851,7 +861,7 @@ export class DataService {
     }
 
     return this.http
-      .get<LookupResponse>('/api/v1/symbol/lookup', { params })
+      .get<LookupResponse>('/api/v1/symbols/lookup', { params })
       .pipe(
         map(({ items }) => {
           return items;
@@ -860,7 +870,7 @@ export class DataService {
   }
 
   public fetchTags() {
-    return this.http.get<Tag[]>('/api/v1/tags');
+    return this.http.get<TagWithAccountAndActivityCount[]>('/api/v1/tags');
   }
 
   public fetchWatchlist() {
@@ -874,22 +884,39 @@ export class DataService {
   }
 
   public postAccess(aAccess: CreateAccessDto) {
-    return this.http.post<Access>('/api/v1/access', aAccess);
+    return this.http.post<AccessResponse>('/api/v1/accesses', aAccess);
   }
 
   public postAccount(aAccount: CreateAccountDto) {
-    return this.http.post<Account>('/api/v1/account', aAccount);
+    return this.http.post<Account>('/api/v1/accounts', aAccount);
   }
 
-  public postAccountBalance(aAccountBalance: CreateAccountBalanceDto) {
-    return this.http.post<AccountBalance>(
-      '/api/v1/account-balance',
-      aAccountBalance
+  public postAccountBalance({
+    accountBalance,
+    accountId
+  }: {
+    accountBalance: CreateAccountBalanceDto;
+    accountId: string;
+  }) {
+    return this.http.post<AccountBalanceResponse>(
+      `/api/v1/accounts/${accountId}/balances`,
+      accountBalance
     );
   }
 
   public postActivity(aOrder: CreateOrderDto) {
-    return this.http.post<Order>('/api/v1/activities', aOrder);
+    return this.http.post<CreateActivityResponse>('/api/v1/activities', aOrder);
+  }
+
+  public postAiActivities(file: File) {
+    const formData = new FormData();
+
+    formData.append('file', file);
+
+    return this.http.post<AiActivitiesResponse>(
+      '/api/v1/ai/activities',
+      formData
+    );
   }
 
   public postApiKey() {
@@ -910,12 +937,16 @@ export class DataService {
     return this.http.post<MarketData>(url, marketData);
   }
 
+  public postPlatform(aPlatform: CreatePlatformDto) {
+    return this.http.post<PlatformResponse>(`/api/v1/platforms`, aPlatform);
+  }
+
   public postTag(aTag: CreateTagDto) {
     return this.http.post<Tag>(`/api/v1/tags`, aTag);
   }
 
-  public postUser() {
-    return this.http.post<UserItem>('/api/v1/user', {});
+  public postUser(aData: CreateUserDto) {
+    return this.http.post<UserItem>('/api/v1/user', aData);
   }
 
   public postWatchlistItem(watchlistItem: CreateWatchlistItemDto) {
@@ -923,15 +954,21 @@ export class DataService {
   }
 
   public putAccess(aAccess: UpdateAccessDto) {
-    return this.http.put<Access>(`/api/v1/access/${aAccess.id}`, aAccess);
+    return this.http.put<AccessResponse>(
+      `/api/v1/accesses/${aAccess.id}`,
+      aAccess
+    );
   }
 
   public putAccount(aAccount: UpdateAccountDto) {
-    return this.http.put<UserItem>(`/api/v1/account/${aAccount.id}`, aAccount);
+    return this.http.put<UserItem>(`/api/v1/accounts/${aAccount.id}`, aAccount);
   }
 
   public putActivity(aOrder: UpdateOrderDto) {
-    return this.http.put<UserItem>(`/api/v1/activities/${aOrder.id}`, aOrder);
+    return this.http.put<DeleteOrUpdateActivityResponse>(
+      `/api/v1/activities/${aOrder.id}`,
+      aOrder
+    );
   }
 
   public putAdminSetting(key: string, aData: UpdatePropertyDto) {
@@ -949,6 +986,13 @@ export class DataService {
     );
   }
 
+  public putPlatform(aPlatform: UpdatePlatformDto) {
+    return this.http.put<PlatformResponse>(
+      `/api/v1/platforms/${aPlatform.id}`,
+      aPlatform
+    );
+  }
+
   public putTag(aTag: UpdateTagDto) {
     return this.http.put<Tag>(`/api/v1/tags/${aTag.id}`, aTag);
   }
@@ -958,9 +1002,12 @@ export class DataService {
   }
 
   public redeemCoupon(couponCode: string) {
-    return this.http.post('/api/v1/subscription/redeem-coupon', {
-      couponCode
-    });
+    return this.http.post<RedeemCouponResponse>(
+      '/api/v1/subscription/redeem-coupon',
+      {
+        couponCode
+      }
+    );
   }
 
   public transferAccountBalance({
@@ -968,7 +1015,7 @@ export class DataService {
     accountIdTo,
     balance
   }: TransferBalanceDto) {
-    return this.http.post('/api/v1/account/transfer-balance', {
+    return this.http.post('/api/v1/accounts/transfer-balance', {
       accountIdFrom,
       accountIdTo,
       balance
@@ -984,7 +1031,7 @@ export class DataService {
 
   public updateUserAccessToken(aUserId: string) {
     return this.http.post<AccessTokenResponse>(
-      `/api/v1/user/${aUserId}/access-token`,
+      `/api/v1/users/${aUserId}/access-token`,
       {}
     );
   }

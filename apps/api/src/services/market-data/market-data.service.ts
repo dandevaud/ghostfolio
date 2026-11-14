@@ -4,7 +4,6 @@ import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging
 import { DataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { DEFAULT_PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_TIMEOUT } from '@ghostfolio/common/config';
-import { UpdateMarketDataDto } from '@ghostfolio/common/dtos';
 import { resetHours } from '@ghostfolio/common/helper';
 import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
 
@@ -39,7 +38,7 @@ export class MarketDataService {
     dataSource,
     date = new Date(),
     symbol
-  }: DataGatheringItem): Promise<MarketData> {
+  }: DataGatheringItem): Promise<MarketData | null> {
     return await this.prismaService.marketData.findFirst({
       where: {
         dataSource,
@@ -52,7 +51,7 @@ export class MarketDataService {
   public async getLatest({
     dataSource,
     symbol
-  }: AssetProfileIdentifier): Promise<MarketData> {
+  }: AssetProfileIdentifier): Promise<MarketData | null> {
     return this.prismaService.marketData.findFirst({
       orderBy: [{ date: 'desc' }],
       where: {
@@ -202,13 +201,16 @@ export class MarketDataService {
           });
 
           await prisma.marketData.createMany({
-            data: data.map(({ date, marketPrice, state }) => ({
-              dataSource,
-              symbol,
-              date: date as Date,
-              marketPrice: marketPrice as number,
-              state: state as MarketDataState
-            })),
+            data: data.map(
+              ({ date, isCarriedForward, marketPrice, state }) => ({
+                dataSource,
+                symbol,
+                date: date as Date,
+                isCarriedForward: isCarriedForward as boolean,
+                marketPrice: marketPrice as number,
+                state: state as MarketDataState
+              })
+            ),
             skipDuplicates: true
           });
         }
@@ -263,21 +265,30 @@ export class MarketDataService {
     data: Prisma.MarketDataUpdateInput[];
   }): Promise<MarketData[]> {
     const upsertPromises = data.map(
-      async ({ dataSource, date, marketPrice, symbol, state }) => {
+      async ({
+        dataSource,
+        date,
+        isCarriedForward,
+        marketPrice,
+        symbol,
+        state
+      }) => {
         return this.prismaService.marketData.upsert({
           create: {
             dataSource: dataSource as DataSource,
             date: date as Date,
+            isCarriedForward: isCarriedForward as boolean,
             marketPrice: marketPrice as number,
             state: state as MarketDataState,
             symbol: symbol as string
           },
           update: {
+            isCarriedForward: (isCarriedForward ?? false) as boolean,
             marketPrice: marketPrice as number,
             state: state as MarketDataState
           },
           where: {
-            dataSource_date_symbol: {
+            dataSource_symbol_date: {
               dataSource: dataSource as DataSource,
               date: date as Date,
               symbol: symbol as string

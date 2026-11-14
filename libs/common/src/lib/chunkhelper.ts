@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import type { Prisma } from '@ghostfolio/prisma/browser';
+import type { PrismaClient } from '@ghostfolio/prisma/client';
 
 class Chunk<T> implements Iterable<T[] | undefined> {
   protected constructor(

@@ -92,6 +92,10 @@ export class UpdateUserSettingDto {
 
   @IsBoolean()
   @IsOptional()
+  isGhostfolioAiEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   isRestrictedView?: boolean;
 
   @IsString()
@@ -101,6 +105,10 @@ export class UpdateUserSettingDto {
   @IsString()
   @IsOptional()
   locale?: string;
+
+  @IsIn([PerformanceCalculationType.ROAI, PerformanceCalculationType.ROI])
+  @IsOptional()
+  performanceCalculationType?: PerformanceCalculationType;
 
   /**
    * The target financial amount the user aims to reach before retiring.

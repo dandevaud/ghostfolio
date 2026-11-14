@@ -1,19 +1,28 @@
-import { NumberParser } from '@internationalized/number';
-import {
-  Type as ActivityType,
+import type {
   AssetProfileOverrides,
-  AssetSubClass,
   MarketData,
   Prisma,
   SymbolProfile
-} from '@prisma/client';
+} from '@ghostfolio/prisma/browser';
+import {
+  AccessType,
+  Type as ActivityType,
+  AssetSubClass
+} from '@ghostfolio/prisma/enums';
+
+import { utc } from '@date-fns/utc';
+import { NumberParser } from '@internationalized/number';
 import { Big } from 'big.js';
 import { isISO4217CurrencyCode, isUUID } from 'class-validator';
+import { countries } from 'countries-list';
 import {
+  addDays,
   getDate,
   getMonth,
   getYear,
+  isAfter,
   isMatch,
+  isValid,
   parse,
   parseISO,
   subDays
@@ -33,7 +42,7 @@ import {
   uk,
   zhCN
 } from 'date-fns/locale';
-import { get, isNil, isString } from 'lodash';
+import { get, isNil, isString } from 'lodash-es';
 
 import {
   DEFAULT_CURRENCY,
@@ -77,11 +86,14 @@ const USER_SETTINGS_KEYS_OF_AUTHENTICATED_USER: (keyof UserSettings)[] = [
   'filters.tags',
   'holdingsViewMode',
   'isExperimentalFeatures',
+  'isGhostfolioAiEnabled',
   'isRestrictedView',
   'language',
   'locale',
   'viewMode'
 ];
+
+const VALID_COUNTRY_CODES = new Set([...Object.keys(countries), 'EU']);
 
 export function applyAssetProfileOverrides<T extends Partial<SymbolProfile>>(
   assetProfile: T,
@@ -172,6 +184,10 @@ export function calculateMovingAverage({
     .toNumber();
 }
 
+export function canApplyFiltersToAccess({ type }: { type: AccessType }) {
+  return type === 'PUBLIC';
+}
+
 export function canDeleteAssetProfile({
   activitiesCount,
   isBenchmark,
@@ -222,8 +238,47 @@ export function canOpenHoldingDetail({
   return assetProfile?.assetSubClass !== AssetSubClass.CASH;
 }
 
+/**
+ * Checks if the symbol of a custom asset profile can be used, either to connect
+ * to the existing asset profile or to create a new one. The prefix is reserved
+ * for the asset profiles of the admin, thus a new asset profile cannot use it.
+ */
+export function canUseCustomAssetProfileSymbol({
+  assetProfile,
+  symbol
+}: {
+  assetProfile: Pick<SymbolProfile, 'id'> | null;
+  symbol: string;
+}): boolean {
+  if (!isValidCustomAssetProfileSymbol(symbol)) {
+    return false;
+  }
+
+  if (assetProfile) {
+    return true;
+  }
+
+  return !hasGhostfolioPrefix(symbol);
+}
+
 export function capitalize(aString: string) {
   return aString.charAt(0).toUpperCase() + aString.slice(1).toLowerCase();
+}
+
+export function convertValuesToPercentagesOfTotal({
+  total,
+  values
+}: {
+  total: number;
+  values: { [key: string]: { value: number } };
+}) {
+  if (!total) {
+    return;
+  }
+
+  for (const item of Object.values(values)) {
+    item.value = item.value / total;
+  }
 }
 
 export function downloadAsFile({
@@ -279,8 +334,8 @@ export function formatAssetProfileName({
   assetSubClass,
   name
 }: {
-  assetSubClass?: AssetSubClass;
-  name?: string;
+  assetSubClass?: AssetSubClass | null;
+  name?: string | null;
 }) {
   if (assetSubClass === 'CRYPTOCURRENCY') {
     // Remove DEFAULT_CURRENCY at the end of cryptocurrency names
@@ -314,12 +369,9 @@ export function getAssetProfileIdentifier({
   return `${dataSource}-${symbol}`;
 }
 
-export function getBackgroundColor(aColorScheme: ColorScheme) {
+export function getBackgroundColor(aColorScheme?: ColorScheme) {
   return getCssVariable(
-    aColorScheme === 'DARK' ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? '--dark-background'
-      : '--light-background'
+    isDarkColorScheme(aColorScheme) ? '--dark-background' : '--light-background'
   );
 }
 
@@ -414,15 +466,31 @@ export function getDateWithTimeFormatString(aLocale?: string) {
 }
 
 export function getEmojiFlag(aCountryCode: string) {
-  if (!aCountryCode) {
-    return aCountryCode;
+  const countryCode = aCountryCode?.toUpperCase();
+
+  if (!countryCode || !VALID_COUNTRY_CODES.has(countryCode)) {
+    return undefined;
   }
 
-  return aCountryCode
-    .toUpperCase()
-    .replace(/./g, (character) =>
-      String.fromCodePoint(127397 + character.charCodeAt(0))
-    );
+  return countryCode.replace(/./g, (character) => {
+    return String.fromCodePoint(127397 + character.charCodeAt(0));
+  });
+}
+
+export function getHoldingName({
+  assetSubClass,
+  assetSubClassLabel,
+  name,
+  symbol
+}: Pick<
+  PortfolioPosition['assetProfile'],
+  'assetSubClass' | 'assetSubClassLabel' | 'name' | 'symbol'
+>) {
+  if (isCashPosition({ assetSubClass }) && assetSubClassLabel) {
+    return `${assetSubClassLabel} (${symbol})`;
+  }
+
+  return name ?? symbol;
 }
 
 export function getLocale() {
@@ -464,6 +532,14 @@ export function getStartOfUtcDate(aDate: Date) {
   return date;
 }
 
+export function getStartOfUtcDateOfTomorrow() {
+  return addDays(getStartOfUtcDate(new Date()), 1, { in: utc });
+}
+
+export function getStartOfUtcDateOfYesterday() {
+  return subDays(getStartOfUtcDate(new Date()), 1, { in: utc });
+}
+
 export function getStringOrNull(aString: string | null | undefined) {
   const trimmedString = aString?.trim();
 
@@ -492,10 +568,9 @@ export function getSum(aArray: Big[]) {
   return new Big(0);
 }
 
-export function getTextColor(aColorScheme: ColorScheme) {
+export function getTextColor(aColorScheme?: ColorScheme) {
   const cssVariable = getCssVariable(
-    aColorScheme === 'DARK' ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches
+    isDarkColorScheme(aColorScheme)
       ? '--light-primary-text'
       : '--dark-primary-text'
   );
@@ -503,14 +578,6 @@ export function getTextColor(aColorScheme: ColorScheme) {
   const [r, g, b] = cssVariable.split(',');
 
   return `${r}, ${g}, ${b}`;
-}
-
-export function getToday() {
-  const year = getYear(new Date());
-  const month = getMonth(new Date());
-  const day = getDate(new Date());
-
-  return new Date(Date.UTC(year, month, day));
 }
 
 export function getUtc(aDateString: string) {
@@ -523,14 +590,6 @@ export function getUtc(aDateString: string) {
       parseInt(dayString, 10)
     )
   );
-}
-
-export function getYesterday() {
-  const year = getYear(new Date());
-  const month = getMonth(new Date());
-  const day = getDate(new Date());
-
-  return subDays(new Date(Date.UTC(year, month, day)), 1);
 }
 
 export function hasGhostfolioPrefix(aSymbol: string) {
@@ -551,12 +610,30 @@ export function interpolate(template: string, context: any) {
   });
 }
 
+export function isAccountBalanceInFuture({
+  date,
+  startOfUtcDateOfTomorrow = getStartOfUtcDateOfTomorrow()
+}: {
+  date: Date;
+  startOfUtcDateOfTomorrow?: Date;
+}) {
+  return isAfter(date, startOfUtcDateOfTomorrow);
+}
+
 export function isAccountExcluded(account?: { tags?: { id: string }[] }) {
   return (
     account?.tags?.some(({ id }) => {
       return id === TAG_ID_EXCLUDE_FROM_ANALYSIS;
     }) === true
   );
+}
+
+export function isCashPosition({
+  assetSubClass
+}: {
+  assetSubClass?: AssetSubClass;
+} = {}) {
+  return assetSubClass === AssetSubClass.CASH;
 }
 
 export function isCurrency(aCurrency: string) {
@@ -579,6 +656,14 @@ export function isCurrencySymbol(aSymbol: string) {
     ) &&
     isCurrency(aSymbol.substring(aSymbol.length - DEFAULT_CURRENCY.length))
   );
+}
+
+export function isDarkColorScheme(aColorScheme?: ColorScheme | null) {
+  if (aColorScheme) {
+    return aColorScheme === 'DARK';
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 export function isDerivedCurrency(aCurrency: string) {
@@ -650,8 +735,53 @@ export function isUserSettingOfAuthenticatedUser(aKey: string) {
   );
 }
 
+export function isValidAccountBalanceDate(aDate: string) {
+  const date = parseISO(aDate);
+
+  return isValid(date) && !isAccountBalanceInFuture({ date: resetHours(date) });
+}
+
+export function isValidCurrencyCode(aCurrency: string) {
+  if (!aCurrency) {
+    return false;
+  }
+
+  return (
+    isDerivedCurrency(aCurrency) ||
+    (aCurrency === aCurrency.toUpperCase() && isISO4217CurrencyCode(aCurrency))
+  );
+}
+
 export function isValidCustomAssetProfileSymbol(aSymbol: string) {
   return hasGhostfolioPrefix(aSymbol) || isUUID(aSymbol);
+}
+
+export function isValidDateAfter1970(aDate: Date | string) {
+  const date = isString(aDate) ? parseISO(aDate, { in: utc }) : aDate;
+
+  return isValid(date) && isAfter(date, new Date(0));
+}
+
+/**
+ * A private access is granted to a user, while a public access and an access
+ * of a client of the model context protocol are credentials on their own and
+ * have no grantee. A row which mixes both is neither, hence it is rejected.
+ * The owner of an access cannot be its grantee.
+ */
+export function isValidGranteeOfAccess({
+  granteeUserId,
+  type,
+  userId
+}: {
+  granteeUserId?: string | null;
+  type: AccessType;
+  userId: string;
+}) {
+  if (type === 'PRIVATE') {
+    return !!granteeUserId && granteeUserId !== userId;
+  }
+
+  return !granteeUserId;
 }
 
 export function isValidSearchQuery(aQuery: string) {

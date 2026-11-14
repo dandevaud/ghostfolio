@@ -1,8 +1,8 @@
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import {
   CACHE_TTL_INFINITE,
@@ -16,14 +16,15 @@ import {
   AssetProfileIdentifier,
   Benchmark,
   BenchmarkProperty,
-  BenchmarkResponse
+  BenchmarkResponse,
+  EnhancedAssetProfile
 } from '@ghostfolio/common/interfaces';
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SymbolProfile } from '@prisma/client';
 import { Big } from 'big.js';
 import { addHours, isPast, subDays } from 'date-fns';
-import { round, uniqBy } from 'lodash';
+import { round, uniqBy } from 'lodash-es';
 import ms from 'ms';
 
 import { BenchmarkValue } from './interfaces/benchmark-value.interface';
@@ -88,18 +89,20 @@ export class BenchmarkService {
           this.CACHE_KEY_BENCHMARKS
         );
 
-        const { benchmarks, expiration }: BenchmarkValue =
-          JSON.parse(cachedBenchmarkValue);
+        if (cachedBenchmarkValue) {
+          const { benchmarks, expiration }: BenchmarkValue =
+            JSON.parse(cachedBenchmarkValue);
 
-        this.logger.debug('Fetched benchmarks from cache');
+          this.logger.debug('Fetched benchmarks from cache');
 
-        if (isPast(new Date(expiration))) {
-          this.calculateAndCacheBenchmarks({
-            enableSharing
-          });
+          if (isPast(new Date(expiration))) {
+            this.calculateAndCacheBenchmarks({
+              enableSharing
+            });
+          }
+
+          return benchmarks;
         }
-
-        return benchmarks;
       } catch {}
     }
 
@@ -108,7 +111,9 @@ export class BenchmarkService {
 
   public async getBenchmarkAssetProfiles({
     enableSharing = false
-  } = {}): Promise<Partial<SymbolProfile>[]> {
+  } = {}): Promise<
+    Pick<EnhancedAssetProfile, 'dataSource' | 'id' | 'name' | 'symbol'>[]
+  > {
     const symbolProfileIds: string[] = (
       (await this.propertyService.getByKey<BenchmarkProperty[]>(
         PROPERTY_BENCHMARKS
@@ -138,7 +143,7 @@ export class BenchmarkService {
         };
       })
       .sort((a, b) => {
-        return a.name?.localeCompare(b?.name) ?? 0;
+        return (a.name ?? '').localeCompare(b.name ?? '');
       });
   }
 
@@ -216,6 +221,12 @@ export class BenchmarkService {
     }
   }
 
+  public getPerformancePercentFromAllTimeHigh(performancePercent: number) {
+    const isAtAllTimeHigh = performancePercent >= 0;
+
+    return isAtAllTimeHigh ? 0 : performancePercent;
+  }
+
   public async isBenchmark(symbolProfileId: string): Promise<boolean> {
     const benchmarks = await this.getBenchmarksProperty();
 
@@ -287,11 +298,10 @@ export class BenchmarkService {
         name: benchmarkAssetProfiles[index].name,
         performances: {
           allTimeHigh: {
-            date: allTimeHigh?.date,
-            performancePercent:
-              performancePercentFromAllTimeHigh >= 0
-                ? 0
-                : performancePercentFromAllTimeHigh
+            date: allTimeHigh?.date as Date,
+            performancePercent: this.getPerformancePercentFromAllTimeHigh(
+              performancePercentFromAllTimeHigh
+            )
           }
         },
         symbol: benchmarkAssetProfiles[index].symbol,
@@ -330,5 +340,7 @@ export class BenchmarkService {
       key: PROPERTY_BENCHMARKS,
       value: JSON.stringify(benchmarks)
     });
+
+    await this.redisCacheService.remove(this.CACHE_KEY_BENCHMARKS);
   }
 }

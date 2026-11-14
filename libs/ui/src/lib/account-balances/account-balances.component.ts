@@ -11,7 +11,6 @@ import {
   Component,
   EventEmitter,
   OnChanges,
-  OnInit,
   Output,
   effect,
   inject,
@@ -25,7 +24,6 @@ import {
   ReactiveFormsModule
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { DateAdapter } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -37,10 +35,11 @@ import { format } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
   calendarClearOutline,
+  documentTextOutline,
   ellipsisHorizontal,
   trashOutline
 } from 'ionicons/icons';
-import { get, isNil } from 'lodash';
+import { get, isNil } from 'lodash-es';
 
 import { GfValueComponent } from '../value';
 
@@ -63,17 +62,29 @@ import { GfValueComponent } from '../value';
   styleUrls: ['./account-balances.component.scss'],
   templateUrl: './account-balances.component.html'
 })
-export class GfAccountBalancesComponent implements OnChanges, OnInit {
+export class GfAccountBalancesComponent implements OnChanges {
   @Output() accountBalanceCreated = new EventEmitter<CreateAccountBalanceDto>();
   @Output() accountBalanceDeleted = new EventEmitter<string>();
 
   public readonly accountBalances =
     input.required<AccountBalancesResponse['balances']>();
-  public readonly accountCurrency = input.required<string>();
-  public readonly accountId = input.required<string>();
+
+  public readonly accountCurrency = input.required<string | null>();
   public readonly currentBalance = input<number | null>();
-  public readonly displayedColumns: string[] = ['date', 'value', 'actions'];
-  public readonly locale = input(getLocale());
+  public readonly displayedColumns: string[] = [
+    'date',
+    'value',
+    'comment',
+    'actions'
+  ];
+  public readonly isSubmitting = input(false);
+
+  public readonly locale = input(getLocale(), {
+    transform: (value?: string) => {
+      return value ?? getLocale();
+    }
+  });
+
   public readonly showActions = input(true);
   public readonly sort = viewChild(MatSort);
 
@@ -87,11 +98,15 @@ export class GfAccountBalancesComponent implements OnChanges, OnInit {
   >();
   public maxDate = new Date();
 
-  private dateAdapter = inject<DateAdapter<Date, string>>(DateAdapter);
   private notificationService = inject(NotificationService);
 
   public constructor() {
-    addIcons({ calendarClearOutline, ellipsisHorizontal, trashOutline });
+    addIcons({
+      calendarClearOutline,
+      documentTextOutline,
+      ellipsisHorizontal,
+      trashOutline
+    });
 
     effect(() => {
       const currentBalance = this.currentBalance();
@@ -103,10 +118,6 @@ export class GfAccountBalancesComponent implements OnChanges, OnInit {
         this.accountBalanceForm.controls.balance.setValue(currentBalance);
       }
     });
-  }
-
-  public ngOnInit() {
-    this.dateAdapter.setLocale(this.locale());
   }
 
   public ngOnChanges() {
@@ -128,6 +139,12 @@ export class GfAccountBalancesComponent implements OnChanges, OnInit {
     });
   }
 
+  public onOpenComment(aComment: string) {
+    this.notificationService.alert({
+      title: aComment
+    });
+  }
+
   public async onSubmitAccountBalance() {
     const { balance, date } = this.accountBalanceForm.value;
 
@@ -137,7 +154,6 @@ export class GfAccountBalancesComponent implements OnChanges, OnInit {
 
     const accountBalance: CreateAccountBalanceDto = {
       balance,
-      accountId: this.accountId(),
       date: format(date, DATE_FORMAT)
     };
 

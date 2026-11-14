@@ -1,4 +1,4 @@
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 
 import type { Job, JobId, JobOptions } from 'bull';
 import ms from 'ms';
@@ -30,7 +30,9 @@ export const PortfolioSnapshotServiceMock = {
       }
     };
 
-    PortfolioSnapshotServiceMock.jobsStore.set(opts?.jobId, mockJob);
+    if (opts?.jobId) {
+      PortfolioSnapshotServiceMock.jobsStore.set(opts.jobId, mockJob);
+    }
 
     return Promise.resolve(mockJob as Job);
   },

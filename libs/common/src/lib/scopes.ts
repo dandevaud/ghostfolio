@@ -1,4 +1,5 @@
 import { AccessLevel } from '@ghostfolio/common/types';
+import { AccessType } from '@ghostfolio/prisma/enums';
 
 /**
  * Scopes describe what a grantee may do on behalf of the granting user. They
@@ -60,39 +61,67 @@ export const SCOPES_OF_READ_RESTRICTED_ACCESS: readonly Scope[] =
   });
 
 /**
+ * Maximum scopes per access type. The scopes stored on an access are
+ * intersected with it, hence a scope which the type does not permit stays
+ * ineffective even if it is stored. A type which cannot grant the restricted
+ * write access drops the write scopes in addition, unless the access reads the
+ * monetary values.
+ */
+const SCOPES_OF_TYPE: Record<AccessType, readonly Scope[]> = {
+  MCP: [...SCOPES_OF_READ_ACCESS, scopes.accountUpdate, scopes.activityCreate],
+  PRIVATE: Object.values(scopes),
+  PUBLIC: SCOPES_OF_PUBLIC_ACCESS
+};
+
+/**
+ * Access types which can combine a write scope with the restricted read access,
+ * because their tools which change data do not expose the monetary values
+ */
+export function canGrantRestrictedWriteAccess({ type }: { type: AccessType }) {
+  return type === 'MCP';
+}
+
+/**
+ * Access types which can expose the monetary values
+ */
+export function canGrantUnrestrictedReadAccess({ type }: { type: AccessType }) {
+  return SCOPES_OF_TYPE[type].includes(scopes.portfolioReadValues);
+}
+
+/**
  * Access level which the scopes of an access grant
  */
 export function getAccessLevel(aScopes: string[] = []): AccessLevel {
+  const hasScopeToReadValues = hasScope(aScopes, scopes.portfolioReadValues);
+
   if (hasAnyScopeOfWriteAccess(aScopes)) {
-    return 'CREATE_READ_UPDATE_DELETE';
+    return hasScopeToReadValues
+      ? 'CREATE_READ_UPDATE_DELETE'
+      : 'CREATE_READ_RESTRICTED_UPDATE_DELETE';
   }
 
-  return hasScope(aScopes, scopes.portfolioReadValues)
-    ? 'READ'
-    : 'READ_RESTRICTED';
+  return hasScopeToReadValues ? 'READ' : 'READ_RESTRICTED';
 }
 
 export function getScopesOfAccess({
-  granteeUserId,
-  scopes: scopesOfAccess
+  scopes: scopesOfAccess,
+  type
 }: {
-  granteeUserId?: string | null;
   scopes?: string[];
+  type: AccessType;
 }): string[] {
   const scopesToEvaluate = scopesOfAccess ?? [];
 
-  if (granteeUserId) {
-    // An unknown scope is dropped, so that a scope which has been removed from
-    // the vocabulary cannot stay effective
-    return Object.values(scopes).filter((scope) => {
-      return scopesToEvaluate.includes(scope);
-    });
-  }
+  const permitsWriteAccess =
+    canGrantRestrictedWriteAccess({ type }) ||
+    hasScope(scopesToEvaluate, scopes.portfolioReadValues);
 
-  // An access which has not been granted to a user is public, hence it is
-  // narrowed to the scopes exposed by the public endpoints
-  return SCOPES_OF_PUBLIC_ACCESS.filter((scope) => {
-    return scopesToEvaluate.includes(scope);
+  // An unknown scope is dropped
+  return SCOPES_OF_TYPE[type].filter((scope) => {
+    return (
+      scopesToEvaluate.includes(scope) &&
+      (permitsWriteAccess || !SCOPES_OF_WRITE_ACCESS.includes(scope))
+    );
   });
 }
 
@@ -101,6 +130,8 @@ export function getScopesOfAccess({
  */
 export function getScopesOfAccessLevel(aAccessLevel: AccessLevel): Scope[] {
   switch (aAccessLevel) {
+    case 'CREATE_READ_RESTRICTED_UPDATE_DELETE':
+      return [...SCOPES_OF_READ_RESTRICTED_ACCESS, ...SCOPES_OF_WRITE_ACCESS];
     case 'CREATE_READ_UPDATE_DELETE':
       return [...SCOPES_OF_READ_ACCESS, ...SCOPES_OF_WRITE_ACCESS];
     case 'READ':

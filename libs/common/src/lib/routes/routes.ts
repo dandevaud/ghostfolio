@@ -23,6 +23,20 @@ export const internalRoutes = {
       access: {
         path: 'access',
         routerLink: ['/account', 'access'],
+        subRoutes: {
+          create: {
+            path: 'create',
+            routerLink: ['/account', 'access', 'create'],
+            title: $localize`Grant access`
+          },
+          update: {
+            path: 'update',
+            routerLink: (aAccessId: string) => {
+              return ['/account', 'access', aAccessId, 'update'];
+            },
+            title: $localize`Edit access`
+          }
+        },
         title: $localize`Access`
       },
       membership: {
@@ -48,6 +62,20 @@ export const internalRoutes = {
       marketData: {
         path: 'market-data',
         routerLink: ['/admin', 'market-data'],
+        subRoutes: {
+          create: {
+            path: 'create',
+            routerLink: ['/admin', 'market-data', 'create'],
+            title: $localize`Add Asset Profile`
+          },
+          update: {
+            path: 'update',
+            routerLink: (aDataSource: string, aSymbol: string) => {
+              return ['/admin', 'market-data', aDataSource, aSymbol, 'update'];
+            },
+            title: $localize`Asset Profile`
+          }
+        },
         title: $localize`Market Data`
       },
       settings: {
@@ -78,6 +106,11 @@ export const internalRoutes = {
           return ['/accounts', aAccountId];
         },
         title: $localize`Account`
+      },
+      transferCashBalance: {
+        path: 'transfer-cash-balance',
+        routerLink: ['/accounts', 'transfer-cash-balance'],
+        title: $localize`Transfer Cash Balance`
       },
       update: {
         path: 'update',
@@ -123,6 +156,13 @@ export const internalRoutes = {
       watchlist: {
         path: 'watchlist',
         routerLink: ['/home', 'watchlist'],
+        subRoutes: {
+          create: {
+            path: 'create',
+            routerLink: ['/home', 'watchlist', 'create'],
+            title: $localize`Add to Watchlist`
+          }
+        },
         title: $localize`Watchlist`
       }
     },

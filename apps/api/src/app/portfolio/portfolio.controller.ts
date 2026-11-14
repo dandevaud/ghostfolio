@@ -1,12 +1,13 @@
-import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { Impersonation } from '@ghostfolio/api/decorators/impersonation.decorator';
 import { RequiresScope } from '@ghostfolio/api/decorators/requires-scope.decorator';
 import {
   hasNotDefinedValuesInObject,
-  nullifyValuesInObject
+  nullifyValuesInObject,
+  nullifyValuesInObjects
 } from '@ghostfolio/api/helper/object.helper';
+import { convertValuesToPercentages } from '@ghostfolio/api/helper/portfolio.helper';
 import {
   LogPerformance,
   PerformanceLoggingInterceptor
@@ -14,11 +15,13 @@ import {
 import { RedactValuesInResponseInterceptor } from '@ghostfolio/api/interceptors/redact-values-in-response/redact-values-in-response.interceptor';
 import { TransformDataSourceInRequestInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-request/transform-data-source-in-request.interceptor';
 import { TransformDataSourceInResponseInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-response/transform-data-source-in-response.interceptor';
+import { ActivitiesService } from '@ghostfolio/api/services/activities/activities.service';
 import { ApiService } from '@ghostfolio/api/services/api/api.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import { UNKNOWN_KEY } from '@ghostfolio/common/config';
 import { SubscriptionType } from '@ghostfolio/common/enums';
+import { isCashPosition } from '@ghostfolio/common/helper';
 import {
   PortfolioDetails,
   PortfolioDividendsResponse,
@@ -48,7 +51,7 @@ import {
   Version
 } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
-import { AssetClass, AssetSubClass, DataSource } from '@prisma/client';
+import { DataSource } from '@prisma/client';
 import { Big } from 'big.js';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
@@ -195,6 +198,7 @@ export class PortfolioController {
       for (const [name, { valueInBaseCurrency }] of Object.entries(platforms)) {
         platforms[name].valueInPercentage = valueInBaseCurrency / totalValue;
       }
+      convertValuesToPercentages({ accounts, holdings, platforms });
     }
 
     if (
@@ -237,29 +241,25 @@ export class PortfolioController {
       ]);
     }
 
-    for (const [symbol, portfolioPosition] of Object.entries(holdings)) {
-      holdings[symbol] = {
+    for (const [index, portfolioPosition] of holdings.entries()) {
+      holdings[index] = {
         ...portfolioPosition,
         assetProfile: {
           ...portfolioPosition.assetProfile,
           assetClass:
-            hasDetails ||
-            portfolioPosition.assetProfile.assetClass === AssetClass.LIQUIDITY
+            hasDetails || isCashPosition(portfolioPosition.assetProfile)
               ? portfolioPosition.assetProfile.assetClass
               : undefined,
           assetClassLabel:
-            hasDetails ||
-            portfolioPosition.assetProfile.assetClass === AssetClass.LIQUIDITY
+            hasDetails || isCashPosition(portfolioPosition.assetProfile)
               ? portfolioPosition.assetProfile.assetClassLabel
               : undefined,
           assetSubClass:
-            hasDetails ||
-            portfolioPosition.assetProfile.assetSubClass === AssetSubClass.CASH
+            hasDetails || isCashPosition(portfolioPosition.assetProfile)
               ? portfolioPosition.assetProfile.assetSubClass
               : undefined,
           assetSubClassLabel:
-            hasDetails ||
-            portfolioPosition.assetProfile.assetSubClass === AssetSubClass.CASH
+            hasDetails || isCashPosition(portfolioPosition.assetProfile)
               ? portfolioPosition.assetProfile.assetSubClassLabel
               : undefined,
           ...(hasDetails
@@ -426,7 +426,8 @@ export class PortfolioController {
     const holding = await this.portfolioService.getHolding({
       dataSource,
       symbol,
-      userId
+      userId,
+      withExcludedActivities: true
     });
 
     if (!holding) {
@@ -579,6 +580,7 @@ export class PortfolioController {
       accounts,
       assetClasses,
       dataSource,
+      groupBy,
       range,
       symbol,
       tags,
@@ -600,6 +602,7 @@ export class PortfolioController {
     const performanceInformation = await this.portfolioService.getPerformance({
       filters,
       user,
+      groupBy,
       userId,
       withExcludedAccounts,
       dateRange: range
@@ -613,6 +616,7 @@ export class PortfolioController {
       performanceInformation.chart = performanceInformation.chart.map(
         ({
           date,
+          dividendInPercentageWithCurrencyEffect,
           netPerformanceInPercentage,
           netPerformanceInPercentageWithCurrencyEffect,
           netWorth,
@@ -623,6 +627,7 @@ export class PortfolioController {
         }) => {
           return {
             date,
+            dividendInPercentageWithCurrencyEffect,
             netPerformanceInPercentage,
             netPerformanceInPercentageWithCurrencyEffect,
             timeWeightedPerformanceInPercentage,
@@ -658,11 +663,13 @@ export class PortfolioController {
         [
           'currentNetWorth',
           'currentValueInBaseCurrency',
+          'dividendInBaseCurrency',
           'grossPerformance',
           'grossPerformanceWithCurrencyEffect',
           'netPerformance',
           'netPerformanceWithCurrencyEffect',
-          'totalInvestment'
+          'totalInvestment',
+          'totalInvestmentValueWithCurrencyEffect'
         ]
       );
     }
@@ -671,14 +678,26 @@ export class PortfolioController {
       this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION') &&
       this.request.user.subscription?.type === SubscriptionType.Basic
     ) {
-      performanceInformation.chart = performanceInformation.chart.map(
-        (item) => {
-          return nullifyValuesInObject(item, ['totalInvestment', 'value']);
-        }
+      performanceInformation.chart = nullifyValuesInObjects(
+        performanceInformation.chart,
+        [
+          'dividendInBaseCurrency',
+          'totalInvestment',
+          'value',
+          ...(groupBy === 'year'
+            ? [
+                'investmentValueWithCurrencyEffect',
+                'netPerformance',
+                'netPerformanceInPercentage',
+                'netPerformanceInPercentageWithCurrencyEffect',
+                'netPerformanceWithCurrencyEffect'
+              ]
+            : [])
+        ]
       );
       performanceInformation.performance = nullifyValuesInObject(
         performanceInformation.performance,
-        ['netPerformance']
+        ['dividendInBaseCurrency', 'netPerformance']
       );
     }
 
@@ -725,7 +744,8 @@ export class PortfolioController {
     const holding = await this.portfolioService.getHolding({
       dataSource,
       symbol,
-      userId
+      userId,
+      withExcludedActivities: true
     });
 
     if (!holding) {

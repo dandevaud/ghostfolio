@@ -3,21 +3,89 @@ import {
   TAG_ID_EXCLUDE_FROM_ANALYSIS
 } from '@ghostfolio/common/config';
 import {
+  canApplyFiltersToAccess,
+  canUseCustomAssetProfileSymbol,
   extractNumberFromString,
   getCountryCodeFromCurrency,
+  getEmojiFlag,
+  getHoldingName,
   getNumberFormatGroup,
   getStringOrNull,
   getStringOrUndefined,
+  isAccountBalanceInFuture,
   isAccountExcluded,
   isCurrency,
   isCurrencySymbol,
+  isDarkColorScheme,
   isSplitRatio,
+  isValidAccountBalanceDate,
+  isValidCurrencyCode,
   isValidCustomAssetProfileSymbol,
+  isValidDateAfter1970,
+  isValidGranteeOfAccess,
   resolveUserSettings
 } from '@ghostfolio/common/helper';
 import { UserSettings } from '@ghostfolio/common/interfaces';
 
 describe('Helper', () => {
+  describe('Can apply filters to access', () => {
+    it('An access of the model context protocol', () => {
+      expect(canApplyFiltersToAccess({ type: 'MCP' })).toEqual(false);
+    });
+
+    it('A private access', () => {
+      expect(canApplyFiltersToAccess({ type: 'PRIVATE' })).toEqual(false);
+    });
+
+    it('A public access', () => {
+      expect(canApplyFiltersToAccess({ type: 'PUBLIC' })).toEqual(true);
+    });
+  });
+
+  describe('Can use custom asset profile symbol', () => {
+    const assetProfile = { id: 'asset-profile-id' };
+    const symbol = '7e91b7d4-1430-4212-8380-289a06c9bbc1';
+
+    it('Free-text symbol', () => {
+      expect(
+        canUseCustomAssetProfileSymbol({
+          assetProfile: null,
+          symbol: 'Penthouse Apartment'
+        })
+      ).toEqual(false);
+    });
+
+    it('New asset profile with UUID', () => {
+      expect(
+        canUseCustomAssetProfileSymbol({ symbol, assetProfile: null })
+      ).toEqual(true);
+    });
+
+    it('New asset profile with Ghostfolio prefix', () => {
+      expect(
+        canUseCustomAssetProfileSymbol({
+          assetProfile: null,
+          symbol: 'GF_PENTHOUSE_APARTMENT'
+        })
+      ).toEqual(false);
+    });
+
+    it('Existing asset profile with UUID', () => {
+      expect(canUseCustomAssetProfileSymbol({ assetProfile, symbol })).toEqual(
+        true
+      );
+    });
+
+    it('Existing asset profile with Ghostfolio prefix', () => {
+      expect(
+        canUseCustomAssetProfileSymbol({
+          assetProfile,
+          symbol: 'GF_PENTHOUSE_APARTMENT'
+        })
+      ).toEqual(true);
+    });
+  });
+
   describe('Extract number from string', () => {
     it('Get decimal number', () => {
       expect(extractNumberFromString({ value: '999.99' })).toEqual(999.99);
@@ -101,6 +169,71 @@ describe('Helper', () => {
 
     it('Empty currency', () => {
       expect(getCountryCodeFromCurrency('')).toEqual('');
+    });
+  });
+
+  describe('Get emoji flag', () => {
+    it('Country code', () => {
+      expect(getEmojiFlag('US')).toEqual('🇺🇸');
+      expect(getEmojiFlag('us')).toEqual('🇺🇸');
+    });
+
+    it('European Union code', () => {
+      expect(getEmojiFlag('EU')).toEqual('🇪🇺');
+    });
+
+    it('Invalid country code', () => {
+      expect(getEmojiFlag('XX')).toEqual(undefined);
+    });
+
+    it('Empty country code', () => {
+      expect(getEmojiFlag('')).toEqual(undefined);
+    });
+  });
+
+  describe('Get holding name', () => {
+    it('Cash position', () => {
+      expect(
+        getHoldingName({
+          assetSubClass: 'CASH',
+          assetSubClassLabel: 'Cash',
+          name: 'CHF',
+          symbol: 'CHF'
+        })
+      ).toEqual('Cash (CHF)');
+    });
+
+    it('Cash position without asset sub class label', () => {
+      expect(
+        getHoldingName({
+          assetSubClass: 'CASH',
+          assetSubClassLabel: undefined,
+          name: 'CHF',
+          symbol: 'CHF'
+        })
+      ).toEqual('CHF');
+    });
+
+    it('Holding with name', () => {
+      expect(
+        getHoldingName({
+          assetSubClass: 'STOCK',
+          assetSubClassLabel: 'Stock',
+          name: 'Apple Inc.',
+          symbol: 'AAPL'
+        })
+      ).toEqual('Apple Inc.');
+    });
+
+    it('Holding without name', () => {
+      expect(
+        getHoldingName({
+          assetSubClass: 'STOCK',
+          assetSubClassLabel: 'Stock',
+          name: undefined,
+          symbol: 'AAPL'
+        })
+      ).toEqual('AAPL');
     });
   });
 
@@ -222,6 +355,43 @@ describe('Helper', () => {
     });
   });
 
+  // A user in a time zone ahead of the instance is already on the next day at
+  // this moment. The expected limit is a moment in UTC, hence this suite must
+  // give the same result with the instance in any time zone.
+  describe('Is account balance in future', () => {
+    beforeAll(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-03T23:30:00.000Z'));
+    });
+
+    afterAll(() => {
+      jest.useRealTimers();
+    });
+
+    it('should accept the account balance of the current day', () => {
+      expect(
+        isAccountBalanceInFuture({ date: new Date('2026-09-03T00:00:00.000Z') })
+      ).toBe(false);
+    });
+
+    it('should accept the account balance of a user in a time zone ahead of the instance', () => {
+      expect(
+        isAccountBalanceInFuture({ date: new Date('2026-09-04T00:00:00.000Z') })
+      ).toBe(false);
+    });
+
+    it('should reject an account balance after the start of the UTC date of tomorrow', () => {
+      expect(
+        isAccountBalanceInFuture({ date: new Date('2026-09-04T00:00:00.001Z') })
+      ).toBe(true);
+    });
+
+    it('should reject an account balance of the day after tomorrow', () => {
+      expect(
+        isAccountBalanceInFuture({ date: new Date('2026-09-05T00:00:00.000Z') })
+      ).toBe(true);
+    });
+  });
+
   describe('Is account excluded', () => {
     it('Account with Exclude from Analysis tag', () => {
       expect(
@@ -301,6 +471,40 @@ describe('Helper', () => {
     });
   });
 
+  describe('Is dark color scheme', () => {
+    const mockPrefersColorSchemeDark = (matches: boolean) => {
+      window.matchMedia = jest.fn(() => {
+        return { matches } as MediaQueryList;
+      });
+    };
+
+    afterEach(() => {
+      Reflect.deleteProperty(window, 'matchMedia');
+    });
+
+    it('Dark color scheme with operating system in light mode', () => {
+      mockPrefersColorSchemeDark(false);
+      expect(isDarkColorScheme('DARK')).toEqual(true);
+    });
+
+    it('Light color scheme with operating system in dark mode', () => {
+      mockPrefersColorSchemeDark(true);
+      expect(isDarkColorScheme('LIGHT')).toEqual(false);
+    });
+
+    it('Auto color scheme with operating system in dark mode', () => {
+      mockPrefersColorSchemeDark(true);
+      expect(isDarkColorScheme()).toEqual(true);
+      expect(isDarkColorScheme(null)).toEqual(true);
+    });
+
+    it('Auto color scheme with operating system in light mode', () => {
+      mockPrefersColorSchemeDark(false);
+      expect(isDarkColorScheme()).toEqual(false);
+      expect(isDarkColorScheme(null)).toEqual(false);
+    });
+  });
+
   describe('Is split ratio', () => {
     it('Forward split', () => {
       expect(isSplitRatio({ denominator: 1, numerator: 2 })).toEqual(true);
@@ -346,6 +550,58 @@ describe('Helper', () => {
     });
   });
 
+  describe('Is valid account balance date', () => {
+    beforeAll(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-03T23:30:00.000Z'));
+    });
+
+    afterAll(() => {
+      jest.useRealTimers();
+    });
+
+    it('Accepts a date in the past', () => {
+      expect(isValidAccountBalanceDate('2026-09-02')).toBe(true);
+    });
+
+    it('Accepts the current date', () => {
+      expect(isValidAccountBalanceDate('2026-09-03')).toBe(true);
+    });
+
+    it('Accepts the current date of a user in a time zone ahead of the instance', () => {
+      expect(isValidAccountBalanceDate('2026-09-04')).toBe(true);
+    });
+
+    it('Refuses a date in the future', () => {
+      expect(isValidAccountBalanceDate('2026-09-05')).toBe(false);
+    });
+
+    it('Refuses a date which is not valid', () => {
+      expect(isValidAccountBalanceDate('2026-02-30')).toBe(false);
+    });
+  });
+
+  describe('Is valid currency code', () => {
+    it('Currency code in lower case', () => {
+      expect(isValidCurrencyCode('usd')).toEqual(false);
+    });
+
+    it('Currency code in upper case', () => {
+      expect(isValidCurrencyCode('USD')).toEqual(true);
+    });
+
+    it('Derived currency', () => {
+      expect(isValidCurrencyCode('GBp')).toEqual(true);
+    });
+
+    it('Empty currency code', () => {
+      expect(isValidCurrencyCode('')).toEqual(false);
+    });
+
+    it('Unknown currency code', () => {
+      expect(isValidCurrencyCode('XYZ')).toEqual(false);
+    });
+  });
+
   describe('Is valid custom asset profile symbol', () => {
     it('Empty symbol', () => {
       expect(isValidCustomAssetProfileSymbol('')).toEqual(false);
@@ -371,6 +627,109 @@ describe('Helper', () => {
       expect(
         isValidCustomAssetProfileSymbol('7e91b7d4-1430-4212-8380-289a06c9bbc1')
       ).toEqual(true);
+    });
+  });
+
+  describe('Is valid date after 1970', () => {
+    it('Date', () => {
+      expect(isValidDateAfter1970('2024-01-01')).toEqual(true);
+    });
+
+    it('Date and time', () => {
+      expect(isValidDateAfter1970('2024-01-01T12:00:00.000Z')).toEqual(true);
+    });
+
+    it('Date before 1970', () => {
+      expect(isValidDateAfter1970('0000-01-01')).toEqual(false);
+    });
+
+    it('Date object', () => {
+      expect(
+        isValidDateAfter1970(new Date('2024-01-01T12:00:00.000Z'))
+      ).toEqual(true);
+    });
+
+    it('Date object of 1970', () => {
+      expect(isValidDateAfter1970(new Date(0))).toEqual(false);
+    });
+
+    it('Date of 1970', () => {
+      expect(isValidDateAfter1970('1970-01-01T00:00:00.000Z')).toEqual(false);
+    });
+
+    // A date without a time is read in UTC, hence the result is the same in
+    // every time zone of the server
+    it('Date of 1970 without a time', () => {
+      expect(isValidDateAfter1970('1970-01-01')).toEqual(false);
+    });
+
+    it('Date after 1970 without a time', () => {
+      expect(isValidDateAfter1970('1970-01-02')).toEqual(true);
+    });
+
+    it('Date with an expanded year', () => {
+      expect(isValidDateAfter1970('+010000-01-01')).toEqual(true);
+    });
+
+    it('Empty date', () => {
+      expect(isValidDateAfter1970('')).toEqual(false);
+    });
+
+    it('Free-text date', () => {
+      expect(isValidDateAfter1970('yesterday')).toEqual(false);
+    });
+  });
+
+  describe('Is valid grantee of access', () => {
+    const granteeUserId = 'ffb08949-2f8a-4b6e-88fd-0f1e6b6b5f5d';
+    const userId = '6b5d4e2a-7c1f-4a3b-9e8d-2f0c1a5b7d3e';
+
+    it('A private access with a grantee', () => {
+      expect(
+        isValidGranteeOfAccess({ granteeUserId, userId, type: 'PRIVATE' })
+      ).toEqual(true);
+    });
+
+    it('A private access without a grantee', () => {
+      expect(isValidGranteeOfAccess({ userId, type: 'PRIVATE' })).toEqual(
+        false
+      );
+    });
+
+    it('A private access with an empty grantee', () => {
+      expect(
+        isValidGranteeOfAccess({ userId, granteeUserId: null, type: 'PRIVATE' })
+      ).toEqual(false);
+    });
+
+    it('A private access with its owner as grantee', () => {
+      expect(
+        isValidGranteeOfAccess({
+          userId,
+          granteeUserId: userId,
+          type: 'PRIVATE'
+        })
+      ).toEqual(false);
+    });
+
+    it('A public access without a grantee', () => {
+      expect(isValidGranteeOfAccess({ userId, type: 'PUBLIC' })).toEqual(true);
+    });
+
+    it('A public access with a grantee', () => {
+      expect(
+        isValidGranteeOfAccess({ granteeUserId, userId, type: 'PUBLIC' })
+      ).toEqual(false);
+    });
+
+    it('An access of the model context protocol without a grantee', () => {
+      expect(isValidGranteeOfAccess({ userId, type: 'MCP' })).toEqual(true);
+    });
+
+    it('An access of the model context protocol with a grantee', () => {
+      expect(
+        isValidGranteeOfAccess({ granteeUserId, userId, type: 'MCP' })
+      ).toEqual(false);
     });
   });
 

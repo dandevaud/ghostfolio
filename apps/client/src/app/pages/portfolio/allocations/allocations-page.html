@@ -12,7 +12,7 @@
             >Proportion of Net Worth</mat-card-title
           >
           <gf-value
-            class="justify-content-end l-2"
+            class="justify-content-end ms-2"
             size="medium"
             [isLoading]="isLoading"
             [isPercent]="true"
@@ -23,15 +23,17 @@
           <mat-progress-bar
             mode="determinate"
             [title]="`${(
-              portfolioDetails?.summary?.filteredValueInPercentage * 100
+              (portfolioDetails?.summary?.filteredValueInPercentage ?? 0) * 100
             ).toFixed(2)}%`"
-            [value]="portfolioDetails?.summary?.filteredValueInPercentage * 100"
+            [value]="
+              (portfolioDetails?.summary?.filteredValueInPercentage ?? 0) * 100
+            "
           />
         </mat-card-content>
       </mat-card>
     </div>
   </div>
-  <div class="proportion-charts row">
+  <div class="row">
     <div class="col-md-4">
       <mat-card appearance="outlined" class="mb-3">
         <mat-card-header class="overflow-hidden w-100">
@@ -57,7 +59,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By Currency</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -79,7 +81,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By Asset Class</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -124,7 +126,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By Sector</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -147,7 +149,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By Continent</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -169,7 +171,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By Market</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -192,7 +194,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>Regions</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -206,7 +208,7 @@
             />
           </div>
           <div class="row">
-            <div class="col-xs-12 col-md my-2">
+            <div class="col-md my-2">
               <gf-value
                 i18n
                 size="large"
@@ -216,7 +218,7 @@
                 >Developed Markets</gf-value
               >
             </div>
-            <div class="col-xs-12 col-md my-2">
+            <div class="col-md my-2">
               <gf-value
                 i18n
                 size="large"
@@ -226,7 +228,7 @@
                 >Emerging Markets</gf-value
               >
             </div>
-            <div class="col-xs-12 col-md my-2">
+            <div class="col-md my-2">
               <gf-value
                 i18n
                 size="large"
@@ -236,8 +238,8 @@
                 >Other Markets</gf-value
               >
             </div>
-            @if (markets?.[UNKNOWN_KEY]?.valueInPercentage > 0) {
-              <div class="col-xs-12 col-md my-2">
+            @if ((markets?.[UNKNOWN_KEY]?.valueInPercentage ?? 0) > 0) {
+              <div class="col-md my-2">
                 <gf-value
                   i18n
                   size="large"
@@ -260,7 +262,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By Country</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -302,7 +304,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By ETF Provider</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
         </mat-card-header>
@@ -345,7 +347,7 @@
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By ETF Holding</span>
             @if (user?.subscription?.type === 'Basic') {
-              <gf-premium-indicator class="ml-1" />
+              <gf-premium-indicator class="ms-1" />
             }
           </mat-card-title>
           <mat-card-subtitle>
@@ -357,6 +359,7 @@
         <mat-card-content>
           <gf-top-holdings
             [baseCurrency]="user?.settings?.baseCurrency"
+            [hasPermissionToShowValues]="!showValuesInPercentage()"
             [locale]="user?.settings?.locale"
             [pageSize]="10"
             [topHoldings]="topHoldings"

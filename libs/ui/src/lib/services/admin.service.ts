@@ -5,10 +5,8 @@ import {
 } from '@ghostfolio/common/config';
 import {
   CreateAssetProfileSplitDto,
-  CreatePlatformDto,
   MergeAssetProfileDto,
-  UpdateAssetProfileDto,
-  UpdatePlatformDto
+  UpdateAssetProfileDto
 } from '@ghostfolio/common/dtos';
 import {
   AdminData,
@@ -21,13 +19,13 @@ import {
   EnhancedAssetProfile
 } from '@ghostfolio/common/interfaces';
 import { DateRange } from '@ghostfolio/common/types';
+import type { AssetProfileSplit, MarketData } from '@ghostfolio/prisma/browser';
 import { GF_ENVIRONMENT } from '@ghostfolio/ui/environment';
 
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
-import { AssetProfileSplit, MarketData, Platform } from '@prisma/client';
 import { JobStatus } from 'bull';
-import { isNumber } from 'lodash';
+import { isNumber } from 'lodash-es';
 
 @Service()
 export class AdminService {
@@ -55,10 +53,6 @@ export class AdminService {
     return this.http.delete<void>('/api/v1/admin/queue/job', {
       params
     });
-  }
-
-  public deletePlatform(aId: string) {
-    return this.http.delete<void>(`/api/v1/platform/${aId}`);
   }
 
   public deleteAssetProfileSplit({
@@ -109,12 +103,8 @@ export class AdminService {
     });
   }
 
-  public fetchPlatforms() {
-    return this.http.get<Platform[]>('/api/v1/platform');
-  }
-
   public fetchUserById(id: string) {
-    return this.http.get<AdminUserResponse>(`/api/v1/admin/user/${id}`);
+    return this.http.get<AdminUserResponse>(`/api/v1/users/${id}`);
   }
 
   public fetchUsers({
@@ -134,7 +124,7 @@ export class AdminService {
       params = params.append('take', take);
     }
 
-    return this.http.get<AdminUsersResponse>('/api/v1/admin/user', { params });
+    return this.http.get<AdminUsersResponse>('/api/v1/users', { params });
   }
 
   public gatherMax() {
@@ -197,7 +187,7 @@ export class AdminService {
     dateString,
     symbol
   }: { dateString: string } & AssetProfileIdentifier) {
-    const url = `/api/v1/symbol/${dataSource}/${encodeURIComponent(symbol)}/${dateString}`;
+    const url = `/api/v1/symbols/${dataSource}/${encodeURIComponent(symbol)}/${dateString}`;
 
     return this.http.get<DataProviderHistoricalResponse>(url);
   }
@@ -264,17 +254,6 @@ export class AdminService {
     return this.http.post<AssetProfileSplit>(
       `/api/v1/asset-profiles/${dataSource}/${encodeURIComponent(symbol)}/splits`,
       split
-    );
-  }
-
-  public postPlatform(aPlatform: CreatePlatformDto) {
-    return this.http.post<Platform>(`/api/v1/platform`, aPlatform);
-  }
-
-  public putPlatform(aPlatform: UpdatePlatformDto) {
-    return this.http.put<Platform>(
-      `/api/v1/platform/${aPlatform.id}`,
-      aPlatform
     );
   }
 

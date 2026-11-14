@@ -1,7 +1,12 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = []
   binaryTargets   = ["debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x", "native"]
+  previewFeatures = []
+  provider        = "prisma-client-js"
+}
+
+generator workspaceClient {
+  output   = "./generated"
+  provider = "prisma-client"
 }
 
 datasource db {
@@ -10,15 +15,18 @@ datasource db {
 
 model Access {
   alias         String?
-  createdAt     DateTime @default(now())
-  granteeUser   User?    @relation("accessGet", fields: [granteeUserId], onDelete: Cascade, references: [id])
+  createdAt     DateTime   @default(now())
+  expiresAt     DateTime
+  granteeUser   User?      @relation("accessGet", fields: [granteeUserId], onDelete: Cascade, references: [id])
   granteeUserId String?
-  id            String   @id @default(uuid())
-  scopes        String[] @default([])
-  settings      Json     @default("{}")
-  updatedAt     DateTime @updatedAt
+  id            String     @id @default(uuid())
+  lastUsedAt    DateTime?
+  scopes        String[]   @default([])
+  settings      Json       @default("{}")
+  type          AccessType @default(PRIVATE)
+  updatedAt     DateTime   @updatedAt
   userId        String
-  user          User     @relation("accessGive", fields: [userId], onDelete: Cascade, references: [id])
+  user          User       @relation("accessGive", fields: [userId], onDelete: Cascade, references: [id])
 
   @@index([alias])
   @@index([granteeUserId])
@@ -50,6 +58,7 @@ model Account {
 model AccountBalance {
   account   Account  @relation(fields: [accountId, userId], onDelete: Cascade, references: [id, userId])
   accountId String
+  comment   String?
   createdAt DateTime @default(now())
   date      DateTime @default(now())
   id        String   @id @default(uuid())
@@ -57,19 +66,20 @@ model AccountBalance {
   userId    String
   value     Float
 
-  @@unique([accountId, date])
+  @@unique([accountId, userId, date])
   @@index([accountId])
   @@index([date])
 }
 
 model Analytics {
-  activityCount                       Int      @default(0)
+  activityCount                       Int            @default(0)
   country                             String?
-  dataProviderGhostfolioDailyRequests Int      @default(0)
-  lastRequestAt                       DateTime @default(now())
-  updatedAt                           DateTime @updatedAt
-  user                                User     @relation(fields: [userId], onDelete: Cascade, references: [id])
-  userId                              String   @id
+  dataProviderGhostfolioDailyRequests Int            @default(0)
+  lastRequestAt                       DateTime       @default(now())
+  lastRequestClient                   RequestClient?
+  updatedAt                           DateTime       @updatedAt
+  user                                User           @relation(fields: [userId], onDelete: Cascade, references: [id])
+  userId                              String         @id
 
   @@index([lastRequestAt])
   @@index([updatedAt])
@@ -156,19 +166,17 @@ model AuthDevice {
 }
 
 model MarketData {
-  createdAt   DateTime        @default(now())
-  dataSource  DataSource
-  date        DateTime
-  id          String          @id @default(uuid())
-  marketPrice Float
-  state       MarketDataState @default(CLOSE)
-  symbol      String
+  createdAt        DateTime        @default(now())
+  dataSource       DataSource
+  date             DateTime
+  id               String          @id @default(uuid())
+  isCarriedForward Boolean         @default(false)
+  marketPrice      Float
+  state            MarketDataState @default(CLOSE)
+  symbol           String
 
-  @@unique([dataSource, date, symbol])
-  @@index([dataSource])
-  @@index([dataSource, symbol])
+  @@unique([dataSource, symbol, date])
   @@index([date])
-  @@index([marketPrice])
   @@index([state])
   @@index([symbol])
 }
@@ -195,9 +203,9 @@ model Order {
 
   @@index([accountId])
   @@index([date])
-  @@index([symbolProfileId])
-  @@index([type])
-  @@index([userId])
+  @@index([symbolProfileId, date])
+  @@index([userId, date])
+  @@index([userId, type, date])
 }
 
 model Platform {
@@ -333,6 +341,12 @@ model User {
   @@index([thirdPartyId])
 }
 
+enum AccessType {
+  MCP
+  PRIVATE
+  PUBLIC
+}
+
 enum AssetClass {
   ALTERNATIVE_INVESTMENT
   COMMODITY
@@ -383,6 +397,13 @@ enum Provider {
   GOOGLE
   INTERNET_IDENTITY
   OIDC
+}
+
+enum RequestClient {
+  API
+  MCP
+  SELF_HOSTING
+  WEB
 }
 
 enum Role {

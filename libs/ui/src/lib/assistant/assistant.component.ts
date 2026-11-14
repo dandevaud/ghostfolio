@@ -1,3 +1,4 @@
+import { SEARCH_QUERY_MAXIMUM_LENGTH } from '@ghostfolio/common/config';
 import { Filter, PortfolioPosition, User } from '@ghostfolio/common/interfaces';
 import { InternalRoute } from '@ghostfolio/common/routes/interfaces/internal-route.interface';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
@@ -38,7 +39,7 @@ import {
   closeOutline,
   searchOutline
 } from 'ionicons/icons';
-import { isFunction, sample } from 'lodash';
+import { isFunction, sample } from 'lodash-es';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { EMPTY, Observable, firstValueFrom, from, merge, of } from 'rxjs';
 import {
@@ -131,6 +132,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   );
 
   public searchFormControl = new FormControl('');
+  public readonly SEARCH_QUERY_MAXIMUM_LENGTH = SEARCH_QUERY_MAXIMUM_LENGTH;
 
   public searchResults: SearchResults = {
     accounts: [],
@@ -539,6 +541,19 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
     this.holdings = [];
 
     this.setIsOpen(true);
+
+    this.dataService
+      .fetchPortfolioHoldings({
+        filters: [{ id: 'ACTIVE', type: 'HOLDING_TYPE' }]
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ holdings }) => {
+        this.holdings = getHoldingsForFilter(holdings);
+
+        this.setPortfolioFilterFormValues();
+
+        this.changeDetectorRef.markForCheck();
+      });
   }
 
   public onApplyFilters() {

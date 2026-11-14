@@ -22,9 +22,9 @@
             [matDatepicker]="date"
             [max]="maxDate"
           />
-          <mat-datepicker-toggle class="mr-2" matSuffix [for]="date">
+          <mat-datepicker-toggle class="me-2" matSuffix [for]="date">
             <ion-icon
-              class="text-muted"
+              class="text-body-secondary"
               matDatepickerToggleIcon
               name="calendar-clear-outline"
             />
@@ -35,7 +35,7 @@
     </ng-container>
 
     <ng-container matColumnDef="value">
-      <th *matHeaderCellDef class="px-2 text-right" mat-header-cell>
+      <th *matHeaderCellDef class="px-2 text-end" mat-header-cell>
         <ng-container i18n>Value</ng-container>
       </th>
       <td *matCellDef="let element" class="px-2" mat-cell>
@@ -52,12 +52,43 @@
         <div class="d-flex justify-content-end">
           <mat-form-field appearance="outline" class="without-hint">
             <input formControlName="balance" matInput type="number" />
-            <div class="ml-2" matTextSuffix>
+            <div class="ms-2" matTextSuffix>
               {{ accountCurrency() }}
             </div>
           </mat-form-field>
         </div>
       </td>
+    </ng-container>
+
+    <ng-container matColumnDef="comment">
+      <th
+        *matHeaderCellDef
+        class="d-none d-lg-table-cell px-1"
+        mat-header-cell
+      ></th>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
+        @if (element.comment) {
+          <button
+            class="mx-1 no-min-width px-2"
+            i18n-title
+            mat-button
+            title="Note"
+            type="button"
+            (click)="onOpenComment(element.comment); $event.stopPropagation()"
+          >
+            <ion-icon name="document-text-outline" />
+          </button>
+        }
+      </td>
+      <td
+        *matFooterCellDef
+        class="d-none d-lg-table-cell px-1"
+        mat-footer-cell
+      ></td>
     </ng-container>
 
     <ng-container matColumnDef="actions" stickyEnd>
@@ -81,7 +112,7 @@
             (click)="onDeleteAccountBalance(element.id)"
           >
             <span class="align-items-center d-flex">
-              <ion-icon class="mr-2" name="trash-outline" />
+              <ion-icon class="me-2" name="trash-outline" />
               <span i18n>Delete</span>
             </span>
           </button>
@@ -93,7 +124,7 @@
           color="primary"
           mat-flat-button
           type="submit"
-          [disabled]="accountBalanceForm.invalid"
+          [disabled]="accountBalanceForm.invalid || isSubmitting()"
         >
           <span i18n>Add</span>
         </button>

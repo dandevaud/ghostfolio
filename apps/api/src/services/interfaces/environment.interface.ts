@@ -23,8 +23,11 @@ export interface Environment extends CleanedEnvAccessors {
   ENABLE_FEATURE_CRON: boolean;
   ENABLE_FEATURE_FEAR_AND_GREED_INDEX: boolean;
   ENABLE_FEATURE_GATHER_NEW_EXCHANGE_RATES: boolean;
+  ENABLE_FEATURE_MCP: boolean;
+  ENABLE_FEATURE_MCP_OAUTH: boolean;
   ENABLE_FEATURE_RATE_LIMITING: boolean;
   ENABLE_FEATURE_READ_ONLY_MODE: boolean;
+  ENABLE_FEATURE_SECURITY_HEADERS: boolean;
   ENABLE_FEATURE_STATISTICS: boolean;
   ENABLE_FEATURE_SUBSCRIPTION: boolean;
   ENABLE_FEATURE_SYSTEM_MESSAGE: boolean;
@@ -55,6 +58,7 @@ export interface Environment extends CleanedEnvAccessors {
   REDIS_HOST: string;
   REDIS_PASSWORD: string;
   REDIS_PORT: number;
+  REDIS_TLS: boolean;
   REQUEST_TIMEOUT: number;
   ROOT_URL: string;
   STRIPE_SECRET_KEY: string;

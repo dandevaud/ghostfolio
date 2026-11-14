@@ -7,6 +7,9 @@ import { join } from 'node:path';
 
 @Injectable()
 export class I18nService implements OnModuleInit {
+  private static readonly TRANSLATION_TAGGED_MESSAGE_REGEX =
+    /:.*@@(?<id>[a-zA-Z0-9.]+):(?<message>.+)/;
+
   private readonly logger = new Logger(I18nService.name);
 
   private localesPath = join(__dirname, 'assets', 'locales');
@@ -16,28 +19,61 @@ export class I18nService implements OnModuleInit {
     this.loadFiles();
   }
 
+  public getLocalizedRouterLink({
+    languageCode,
+    routerLink
+  }: {
+    languageCode: string;
+    routerLink: string[];
+  }): string[] {
+    return routerLink.map((link) => {
+      const match = link.match(I18nService.TRANSLATION_TAGGED_MESSAGE_REGEX);
+
+      const segment = match?.groups
+        ? this.getTranslation({
+            languageCode,
+            id: match.groups.id
+          }) || match.groups.message
+        : link;
+
+      return segment.replace(/^\/+|\/+$/g, '');
+    });
+  }
+
   public getTranslation({
     id,
     languageCode,
-    placeholders
+    placeholders,
+    skipUntranslated = false
   }: {
     id: string;
     languageCode: string;
     placeholders?: Record<string, string | number>;
+    skipUntranslated?: boolean;
   }): string {
-    const $ = this.translations[languageCode];
+    const languageCodeToUse = this.translations[languageCode]
+      ? languageCode
+      : DEFAULT_LANGUAGE_CODE;
+
+    const $ = this.translations[languageCodeToUse];
 
     if (!$) {
       this.logger.warn(`Translation not found for locale '${languageCode}'`);
+
+      return '';
     }
+
+    const targetSelector = skipUntranslated
+      ? 'target:not([state="new"])'
+      : 'target';
 
     let translatedText = $(
       `trans-unit[id="${id}"] > ${
-        languageCode === DEFAULT_LANGUAGE_CODE ? 'source' : 'target'
+        languageCodeToUse === DEFAULT_LANGUAGE_CODE ? 'source' : targetSelector
       }`
     ).text();
 
-    if (!translatedText) {
+    if (!translatedText && !skipUntranslated) {
       this.logger.warn(
         `Translation not found for id '${id}' in locale '${languageCode}'`
       );

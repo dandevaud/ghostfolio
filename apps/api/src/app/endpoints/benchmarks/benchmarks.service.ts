@@ -1,8 +1,8 @@
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
-import { SymbolService } from '@ghostfolio/api/app/symbol/symbol.service';
 import { BenchmarkService } from '@ghostfolio/api/services/benchmark/benchmark.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
+import { SymbolService } from '@ghostfolio/api/services/symbol/symbol.service';
 import { DATE_FORMAT, parseDate, resetHours } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
@@ -12,9 +12,10 @@ import {
 } from '@ghostfolio/common/interfaces';
 import { DateRange } from '@ghostfolio/common/types';
 
+import { utc } from '@date-fns/utc';
 import { Injectable, Logger } from '@nestjs/common';
-import { format, isSameDay } from 'date-fns';
-import { isNumber } from 'lodash';
+import { format, isSameDay, min } from 'date-fns';
+import { isNumber } from 'lodash-es';
 
 @Injectable()
 export class BenchmarksService {
@@ -88,32 +89,74 @@ export class BenchmarksService {
       return { marketData };
     }
 
-    const exchangeRates =
-      await this.exchangeRateDataService.getExchangeRatesByCurrency({
-        startDate,
-        currencies: [currentSymbolItem.currency],
-        targetCurrency: userCurrency
-      });
+    if (chart.length === 0) {
+      return { marketData };
+    }
 
-    const exchangeRateAtStartDate =
-      exchangeRates[`${currentSymbolItem.currency}${userCurrency}`]?.[
-        format(startDate, DATE_FORMAT)
-      ];
+    const baselineDate = resetHours(parseDate(chart[0].date));
 
-    const marketPriceAtStartDate = marketDataItems?.find(({ date }) => {
-      return isSameDay(date, startDate);
-    })?.marketPrice;
+    // The market data of the benchmark can start after the baseline date.
+    // In this case, the first market data item is the start and there is no
+    // value before it.
+    const [firstMarketDataItem] = marketDataItems;
+    const marketPriceAtStartDate = firstMarketDataItem?.marketPrice;
 
     if (!marketPriceAtStartDate) {
       this.logger.error(
-        `No historical market data has been found for ${symbol} (${dataSource}) at ${format(
-          startDate,
-          DATE_FORMAT
+        `No historical market data has been found for ${symbol} (${dataSource}) since ${format(
+          baselineDate,
+          DATE_FORMAT,
+          { in: utc }
         )}`
       );
 
       return { marketData };
     }
+
+    if (!isSameDay(firstMarketDataItem.date, baselineDate)) {
+      // If market data exists before the baseline date, the market data at
+      // the baseline date is missing and the benchmark does not start later
+      const [marketDataItemBeforeBaselineDate] =
+        await this.marketDataService.getRange({
+          assetProfileIdentifiers: [{ dataSource, symbol }],
+          dateQuery: { lt: baselineDate },
+          take: 1
+        });
+
+      if (marketDataItemBeforeBaselineDate) {
+        this.logger.error(
+          `No historical market data has been found for ${symbol} (${dataSource}) at ${format(
+            baselineDate,
+            DATE_FORMAT,
+            { in: utc }
+          )}`
+        );
+
+        return { marketData };
+      }
+
+      this.logger.warn(
+        `The market data of ${symbol} (${dataSource}) starts at ${format(
+          firstMarketDataItem.date,
+          DATE_FORMAT,
+          { in: utc }
+        )}, after the baseline date ${format(baselineDate, DATE_FORMAT, { in: utc })}`
+      );
+    }
+
+    const exchangeRates =
+      await this.exchangeRateDataService.getExchangeRatesByCurrency({
+        currencies: [currentSymbolItem.currency],
+        startDate: min([baselineDate, startDate]),
+        targetCurrency: userCurrency
+      });
+
+    // TODO: Format the keys of the exchange rates in UTC, together with the
+    // market data in the portfolio calculator
+    const exchangeRateAtStartDate =
+      exchangeRates[`${currentSymbolItem.currency}${userCurrency}`]?.[
+        format(firstMarketDataItem.date, DATE_FORMAT)
+      ];
 
     for (const marketDataItem of marketDataItems) {
       const exchangeRate =
@@ -127,7 +170,7 @@ export class BenchmarksService {
           : 1;
 
       marketData.push({
-        date: format(marketDataItem.date, DATE_FORMAT),
+        date: format(marketDataItem.date, DATE_FORMAT, { in: utc }),
         value:
           marketPriceAtStartDate === 0
             ? 0

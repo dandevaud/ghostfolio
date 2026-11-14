@@ -12,6 +12,8 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { GfEntityLogoComponent } from '../entity-logo';
+import { EntityLogoImageSourceService } from '../entity-logo/entity-logo-image-source.service';
+import { EntityLogoImageSourceServiceMock } from '../mocks/entity-logo-image-source.service.mock';
 import { NotificationService } from '../notifications';
 import { GfValueComponent } from '../value';
 import { GfAccountsTableComponent } from './accounts-table.component';
@@ -45,7 +47,7 @@ const accounts: AccountWithValue[] = [
     allocationInPercentage: 0.11114023065971035,
     balance: 12000,
     balanceInBaseCurrency: 12000,
-    comment: null,
+    comment: 'Emergency fund for 6 months of living expenses',
     createdAt: new Date('2025-06-01T06:48:53.055Z'),
     currency: 'USD',
     dividendInBaseCurrency: 0,
@@ -108,7 +110,13 @@ export default {
         NgxSkeletonLoaderModule,
         RouterModule.forChild([])
       ],
-      providers: [NotificationService]
+      providers: [
+        NotificationService,
+        {
+          provide: EntityLogoImageSourceService,
+          useValue: new EntityLogoImageSourceServiceMock()
+        }
+      ]
     })
   ]
 } as Meta<GfAccountsTableComponent>;

@@ -1,14 +1,14 @@
 import { GfBenchmarkComparatorComponent } from '@ghostfolio/client/components/benchmark-comparator/benchmark-comparator.component';
-import { GfInvestmentChartComponent } from '@ghostfolio/client/components/investment-chart/investment-chart.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   DEFAULT_DATE_RANGE,
   NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
 } from '@ghostfolio/common/config';
+import { SubscriptionType } from '@ghostfolio/common/enums';
 import { canOpenHoldingDetail } from '@ghostfolio/common/helper';
 import {
-  HistoricalDataItem,
   InvestmentItem,
+  LineChartItem,
   PortfolioInvestmentsResponse,
   PortfolioPerformance,
   PortfolioPosition,
@@ -22,7 +22,10 @@ import type {
   ToggleOption
 } from '@ghostfolio/common/types';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
+import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
+import type { SymbolProfile } from '@ghostfolio/prisma/browser';
 import { translate } from '@ghostfolio/ui/i18n';
+import { GfInvestmentChartComponent } from '@ghostfolio/ui/investment-chart';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
 import { DataService } from '@ghostfolio/ui/services';
 import { GfToggleComponent } from '@ghostfolio/ui/toggle';
@@ -48,10 +51,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { SymbolProfile } from '@prisma/client';
 import { addIcons } from 'ionicons';
 import { copyOutline, ellipsisVertical } from 'ionicons/icons';
-import { isNumber, keyBy, sortBy, union } from 'lodash';
+import { isNumber, keyBy, sortBy, union } from 'lodash-es';
 import ms from 'ms';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -79,7 +81,7 @@ import { forkJoin } from 'rxjs';
 })
 export class GfAnalysisPageComponent implements OnInit {
   protected benchmark?: Partial<SymbolProfile>;
-  protected benchmarkDataItems: HistoricalDataItem[] = [];
+  protected benchmarkDataItems: LineChartItem[] = [];
   protected readonly benchmarks: Partial<SymbolProfile>[];
   protected bottom5: PortfolioPosition[];
   protected dividendsByGroup: InvestmentItem[];
@@ -93,18 +95,22 @@ export class GfAnalysisPageComponent implements OnInit {
   protected isLoadingDividendTimelineChart: boolean;
   protected isLoadingInvestmentChart: boolean;
   protected isLoadingInvestmentTimelineChart: boolean;
+  protected isLoadingPerformanceTimelineChart: boolean;
   protected isLoadingPortfolioPrompt: boolean;
   protected readonly mode = signal<GroupBy>('month');
-  protected readonly modeOptions: ToggleOption[] = [
+  protected readonly modeOptions: ToggleOption<GroupBy>[] = [
     { label: $localize`Monthly`, value: 'month' },
     { label: $localize`Yearly`, value: 'year' }
   ];
   protected performance: PortfolioPerformance;
-  protected performanceDataItems: HistoricalDataItem[];
-  protected performanceDataItemsInPercentage: HistoricalDataItem[];
+  protected readonly PerformanceCalculationType = PerformanceCalculationType;
+  protected performanceDataItems: LineChartItem[];
+  protected performanceDataItemsInPercentage: LineChartItem[];
+  protected performancePercentagesByYear: InvestmentItem[];
   public performanceDataItemsTimeWeightedInPercentage: HistoricalDataItem[] =
     [];
-  protected readonly portfolioEvolutionDataLabel = $localize`Investment`;
+  protected readonly performanceTimelineDataLabel = $localize`Net Performance`;
+  protected readonly portfolioEvolutionDataLabel = $localize`Invested Capital`;
   protected precision = 2;
   protected savingsRatePerMonth: number | undefined;
   protected streaks: PortfolioInvestmentsResponse['streaks'];
@@ -313,6 +319,37 @@ export class GfAnalysisPageComponent implements OnInit {
       );
   }
 
+  private fetchPerformanceByYear() {
+    this.isLoadingPerformanceTimelineChart = true;
+
+    this.dataService
+      .fetchPortfolioPerformance({
+        filters: this.userService.getFilters(),
+        groupBy: 'year',
+        range: this.user?.settings?.dateRange ?? DEFAULT_DATE_RANGE
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ chart }) => {
+        this.performancePercentagesByYear = [];
+
+        for (const {
+          date,
+          netPerformanceInPercentageWithCurrencyEffect
+        } of chart ?? []) {
+          if (isNumber(netPerformanceInPercentageWithCurrencyEffect)) {
+            this.performancePercentagesByYear.push({
+              date,
+              investment: netPerformanceInPercentageWithCurrencyEffect
+            });
+          }
+        }
+
+        this.isLoadingPerformanceTimelineChart = false;
+
+        this.changeDetectorRef.markForCheck();
+      });
+  }
+
   private update() {
     this.isLoadingInvestmentChart = true;
 
@@ -331,31 +368,29 @@ export class GfAnalysisPageComponent implements OnInit {
         this.performanceDataItemsInPercentage = [];
         this.performanceDataItemsTimeWeightedInPercentage = [];
 
-        for (const [
-          index,
-          {
-            date,
-            netPerformanceInPercentageWithCurrencyEffect,
+        for (const {
+          date,
+          netPerformanceInPercentageWithCurrencyEffect,
             timeWeightedPerformanceInPercentageWithCurrencyEffect,
-            totalInvestmentValueWithCurrencyEffect,
-            valueInPercentage,
-            valueWithCurrencyEffect
+          totalInvestmentValueWithCurrencyEffect,
+          valueInPercentage,
+          valueWithCurrencyEffect
+        } of chart ?? []) {
+          if (totalInvestmentValueWithCurrencyEffect !== undefined) {
+            this.investments.push({
+              date,
+              investment: totalInvestmentValueWithCurrencyEffect
+            });
           }
-        ] of (chart ?? []).entries()) {
-          // Ignore first item where value is 0
-          if (index > 0 || this.user?.settings?.dateRange === 'max') {
-            if (totalInvestmentValueWithCurrencyEffect !== undefined) {
-              this.investments.push({
-                date,
-                investment: totalInvestmentValueWithCurrencyEffect
-              });
-            }
 
+          const value = isNumber(valueWithCurrencyEffect)
+            ? valueWithCurrencyEffect
+            : valueInPercentage;
+
+          if (isNumber(value)) {
             this.performanceDataItems.push({
               date,
-              value: isNumber(valueWithCurrencyEffect)
-                ? valueWithCurrencyEffect
-                : valueInPercentage
+              value
             });
           }
 
@@ -394,7 +429,10 @@ export class GfAnalysisPageComponent implements OnInit {
 
     this.dataService
       .fetchPortfolioHoldings({
-        filters: this.userService.getFilters(),
+        filters: [
+          ...this.userService.getFilters(),
+          { id: 'ACTIVE', type: 'HOLDING_TYPE' }
+        ],
         range: this.user?.settings?.dateRange
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -421,6 +459,13 @@ export class GfAnalysisPageComponent implements OnInit {
       });
 
     this.fetchDividendsAndInvestments();
+
+    if (
+      this.user?.settings?.isExperimentalFeatures &&
+      this.user?.subscription?.type !== SubscriptionType.Basic
+    ) {
+      this.fetchPerformanceByYear();
+    }
 
     this.changeDetectorRef.markForCheck();
   }

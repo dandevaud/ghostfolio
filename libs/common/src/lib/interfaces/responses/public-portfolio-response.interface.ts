@@ -4,29 +4,28 @@ import {
   PortfolioPosition
 } from '@ghostfolio/common/interfaces';
 import { Market } from '@ghostfolio/common/types';
-
-import { Order } from '@prisma/client';
+import type { Order } from '@ghostfolio/prisma/browser';
 
 export interface PublicPortfolioResponse extends PublicPortfolioResponseV1 {
   alias?: string;
   hasDetails: boolean;
-  holdings: {
-    [symbol: string]: Pick<
-      PortfolioPosition,
-      | 'allocationInPercentage'
-      | 'assetProfile'
-      | 'dateOfFirstActivity'
-      | 'markets'
-      | 'netPerformancePercentWithCurrencyEffect'
-      | 'valueInBaseCurrency'
-      | 'valueInPercentage'
-    >;
-  };
+  holdings: Pick<
+    PortfolioPosition,
+    | 'allocationInPercentage'
+    | 'assetProfile'
+    | 'dateOfFirstActivity'
+    | 'markets'
+    | 'netPerformancePercentWithCurrencyEffect'
+    | 'valueInPercentage'
+  >[];
   latestActivities: (Pick<
     Order,
     'currency' | 'date' | 'fee' | 'quantity' | 'type' | 'unitPrice'
   > & {
-    assetProfile?: EnhancedAssetProfile;
+    assetProfile: Pick<
+      EnhancedAssetProfile,
+      'currency' | 'dataSource' | 'name' | 'symbol'
+    >;
     value: number;
     valueInBaseCurrency: number;
   })[];

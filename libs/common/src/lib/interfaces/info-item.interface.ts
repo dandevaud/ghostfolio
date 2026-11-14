@@ -1,4 +1,4 @@
-import { SymbolProfile } from '@prisma/client';
+import type { SymbolProfile } from '@ghostfolio/prisma/browser';
 
 import { Statistics } from './statistics.interface';
 import { SubscriptionOffer } from './subscription-offer.interface';
@@ -15,4 +15,5 @@ export interface InfoItem {
   isReadOnlyMode?: boolean;
   statistics: Statistics;
   subscriptionOffer?: SubscriptionOffer;
+  subscriptionOfferMax?: SubscriptionOffer;
 }

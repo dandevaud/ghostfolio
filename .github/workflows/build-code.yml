@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         node_version:
-          - 22.23.2
+          - 22.23.5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Check code style
-        run: npm run lint
+        run: npm run lint -- --quiet
 
       - name: Check formatting
         run: npm run format:check

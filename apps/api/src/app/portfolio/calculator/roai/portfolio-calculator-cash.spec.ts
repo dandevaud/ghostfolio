@@ -1,6 +1,3 @@
-import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/account-balance.service';
-import { AccountService } from '@ghostfolio/api/app/account/account.service';
-import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
   activityDummyData,
   assetProfileDummyData,
@@ -9,8 +6,9 @@ import {
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
+import { AccountBalanceService } from '@ghostfolio/api/services/account-balance/account-balance.service';
+import { AccountService } from '@ghostfolio/api/services/account/account.service';
+import { ActivitiesService } from '@ghostfolio/api/services/activities/activities.service';
 import { AssetProfileSplitService } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
@@ -18,8 +16,10 @@ import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
-import { TimelinePosition } from '@ghostfolio/common/models';
+import { PortfolioSnapshotHolding } from '@ghostfolio/common/models';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
 import { DataSource } from '@prisma/client';
@@ -57,7 +57,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
@@ -118,7 +118,6 @@ describe('PortfolioCalculator', () => {
     currentRateService = new CurrentRateService(
       null,
       dataProviderService,
-      null,
       null
     );
 
@@ -163,6 +162,7 @@ describe('PortfolioCalculator', () => {
           balances: [
             {
               accountId,
+              comment: null,
               date: parseDate('2023-12-31'),
               id: randomUUID(),
               value: 1000,
@@ -170,6 +170,7 @@ describe('PortfolioCalculator', () => {
             },
             {
               accountId,
+              comment: null,
               date: parseDate('2024-12-31'),
               id: randomUUID(),
               value: 2000,
@@ -178,6 +179,7 @@ describe('PortfolioCalculator', () => {
             {
               // Ignored future account balance
               accountId,
+              comment: null,
               date: parseDate('2050-12-31'),
               id: randomUUID(),
               value: 0,
@@ -252,14 +254,20 @@ describe('PortfolioCalculator', () => {
        * Total account balance: 2000 USD * 0.85 = 1700 CHF (using the exchange rate on 2024-12-31)
        * Value in base currency: 2000 USD * 0.91 = 1820 CHF
        */
-      expect(position).toMatchObject<TimelinePosition>({
+      expect(position).toMatchObject<PortfolioSnapshotHolding>({
         activitiesCount: 2,
+        averageInvestment: new Big('912.47956403269754768392'),
+        averageInvestmentWithCurrencyEffect: new Big(
+          '852.45231607629427792916'
+        ),
         averagePrice: new Big(1),
         currency: 'USD',
         dataSource: DataSource.YAHOO,
         dateOfFirstActivity: '2023-12-31',
         dividend: new Big(0),
         dividendInBaseCurrency: new Big(0),
+        dividendYieldPercent: new Big(0),
+        dividendYieldPercentWithCurrencyEffect: new Big(0),
         fee: new Big(0),
         feeInBaseCurrency: new Big(0),
         grossPerformance: new Big(0),
@@ -294,10 +302,6 @@ describe('PortfolioCalculator', () => {
         },
         quantity: new Big(2000),
         symbol: 'USD',
-        timeWeightedInvestment: new Big('912.47956403269754768392'),
-        timeWeightedInvestmentWithCurrencyEffect: new Big(
-          '852.45231607629427792916'
-        ),
         valueInBaseCurrency: new Big(1820)
       });
 
@@ -321,6 +325,8 @@ describe('PortfolioCalculator', () => {
        */
       expect(portfolioSnapshot.historicalData.at(-1)).toEqual({
         date: '2025-01-01',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: 0,
         netPerformanceInPercentage: 0,
@@ -348,6 +354,7 @@ describe('PortfolioCalculator', () => {
           balances: [
             {
               accountId,
+              comment: null,
               date: parseDate('2023-12-31'),
               id: randomUUID(),
               value: 1000,
@@ -355,6 +362,7 @@ describe('PortfolioCalculator', () => {
             },
             {
               accountId,
+              comment: null,
               date: parseDate('2024-12-31'),
               id: randomUUID(),
               value: 2000,
@@ -426,7 +434,7 @@ describe('PortfolioCalculator', () => {
        * The holding itself keeps its investment and value so that it remains
        * visible in the holdings table
        */
-      expect(position).toMatchObject<Partial<TimelinePosition>>({
+      expect(position).toMatchObject<Partial<PortfolioSnapshotHolding>>({
         currency: 'CHF',
         grossPerformance: new Big(0),
         grossPerformanceWithCurrencyEffect: new Big(0),
@@ -461,6 +469,8 @@ describe('PortfolioCalculator', () => {
        */
       expect(portfolioSnapshot.historicalData.at(-1)).toEqual({
         date: '2025-01-01',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: 0,
         netPerformanceInPercentage: 0,
@@ -488,6 +498,7 @@ describe('PortfolioCalculator', () => {
           balances: [
             {
               accountId,
+              comment: null,
               date: parseDate('2023-12-31'),
               id: randomUUID(),
               value: 2000,
@@ -605,6 +616,8 @@ describe('PortfolioCalculator', () => {
        */
       expect(portfolioSnapshot.historicalData.at(-1)).toEqual({
         date: '2025-01-01',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: 0,
         netPerformanceInPercentage: 0,

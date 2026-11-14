@@ -8,13 +8,13 @@ import {
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
 import { Activity, ExportResponse } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
@@ -41,7 +41,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
@@ -84,7 +84,7 @@ describe('PortfolioCalculator', () => {
 
     configurationService = new ConfigurationService();
 
-    currentRateService = new CurrentRateService(null, null, null, null);
+    currentRateService = new CurrentRateService(null, null, null);
 
     exchangeRateDataService = new ExchangeRateDataService(
       null,
@@ -173,6 +173,8 @@ describe('PortfolioCalculator', () => {
 
       expect(portfolioSnapshot.historicalData[0]).toEqual({
         date: '2021-12-11',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: 0,
         netPerformanceInPercentage: 0,
@@ -193,6 +195,8 @@ describe('PortfolioCalculator', () => {
        */
       expect(portfolioSnapshot.historicalData[1]).toEqual({
         date: '2021-12-12',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 44558.42,
         netPerformance: 5535.42, // 1 * (50098.3 - 44558.42) - 4.46 = 5535.42
         netPerformanceInPercentage: 0.12422837255001412, // 5535.42 ÷ 44558.42 = 0.12422837255001412
@@ -214,6 +218,8 @@ describe('PortfolioCalculator', () => {
         ]
       ).toEqual({
         date: '2022-01-14',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: -1463.18,
         netPerformanceInPercentage: -0.032837340282712,
@@ -237,6 +243,8 @@ describe('PortfolioCalculator', () => {
         positions: [
           {
             activitiesCount: 1,
+            averageInvestment: new Big('44558.42'),
+            averageInvestmentWithCurrencyEffect: new Big('44558.42'),
             averagePrice: new Big('44558.42'),
             currency: 'USD',
             dataSource: 'YAHOO',
@@ -266,8 +274,6 @@ describe('PortfolioCalculator', () => {
             quantity: new Big('1'),
             symbol: 'BTCUSD',
             tags: [],
-            timeWeightedInvestment: new Big('44558.42'),
-            timeWeightedInvestmentWithCurrencyEffect: new Big('44558.42'),
             valueInBaseCurrency: new Big('43099.7')
           }
         ],

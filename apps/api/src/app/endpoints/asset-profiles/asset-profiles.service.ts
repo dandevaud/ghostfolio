@@ -1,5 +1,5 @@
-import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
+import { ActivitiesService } from '@ghostfolio/api/services/activities/activities.service';
 import { AssetProfileSplitService } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.service';
 import { BenchmarkService } from '@ghostfolio/api/services/benchmark/benchmark.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
@@ -20,6 +20,7 @@ import {
   AssetProfileIdentifier,
   AssetProfileItem,
   AssetProfilesResponse,
+  DataProviderInfo,
   EnhancedAssetProfile,
   Filter
 } from '@ghostfolio/common/interfaces';
@@ -28,7 +29,7 @@ import { MarketDataPreset } from '@ghostfolio/common/types';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AssetClass, AssetSubClass, DataSource, Prisma } from '@prisma/client';
-import { groupBy } from 'lodash';
+import { groupBy } from 'lodash-es';
 
 @Injectable()
 export class AssetProfilesService {
@@ -255,11 +256,6 @@ export class AssetProfilesService {
       return type;
     });
 
-    const marketDataItems = await this.prismaService.marketData.groupBy({
-      _count: true,
-      by: ['dataSource', 'symbol']
-    });
-
     if (filterByAssetSubClass) {
       where.assetSubClass = AssetSubClass[filterByAssetSubClass.id];
     }
@@ -291,10 +287,8 @@ export class AssetProfilesService {
       }
     }
 
-    const extendedPrismaClient = this.getExtendedPrismaClient();
-
     const symbolProfileResult = await Promise.all([
-      extendedPrismaClient.symbolProfile.findMany({
+      this.prismaService.symbolProfile.findMany({
         skip,
         take,
         where,
@@ -322,7 +316,6 @@ export class AssetProfilesService {
           id: true,
           isin: true,
           isActive: true,
-          isUsedByUsersWithSubscription: true,
           name: true,
           scraperConfiguration: true,
           sectors: true,
@@ -334,36 +327,33 @@ export class AssetProfilesService {
     const symbolProfiles = symbolProfileResult[0];
     let count = symbolProfileResult[1];
 
-    const lastMarketPrices = await this.prismaService.marketData.findMany({
-      distinct: ['dataSource', 'symbol'],
-      orderBy: { date: 'desc' },
-      select: {
-        dataSource: true,
-        marketPrice: true,
-        symbol: true
-      },
-      where: {
-        dataSource: {
-          in: symbolProfiles.map(({ dataSource }) => {
+    const symbolProfileIdsUsedByUsersWithSubscription =
+      await this.getSymbolProfileIdsUsedByUsersWithSubscription(
+        symbolProfiles
+          .filter(({ _count }) => {
+            return _count.activities > 0;
+          })
+          .map(({ id }) => {
+            return id;
+          })
+      );
+
+    const dataProviderInfoMap = new Map<DataSource, DataProviderInfo>(
+      [
+        ...new Set(
+          symbolProfiles.map(({ dataSource }) => {
             return dataSource;
           })
-        },
-        symbol: {
-          in: symbolProfiles.map(({ symbol }) => {
-            return symbol;
-          })
-        }
-      }
-    });
-
-    const lastMarketPriceMap = new Map<string, number>();
-
-    for (const { dataSource, marketPrice, symbol } of lastMarketPrices) {
-      lastMarketPriceMap.set(
-        getAssetProfileIdentifier({ dataSource, symbol }),
-        marketPrice
-      );
-    }
+        )
+      ].map((dataSource) => {
+        return [
+          dataSource,
+          this.dataProviderService
+            .getDataProvider(dataSource)
+            .getDataProviderInfo()
+        ];
+      })
+    );
 
     let assetProfiles: AssetProfileItem[] = await Promise.all(
       symbolProfiles.map(async (assetProfile) => {
@@ -376,7 +366,6 @@ export class AssetProfilesService {
           id,
           isin,
           isActive,
-          isUsedByUsersWithSubscription,
           symbol
         } = assetProfile;
 
@@ -388,17 +377,16 @@ export class AssetProfilesService {
 
         const countriesCount = countries ? Object.keys(countries).length : 0;
 
-        const lastMarketPrice = lastMarketPriceMap.get(
-          getAssetProfileIdentifier({ dataSource, symbol })
-        );
+        const lastMarketPrice = (
+          await this.marketDataService.getLatest({ dataSource, symbol })
+        )?.marketPrice;
 
-        const marketDataItemCount =
-          marketDataItems.find((marketDataItem) => {
-            return (
-              marketDataItem.dataSource === dataSource &&
-              marketDataItem.symbol === symbol
-            );
-          })?._count ?? 0;
+        const marketDataItemCount = await this.prismaService.marketData.count({
+          where: {
+            dataSource,
+            symbol
+          }
+        });
 
         const sectorsCount = sectors ? Object.keys(sectors).length : 0;
         const tags = assetProfile.tags?.map(({ id, name, userId }) => {
@@ -422,8 +410,10 @@ export class AssetProfilesService {
           symbol,
           tags,
           activitiesCount: _count.activities,
+          dataProviderInfo: dataProviderInfoMap.get(dataSource),
           date: activities?.[0]?.date,
-          isUsedByUsersWithSubscription: await isUsedByUsersWithSubscription,
+          isUsedByUsersWithSubscription:
+            symbolProfileIdsUsedByUsersWithSubscription.has(id),
           watchedByCount: _count.watchedBy
         };
       })
@@ -538,43 +528,6 @@ export class AssetProfilesService {
   private async getAssetProfilesForCurrencies(): Promise<AssetProfilesResponse> {
     const currencyPairs = this.exchangeRateDataService.getCurrencyPairs();
 
-    const [lastMarketPrices, marketDataItems] = await Promise.all([
-      this.prismaService.marketData.findMany({
-        distinct: ['dataSource', 'symbol'],
-        orderBy: { date: 'desc' },
-        select: {
-          dataSource: true,
-          marketPrice: true,
-          symbol: true
-        },
-        where: {
-          dataSource: {
-            in: currencyPairs.map(({ dataSource }) => {
-              return dataSource;
-            })
-          },
-          symbol: {
-            in: currencyPairs.map(({ symbol }) => {
-              return symbol;
-            })
-          }
-        }
-      }),
-      this.prismaService.marketData.groupBy({
-        _count: true,
-        by: ['dataSource', 'symbol']
-      })
-    ]);
-
-    const lastMarketPriceMap = new Map<string, number>();
-
-    for (const { dataSource, marketPrice, symbol } of lastMarketPrices) {
-      lastMarketPriceMap.set(
-        getAssetProfileIdentifier({ dataSource, symbol }),
-        marketPrice
-      );
-    }
-
     const assetProfilePromises: Promise<AssetProfileItem>[] = currencyPairs.map(
       async ({ dataSource, symbol }) => {
         let activitiesCount: EnhancedAssetProfile['activitiesCount'] = 0;
@@ -588,17 +541,16 @@ export class AssetProfilesService {
             await this.activitiesService.getStatisticsByCurrency(currency));
         }
 
-        const lastMarketPrice = lastMarketPriceMap.get(
-          getAssetProfileIdentifier({ dataSource, symbol })
-        );
+        const lastMarketPrice = (
+          await this.marketDataService.getLatest({ dataSource, symbol })
+        )?.marketPrice;
 
-        const marketDataItemCount =
-          marketDataItems.find((marketDataItem) => {
-            return (
-              marketDataItem.dataSource === dataSource &&
-              marketDataItem.symbol === symbol
-            );
-          })?._count ?? 0;
+        const marketDataItemCount = await this.prismaService.marketData.count({
+          where: {
+            dataSource,
+            symbol
+          }
+        });
 
         return {
           activitiesCount,
@@ -625,47 +577,41 @@ export class AssetProfilesService {
     return { assetProfiles, count: assetProfiles.length };
   }
 
-  private getExtendedPrismaClient() {
-    const symbolProfileExtension = Prisma.defineExtension((client) => {
-      return client.$extends({
-        result: {
-          symbolProfile: {
-            isUsedByUsersWithSubscription: {
-              compute: async ({ id }) => {
-                const { _count } =
-                  await this.prismaService.symbolProfile.findUnique({
-                    select: {
-                      _count: {
-                        select: {
-                          activities: {
-                            where: {
-                              user: {
-                                subscriptions: {
-                                  some: {
-                                    expiresAt: {
-                                      gt: new Date()
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    where: {
-                      id
-                    }
-                  });
+  private async getSymbolProfileIdsUsedByUsersWithSubscription(
+    symbolProfileIds: string[]
+  ): Promise<Set<string>> {
+    if (symbolProfileIds.length === 0) {
+      return new Set();
+    }
 
-                return _count.activities > 0;
+    const symbolProfiles = await this.prismaService.symbolProfile.findMany({
+      select: {
+        id: true
+      },
+      where: {
+        activities: {
+          some: {
+            user: {
+              subscriptions: {
+                some: {
+                  expiresAt: {
+                    gt: new Date()
+                  }
+                }
               }
             }
           }
+        },
+        id: {
+          in: symbolProfileIds
         }
-      });
+      }
     });
 
-    return this.prismaService.$extends(symbolProfileExtension);
+    return new Set(
+      symbolProfiles.map(({ id }) => {
+        return id;
+      })
+    );
   }
 }

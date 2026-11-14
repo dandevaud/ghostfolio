@@ -4,13 +4,15 @@
       assetProfile?.name ?? data.symbol
     }}</span>
     <button
-      class="ml-1 no-min-width px-2"
-      mat-button
+      mat-icon-button
       type="button"
       [matMenuTriggerFor]="assetProfileActionsMenu"
       (click)="$event.stopPropagation()"
     >
-      <ion-icon name="ellipsis-vertical" />
+      <ion-icon
+        class="d-block mat-icon text-body-secondary"
+        name="ellipsis-vertical"
+      />
     </button>
     <mat-menu
       #assetProfileActionsMenu="matMenu"
@@ -84,10 +86,10 @@
         type="button"
         [disabled]="
           !canDeleteAssetProfile({
-            activitiesCount: assetProfile?.activitiesCount,
+            activitiesCount: assetProfile?.activitiesCount ?? 0,
             isBenchmark: isBenchmark,
             symbol: data.symbol,
-            watchedByCount: assetProfile?.watchedByCount
+            watchedByCount: assetProfile?.watchedByCount ?? 0
           })
         "
         (click)="
@@ -125,10 +127,10 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="reader-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Overview</div>
+          <div class="d-none d-sm-block ms-2" i18n>Overview</div>
         </ng-template>
-        <div class="container px-0 py-3">
-          <div class="row w-100">
+        <div class="container overflow-hidden px-0 py-3">
+          <div class="row">
             @if (isEditAssetProfileIdentifierMode) {
               <div class="col-12 mb-4">
                 <form
@@ -151,7 +153,7 @@
                     />
                   </mat-form-field>
                   <button
-                    class="ml-2 no-min-width px-2"
+                    class="ms-2 no-min-width px-2"
                     color="primary"
                     mat-flat-button
                     type="submit"
@@ -168,7 +170,7 @@
                     <ng-container i18n>Apply</ng-container>
                   </button>
                   <button
-                    class="ml-2 no-min-width px-2"
+                    class="ms-2 no-min-width px-2"
                     mat-button
                     type="button"
                     (click)="onCancelEditAssetProfileIdentifierMode()"
@@ -177,7 +179,7 @@
                   </button>
                 </form>
                 @if (data.dataSource !== DataSource.MANUAL) {
-                  <p class="my-1 px-1 text-muted" i18n>or</p>
+                  <p class="my-1 px-1 text-body-secondary" i18n>or</p>
                   <button
                     color="accent"
                     mat-flat-button
@@ -201,7 +203,7 @@
                   >Symbol</gf-value
                 >
               </div>
-              <div class="col-6 mb-3">
+              <div class="col-6 mb-3 position-relative">
                 <gf-value
                   i18n
                   size="medium"
@@ -285,8 +287,8 @@
               >
             </div>
             @if (
-              assetProfile?.countries?.length > 0 ||
-              assetProfile?.sectors?.length > 0
+              (assetProfile?.countries?.length ?? 0) > 0 ||
+              (assetProfile?.sectors?.length ?? 0) > 0
             ) {
               @if (
                 assetProfile?.countries?.length === 1 &&
@@ -521,6 +523,7 @@
                   cdkTextareaAutosize
                   formControlName="comment"
                   matInput
+                  [maxlength]="COMMENT_MAXIMUM_LENGTH"
                   (keyup.enter)="$event.stopPropagation()"
                 ></textarea>
               </mat-form-field>
@@ -546,10 +549,10 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="server-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Historical Market Data</div>
+          <div class="d-none d-sm-block ms-2" i18n>Historical Market Data</div>
         </ng-template>
         <div class="container mt-3 p-0">
-          <div class="no-gutters row w-100">
+          <div class="g-0 row w-100">
             <div class="col-12">
               <gf-historical-market-data-editor
                 [currency]="assetProfile?.currency"
@@ -558,7 +561,6 @@
                 [locale]="data.locale"
                 [marketData]="marketDataItems"
                 [symbol]="data.symbol"
-                [user]="user"
                 (marketDataChanged)="onMarketDataChanged($event)"
               />
             </div>
@@ -569,20 +571,17 @@
         <mat-tab>
           <ng-template mat-tab-label>
             <ion-icon name="git-compare-outline" />
-            <div class="d-none d-sm-block ml-2" i18n>Splits</div>
+            <div class="d-none d-sm-block ms-2" i18n>Splits</div>
           </ng-template>
           <div class="container mt-3 p-0">
-            <div class="no-gutters row w-100">
+            <div class="g-0 row w-100">
               <div class="col-12">
                 @if (splits.length > 0) {
                   <table class="gf-table mb-3 w-100">
                     <thead>
                       <tr class="mat-mdc-header-row">
                         <th class="mat-mdc-header-cell px-1 py-2" i18n>Date</th>
-                        <th
-                          class="mat-mdc-header-cell px-1 py-2 text-right"
-                          i18n
-                        >
+                        <th class="mat-mdc-header-cell px-1 py-2 text-end" i18n>
                           Split Ratio
                         </th>
                         <th class="mat-mdc-header-cell px-1 py-2"></th>
@@ -594,10 +593,10 @@
                           <td class="mat-mdc-cell px-1 py-2">
                             {{ split.date | date: defaultDateFormat }}
                           </td>
-                          <td class="mat-mdc-cell px-1 py-2 text-right">
+                          <td class="mat-mdc-cell px-1 py-2 text-end">
                             {{ split.numerator }}:{{ split.denominator }}
                           </td>
-                          <td class="mat-mdc-cell px-1 py-2 text-right">
+                          <td class="mat-mdc-cell px-1 py-2 text-end">
                             <button
                               mat-icon-button
                               type="button"
@@ -624,12 +623,12 @@
                       [matDatepicker]="dateOfSplit"
                     />
                     <mat-datepicker-toggle
-                      class="mr-2"
+                      class="me-2"
                       matSuffix
                       [for]="dateOfSplit"
                     >
                       <ion-icon
-                        class="text-muted"
+                        class="text-body-secondary"
                         matDatepickerToggleIcon
                         name="calendar-clear-outline"
                       />
@@ -663,7 +662,7 @@
                       />
                     </mat-form-field>
                   </div>
-                  <div class="text-right">
+                  <div class="text-end">
                     <button
                       color="primary"
                       mat-flat-button
@@ -685,7 +684,7 @@
         <mat-tab>
           <ng-template mat-tab-label>
             <ion-icon name="code-slash-outline" />
-            <div class="d-none d-sm-block ml-2" i18n>Scraper Configuration</div>
+            <div class="d-none d-sm-block ms-2" i18n>Scraper Configuration</div>
           </ng-template>
           <div class="container mt-3 p-0">
             <div [formGroup]="assetProfileForm">
@@ -714,7 +713,6 @@
                       formControlName="headers"
                       matInput
                       type="text"
-                      [matAutocomplete]="auto"
                     ></textarea>
                   </mat-form-field>
                 </div>
@@ -769,7 +767,7 @@
                     <input formControlName="url" matInput type="text" />
                   </mat-form-field>
                 </div>
-                <div class="my-3 text-right">
+                <div class="my-3 text-end">
                   <button
                     color="accent"
                     mat-flat-button

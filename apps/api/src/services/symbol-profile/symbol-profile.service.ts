@@ -1,6 +1,9 @@
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
-import { UNKNOWN_KEY } from '@ghostfolio/common/config';
+import {
+  INVESTMENT_ACTIVITY_TYPES,
+  UNKNOWN_KEY
+} from '@ghostfolio/common/config';
 import { applyAssetProfileOverrides } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
@@ -20,6 +23,7 @@ import {
   Tag
 } from '@prisma/client';
 import { continents, countries } from 'countries-list';
+import { omit } from 'lodash-es';
 
 @Injectable()
 export class SymbolProfileService {
@@ -187,6 +191,41 @@ export class SymbolProfileService {
       });
   }
 
+  /**
+   * Gives the currency, the data source, the ISIN, the name and the symbol of
+   * the active asset profiles of the investment activities of the user, also
+   * of the closed positions and of the excluded accounts, with the overrides.
+   * An inactive asset profile is left out, for example a delisted one, which a
+   * data provider cannot resolve, or one whose data gathering an admin has
+   * disabled.
+   */
+  public async getSymbolProfilesOfUser({ userId }: { userId: string }) {
+    const symbolProfiles = await this.prismaService.symbolProfile.findMany({
+      orderBy: [{ symbol: 'asc' }, { dataSource: 'asc' }],
+      select: {
+        assetProfileOverrides: true,
+        currency: true,
+        dataSource: true,
+        isin: true,
+        name: true,
+        symbol: true
+      },
+      where: {
+        activities: {
+          some: { userId, type: { in: INVESTMENT_ACTIVITY_TYPES } }
+        },
+        isActive: true
+      }
+    });
+
+    return symbolProfiles.map(({ assetProfileOverrides, ...symbolProfile }) => {
+      const { currency, dataSource, isin, name, symbol } =
+        applyAssetProfileOverrides(symbolProfile, assetProfileOverrides);
+
+      return { currency, dataSource, isin, name, symbol };
+    });
+  }
+
   public updateAssetProfileIdentifier(
     oldAssetProfileIdentifier: AssetProfileIdentifier,
     newAssetProfileIdentifier: AssetProfileIdentifier
@@ -254,7 +293,7 @@ export class SymbolProfileService {
         date: Date;
       }[];
       tags?: Tag[];
-      assetProfileOverrides: AssetProfileOverrides;
+      assetProfileOverrides: AssetProfileOverrides | null;
     })[]
   ): EnhancedAssetProfile[] {
     return symbolProfiles.map((symbolProfile) => {
@@ -263,13 +302,19 @@ export class SymbolProfileService {
         symbolProfile.assetProfileOverrides
       );
 
-      const item = {
-        ...symbolProfileWithOverrides,
-        activitiesCount: 0,
+      const symbolProfileWithoutExtras = omit(symbolProfileWithOverrides, [
+        '_count',
+        'activities',
+        'assetProfileOverrides'
+      ]);
+
+      return {
+        ...symbolProfileWithoutExtras,
+        activitiesCount: symbolProfile._count.activities,
         countries: this.getCountries(
           symbolProfileWithOverrides?.countries as unknown as Prisma.JsonArray
         ),
-        dateOfFirstActivity: undefined as Date,
+        dateOfFirstActivity: symbolProfile.activities?.[0]?.date,
         holdings: this.getHoldings(
           symbolProfileWithOverrides?.holdings as unknown as Prisma.JsonArray
         ),
@@ -281,19 +326,8 @@ export class SymbolProfileService {
         ),
         symbolMapping: this.getSymbolMapping(symbolProfileWithOverrides),
         tags: symbolProfile?.tags,
-        watchedByCount: 0
-      };
-
-      item.activitiesCount = symbolProfile._count.activities;
-      item.watchedByCount = symbolProfile._count.watchedBy ?? 0;
-      delete item._count;
-
-      item.dateOfFirstActivity = symbolProfile.activities?.[0]?.date;
-      delete item.activities;
-
-      delete item.assetProfileOverrides;
-
-      return item;
+        watchedByCount: symbolProfile._count.watchedBy ?? 0
+      } as EnhancedAssetProfile;
     });
   }
 
@@ -332,7 +366,7 @@ export class SymbolProfileService {
 
   private getScraperConfiguration(
     symbolProfile: SymbolProfile
-  ): ScraperConfiguration {
+  ): ScraperConfiguration | null {
     const scraperConfiguration =
       symbolProfile.scraperConfiguration as Prisma.JsonObject;
 

@@ -19,11 +19,12 @@ import {
   LookupResponse
 } from '@ghostfolio/common/interfaces';
 
+import { utc } from '@date-fns/utc';
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, SymbolProfile } from '@prisma/client';
 import { addDays, format, isSameDay } from 'date-fns';
 import { ReasonPhrases, StatusCodes } from 'http-status-codes';
-import { uniqBy } from 'lodash';
+import { uniqBy } from 'lodash-es';
 import YahooFinance from 'yahoo-finance2';
 import type { ChartResultArray } from 'yahoo-finance2/modules/chart';
 import type {
@@ -63,7 +64,9 @@ export class YahooFinanceService implements DataProviderInterface {
   public async getAssetProfile({
     symbol
   }: GetAssetProfileParams): Promise<Partial<SymbolProfile>> {
-    return this.yahooFinanceDataEnhancerService.getAssetProfile(symbol);
+    return (
+      (await this.yahooFinanceDataEnhancerService.getAssetProfile(symbol)) ?? {}
+    );
   }
 
   public getDataProviderInfo(): DataProviderInfo {
@@ -103,7 +106,7 @@ export class YahooFinanceService implements DataProviderInterface {
       } = {};
 
       for (const historicalItem of historicalResult) {
-        response[format(historicalItem.date, DATE_FORMAT)] = {
+        response[format(historicalItem.date, DATE_FORMAT, { in: utc })] = {
           marketPrice: historicalItem.dividends
         };
       }
@@ -143,30 +146,39 @@ export class YahooFinanceService implements DataProviderInterface {
     [date: string]: DataProviderHistoricalResponse;
   }> {
     try {
-      const historicalResult = this.convertToHistoricalResult(
-        await this.yahooFinance.chart(
-          this.yahooFinanceDataEnhancerService.convertToYahooFinanceSymbol(
-            symbol
-          ),
-          {
-            interval: '1d',
-            period1: format(from, DATE_FORMAT),
-            period2: format(
-              isSameDay(from, to) ? addDays(to, 1) : to,
-              DATE_FORMAT
-            )
-          }
-        )
+      const chartResult = await this.yahooFinance.chart(
+        this.yahooFinanceDataEnhancerService.convertToYahooFinanceSymbol(
+          symbol
+        ),
+        {
+          interval: '1d',
+          period1: format(from, DATE_FORMAT),
+          period2: format(
+            isSameDay(from, to) ? addDays(to, 1) : to,
+            DATE_FORMAT
+          )
+        }
       );
+
+      const historicalResult = this.convertToHistoricalResult(chartResult);
 
       const response: {
         [date: string]: DataProviderHistoricalResponse;
       } = {};
 
-      for (const historicalItem of historicalResult) {
-        response[format(historicalItem.date, DATE_FORMAT)] = {
-          marketPrice: historicalItem.close
-        };
+      for (const { close, date } of historicalResult) {
+        // The chart endpoint can omit the close price of a historical item, for
+        // example if the daily data of an exchange has not been consolidated yet.
+        // In this case, the market price of the corresponding quote is taken.
+        const marketPrice =
+          close ??
+          (isSameDay(date, chartResult.meta.regularMarketTime)
+            ? chartResult.meta.regularMarketPrice
+            : undefined);
+
+        if (marketPrice) {
+          response[format(date, DATE_FORMAT, { in: utc })] = { marketPrice };
+        }
       }
 
       return response;

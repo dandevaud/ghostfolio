@@ -46,10 +46,10 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="reader-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Overview</div>
+          <div class="d-none d-sm-block ms-2" i18n>Overview</div>
         </ng-template>
-        <div class="container mt-3 p-0">
-          <div class="row w-100">
+        <div class="container mt-3 overflow-hidden p-0">
+          <div class="row">
             <div class="col-6 mb-3">
               <gf-value
                 i18n
@@ -369,7 +369,7 @@
               </form>
             </div>
 
-            @if (dataProviderInfo) {
+            @if (dataProviderInfo?.name) {
               <div class="col-md-12 mb-3 text-center">
                 <hr />
                 <gf-data-provider-credits
@@ -384,7 +384,7 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="swap-vertical-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Activities</div>
+          <div class="d-none d-sm-block ms-2" i18n>Activities</div>
         </ng-template>
         <gf-activities-table
           [baseCurrency]="data.baseCurrency"
@@ -396,7 +396,6 @@
           [hasPermissionToExportActivities]="
             !data.impersonationId && !user?.settings?.isRestrictedView
           "
-          [hasPermissionToFilter]="false"
           [hasPermissionToOpenDetails]="false"
           [hasPermissionToUpdateActivity]="data.hasPermissionToUpdateActivity"
           [locale]="data.locale"
@@ -419,7 +418,7 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="wallet-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Accounts</div>
+          <div class="d-none d-sm-block ms-2" i18n>Accounts</div>
         </ng-template>
         <gf-accounts-table
           [accounts]="accounts"
@@ -427,22 +426,22 @@
           [hasPermissionToOpenDetails]="false"
           [locale]="user?.settings?.locale"
           [showActivitiesCount]="false"
-          [showAllocationInPercentage]="user?.settings?.isExperimentalFeatures"
+          [showAllocationInPercentage]="true"
           [showBalance]="false"
           [showFooter]="false"
-          [showQuantity]="user?.settings?.isExperimentalFeatures"
+          [showQuantity]="true"
           [showValue]="false"
           [showValueInBaseCurrency]="false"
         />
       </mat-tab>
-      @if (
-        hasPermissionToReadMarketDataOfOwnAssetProfile &&
-        user?.settings?.isExperimentalFeatures
-      ) {
-        <mat-tab>
+      @if (isOwnAssetProfile && user?.settings?.isExperimentalFeatures) {
+        <mat-tab [disabled]="!hasPermissionToReadMarketDataOfOwnAssetProfile">
           <ng-template mat-tab-label>
             <ion-icon name="server-outline" />
-            <div class="d-none d-sm-block ml-2" i18n>Market Data</div>
+            <div class="d-none d-sm-block ms-2" i18n>Market Data</div>
+            @if (user?.subscription?.type === 'Basic') {
+              <gf-premium-indicator class="ms-1" [enableLink]="false" />
+            }
           </ng-template>
           <gf-historical-market-data-editor
             [currency]="assetProfile?.currency"
@@ -451,7 +450,6 @@
             [locale]="data.locale"
             [marketData]="marketDataItems"
             [symbol]="assetProfile?.symbol"
-            [user]="user"
             (marketDataChanged)="onMarketDataChanged($event)"
           />
         </mat-tab>
@@ -473,7 +471,7 @@
                 mat-stroked-button
                 (click)="onCloseHolding()"
               >
-                <ion-icon class="mr-1" name="arrow-down-circle-outline" /><span
+                <ion-icon class="me-1" name="arrow-down-circle-outline" /><span
                   i18n
                   >Close Holding</span
                 >
@@ -487,7 +485,7 @@
                 color="warn"
                 mat-stroked-button
                 [href]="reportDataGlitchMailHref"
-                ><ion-icon class="mr-1" name="flag-outline" /><span i18n
+                ><ion-icon class="me-1" name="flag-outline" /><span i18n
                   >Report Data Glitch</span
                 >...</a
               >
@@ -495,14 +493,14 @@
             @if (data.hasPermissionToAccessAdminControl) {
               <a
                 mat-stroked-button
-                [queryParams]="{
-                  assetProfileDialog: true,
-                  dataSource: assetProfile?.dataSource,
-                  symbol: assetProfile?.symbol
-                }"
-                [routerLink]="routerLinkAdminControlMarketData"
+                [routerLink]="
+                  routerLinkAdminControlMarketDataUpdate(
+                    assetProfile?.dataSource ?? data.dataSource,
+                    assetProfile?.symbol ?? data.symbol
+                  )
+                "
                 (click)="onClose()"
-                ><ion-icon class="mr-1" name="create-outline" /><span i18n
+                ><ion-icon class="me-1" name="create-outline" /><span i18n
                   >Manage Asset Profile</span
                 >...</a
               >

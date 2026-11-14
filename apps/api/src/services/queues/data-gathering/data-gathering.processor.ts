@@ -21,6 +21,7 @@ import {
   DataProviderHistoricalResponse
 } from '@ghostfolio/common/interfaces';
 
+import { utc } from '@date-fns/utc';
 import { Process, Processor } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Prisma } from '@prisma/client';
@@ -29,9 +30,6 @@ import { isNumber } from 'class-validator';
 import {
   addDays,
   format,
-  getDate,
-  getMonth,
-  getYear,
   isBefore,
   parseISO,
   eachDayOfInterval
@@ -126,7 +124,8 @@ export class DataGatheringProcessor {
       this.logger.log(
         `Historical market data gathering has been started for ${symbol} (${dataSource}) at ${format(
           currentDate,
-          DATE_FORMAT
+          DATE_FORMAT,
+          { in: utc }
         )}${force ? ' (forced update)' : ''}`
       );
 
@@ -142,30 +141,17 @@ export class DataGatheringProcessor {
       });
 
       const data: Prisma.MarketDataUpdateInput[] = [];
-      let lastMarketPrice: number;
+      const startOfUtcDateOfToday = getStartOfUtcDate(new Date());
+      let lastMarketPrice: number | undefined;
 
-      while (
-        isBefore(
-          currentDate,
-          new Date(
-            Date.UTC(
-              getYear(new Date()),
-              getMonth(new Date()),
-              getDate(new Date()),
-              0
-            )
-          )
-        )
-      ) {
-        if (
+      while (isBefore(currentDate, startOfUtcDateOfToday)) {
+        const marketPriceOfDataProvider =
           historicalData[assetProfileIdentifier]?.[
-            format(currentDate, DATE_FORMAT)
-          ]?.marketPrice
-        ) {
-          lastMarketPrice =
-            historicalData[assetProfileIdentifier]?.[
-              format(currentDate, DATE_FORMAT)
-            ]?.marketPrice;
+            format(currentDate, DATE_FORMAT, { in: utc })
+          ]?.marketPrice;
+
+        if (marketPriceOfDataProvider) {
+          lastMarketPrice = marketPriceOfDataProvider;
         }
 
         if (lastMarketPrice) {
@@ -173,12 +159,13 @@ export class DataGatheringProcessor {
             dataSource,
             symbol,
             date: getStartOfUtcDate(currentDate),
+            isCarriedForward: lastMarketPrice !== marketPriceOfDataProvider,
             marketPrice: lastMarketPrice,
             state: 'CLOSE'
           });
         }
 
-        currentDate = addDays(currentDate, 1);
+        currentDate = addDays(currentDate, 1, { in: utc });
       }
 
       if (force) {
@@ -194,7 +181,8 @@ export class DataGatheringProcessor {
       this.logger.log(
         `Historical market data gathering has been completed for ${symbol} (${dataSource}) at ${format(
           currentDate,
-          DATE_FORMAT
+          DATE_FORMAT,
+          { in: utc }
         )}`,
         `DataGatheringProcessor (${GATHER_HISTORICAL_MARKET_DATA_PROCESS_JOB_NAME})`
       );

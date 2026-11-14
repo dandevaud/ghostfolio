@@ -347,7 +347,12 @@ export class AdminService {
     }
 
     const marketDataItems = await this.prismaService.marketData.findMany({
-      select: { date: true, marketPrice: true, state: true },
+      select: {
+        date: true,
+        isCarriedForward: true,
+        marketPrice: true,
+        state: true
+      },
       where: {
         dataSource: sourceAssetProfileIdentifier.dataSource,
         symbol: sourceAssetProfileIdentifier.symbol
@@ -370,15 +375,18 @@ export class AdminService {
         where: { id: targetAssetProfile.id }
       }),
       this.prismaService.marketData.createMany({
-        data: marketDataItems.map(({ date, marketPrice, state }) => {
-          return {
-            date,
-            marketPrice,
-            state,
-            dataSource: targetAssetProfileIdentifier.dataSource,
-            symbol: targetAssetProfileIdentifier.symbol
-          };
-        }),
+        data: marketDataItems.map(
+          ({ date, isCarriedForward, marketPrice, state }) => {
+            return {
+              date,
+              isCarriedForward,
+              marketPrice,
+              state,
+              dataSource: targetAssetProfileIdentifier.dataSource,
+              symbol: targetAssetProfileIdentifier.symbol
+            };
+          }
+        ),
         skipDuplicates: true
       }),
       // The market data has no relation to the asset profile and is therefore
@@ -652,7 +660,7 @@ export class AdminService {
   }
 
   private async countUsersWithAnalytics() {
-    let where: Prisma.UserWhereInput;
+    let where: Prisma.UserWhereInput | undefined;
 
     if (this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION')) {
       where = {
@@ -718,7 +726,8 @@ export class AdminService {
             activityCount: true,
             country: true,
             dataProviderGhostfolioDailyRequests: true,
-            lastRequestAt: true
+            lastRequestAt: true,
+            lastRequestClient: true
           }
         },
         createdAt: true,
@@ -764,7 +773,8 @@ export class AdminService {
           activityCount: _count.activities || 0,
           country: analytics?.country,
           dailyApiRequests: analytics?.dataProviderGhostfolioDailyRequests || 0,
-          lastActivity: analytics?.lastRequestAt
+          lastActivity: analytics?.lastRequestAt,
+          lastRequestClient: analytics?.lastRequestClient
         };
       }
     );

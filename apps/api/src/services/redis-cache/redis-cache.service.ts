@@ -1,0 +1,192 @@
+import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
+import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
+import { AssetProfileIdentifier, Filter } from '@ghostfolio/common/interfaces';
+import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
+
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import ms from 'ms';
+import { createHash, randomUUID } from 'node:crypto';
+
+import { DateQuery } from '../portfolio/interfaces/date-query.interface';
+
+@Injectable()
+export class RedisCacheService {
+  private readonly logger = new Logger(RedisCacheService.name);
+
+  private client: Cache['stores'][0];
+
+  public constructor(
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    private readonly configurationService: ConfigurationService
+  ) {
+    this.client = cache.stores[0];
+
+    this.client.deserialize = (value) => {
+      try {
+        return JSON.parse(value);
+      } catch {}
+
+      return value;
+    };
+
+    this.client.on('error', (error) => {
+      this.logger.error(error);
+    });
+  }
+
+  public async get(key: string): Promise<string | undefined> {
+    return this.cache.get(key);
+  }
+
+  public async getKeys(aPrefix?: string): Promise<string[]> {
+    const keys: string[] = [];
+    const prefix = aPrefix;
+
+    try {
+      if (this.client.iterator) {
+        for await (const [key] of this.client.iterator({})) {
+          if ((prefix && key.startsWith(prefix)) || !prefix) {
+            keys.push(key);
+          }
+        }
+      }
+    } catch {}
+
+    return keys;
+  }
+
+  public getPortfolioSnapshotKey({
+    calculationType,
+    filters,
+    userId
+  }: {
+    calculationType: PerformanceCalculationType;
+    filters?: Filter[];
+    userId: string;
+  }) {
+    let portfolioSnapshotKey = `${this.getPortfolioSnapshotKeyPrefix({ userId })}-${calculationType}`;
+
+    if (filters && filters.length > 0) {
+      const filtersHash = createHash('sha256')
+        .update(JSON.stringify(filters))
+        .digest('hex');
+
+      portfolioSnapshotKey = `${portfolioSnapshotKey}-${filtersHash}`;
+    }
+
+    return portfolioSnapshotKey;
+  }
+
+  public getQuoteKey({ dataSource, symbol }: AssetProfileIdentifier) {
+    return `quote-${getAssetProfileIdentifier({ dataSource, symbol })}`;
+  }
+
+  public getDateQueryKey(dateQuery: DateQuery) {
+    const lt = dateQuery.lt ? dateQuery.lt.getTime() : '';
+    const gte = dateQuery.gte ? dateQuery.gte.getTime() : '';
+    const inPart = (dateQuery.in ?? []).map((date) => date.getTime()).join(',');
+
+    return `dateQuery-lte-${lt}-gte-${gte}-in-${inPart}`;
+  }
+
+  public getDateQueryFromKey(key: string): DateQuery | null {
+    const regex = /dateQuery-lte-(\d*)-gte-(\d*)-in-([\d,]*)/;
+    const match = regex.exec(key);
+
+    if (!match) {
+      return null;
+    }
+
+    const lt = match[1];
+    const gte = match[2];
+    const inPart = match[3];
+
+    const dateQuery: DateQuery = {};
+
+    if (lt) {
+      dateQuery.lt = new Date(parseInt(lt, 10));
+    }
+
+    if (gte) {
+      dateQuery.gte = new Date(parseInt(gte, 10));
+    }
+
+    if (inPart) {
+      dateQuery.in = inPart
+        .split(',')
+        .map((timestamp) => new Date(parseInt(timestamp, 10)));
+    }
+
+    return dateQuery;
+  }
+
+  public async isHealthy() {
+    const HEALTH_CHECK_TIMEOUT = ms('5 seconds');
+
+    const testKey = `__health_check__${randomUUID().replace(/-/g, '')}`;
+    const testValue = Date.now().toString();
+
+    try {
+      await Promise.race([
+        (async () => {
+          await this.set(testKey, testValue, HEALTH_CHECK_TIMEOUT);
+
+          const result = await this.get(testKey);
+
+          if (result !== testValue) {
+            throw new Error('Redis health check failed: value mismatch');
+          }
+        })(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Redis health check failed: timeout')),
+            HEALTH_CHECK_TIMEOUT
+          )
+        )
+      ]);
+
+      return true;
+    } catch (error) {
+      this.logger.error(error?.message);
+
+      return false;
+    } finally {
+      try {
+        await this.remove(testKey);
+      } catch {}
+    }
+  }
+
+  public async remove(key: string) {
+    return this.cache.del(key);
+  }
+
+  public async removePortfolioSnapshotsByUserId({
+    userId
+  }: {
+    userId: string;
+  }) {
+    const keys = await this.getKeys(
+      this.getPortfolioSnapshotKeyPrefix({ userId })
+    );
+
+    return this.cache.mdel(keys);
+  }
+
+  public async reset() {
+    return this.cache.clear();
+  }
+
+  public async set(key: string, value: string, ttl?: number) {
+    return this.cache.set(
+      key,
+      value,
+      ttl ?? this.configurationService.get('CACHE_TTL')
+    );
+  }
+
+  private getPortfolioSnapshotKeyPrefix({ userId }: { userId: string }) {
+    return `portfolio-snapshot-${userId}`;
+  }
+}

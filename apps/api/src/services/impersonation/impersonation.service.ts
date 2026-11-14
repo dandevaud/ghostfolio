@@ -1,6 +1,7 @@
-import { SubscriptionService } from '@ghostfolio/api/app/subscription/subscription.service';
+import { AccessService } from '@ghostfolio/api/services/access/access.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
+import { SubscriptionService } from '@ghostfolio/api/services/subscription/subscription.service';
 import { DEFAULT_CURRENCY } from '@ghostfolio/common/config';
 import { UserSettings } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
@@ -15,32 +16,41 @@ import type {
 } from '@ghostfolio/common/types';
 
 import { Injectable } from '@nestjs/common';
-import { Access } from '@prisma/client';
+import { Access, AccessType } from '@prisma/client';
 
 @Injectable()
 export class ImpersonationService {
   public constructor(
+    private readonly accessService: AccessService,
     private readonly configurationService: ConfigurationService,
     private readonly prismaService: PrismaService,
     private readonly subscriptionService: SubscriptionService
   ) {}
 
+  /**
+   * Gives the context of the identifier. The types are the kinds of access
+   * which the caller accepts as a credential of its own, hence a caller which
+   * has no authenticated user has to name them. An empty list rejects every
+   * identifier, so that an access can never be a credential by accident.
+   */
   public async resolve({
     impersonationId,
+    types,
     user
   }: {
     impersonationId?: string;
+    types?: AccessType[];
     user?: UserWithSettings;
   }): Promise<ImpersonationContext> {
     const { access, userId: impersonatedUserId } =
-      await this.validateImpersonation({ impersonationId, user });
+      await this.validateImpersonation({ impersonationId, types, user });
 
     if (!impersonatedUserId) {
       return {
         authenticatedUserSubscription: user?.subscription,
         isActive: false,
         scopes: getScopesOfOwnAccess(),
-        userId: user?.id,
+        userId: user?.id as string,
         userSettings: user?.settings?.settings ?? {},
         userSubscription: user?.subscription
       };
@@ -83,9 +93,11 @@ export class ImpersonationService {
 
   private async validateImpersonation({
     impersonationId,
+    types,
     user
   }: {
     impersonationId?: string;
+    types?: AccessType[];
     user?: UserWithSettings;
   }): Promise<{ access?: Access; userId: string | null }> {
     if (!impersonationId) {
@@ -100,9 +112,12 @@ export class ImpersonationService {
         }
       });
 
-      if (accessObject?.userId) {
+      if (accessObject?.userId && !this.accessService.isExpired(accessObject)) {
+        await this.accessService.updateLastUsedAt(accessObject);
+
         return { access: accessObject, userId: accessObject.userId };
       } else if (
+        !accessObject &&
         hasPermission(user.permissions, permissions.impersonateAllUsers)
       ) {
         // The identifier is a user id in this case, hence verify its existence
@@ -113,16 +128,17 @@ export class ImpersonationService {
 
         return { userId: impersonatedUser?.id ?? null };
       }
-    } else {
-      // Public access
+    } else if (types?.length) {
       const accessObject = await this.prismaService.access.findFirst({
         where: {
-          granteeUserId: null,
-          user: { id: impersonationId }
+          id: impersonationId,
+          type: { in: types }
         }
       });
 
-      if (accessObject?.userId) {
+      if (accessObject?.userId && !this.accessService.isExpired(accessObject)) {
+        await this.accessService.updateLastUsedAt(accessObject);
+
         return { access: accessObject, userId: accessObject.userId };
       }
     }

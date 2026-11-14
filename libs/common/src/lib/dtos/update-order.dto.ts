@@ -1,20 +1,31 @@
+import {
+  COMMENT_MAXIMUM_LENGTH,
+  SYMBOL_MAXIMUM_LENGTH
+} from '@ghostfolio/common/config';
 import { IsAfter1970Constraint } from '@ghostfolio/common/validator-constraints/is-after-1970';
 import { IsCurrencyCode } from '@ghostfolio/common/validators/is-currency-code';
+import {
+  AssetClass,
+  AssetSubClass,
+  DataSource,
+  Type
+} from '@ghostfolio/prisma/enums';
 
-import { AssetClass, AssetSubClass, DataSource, Type } from '@prisma/client';
 import { Transform, TransformFnParams } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
   IsEnum,
   IsISO8601,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   Validate
 } from 'class-validator';
-import { isString } from 'lodash';
+import { isString } from 'lodash-es';
 
 export class UpdateOrderDto {
   @IsOptional()
@@ -31,6 +42,7 @@ export class UpdateOrderDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(COMMENT_MAXIMUM_LENGTH)
   @Transform(({ value }: TransformFnParams) =>
     isString(value) ? value.trim() : value
   )
@@ -61,7 +73,12 @@ export class UpdateOrderDto {
   @Min(0)
   quantity: number;
 
+  @IsNotEmpty()
   @IsString()
+  @MaxLength(SYMBOL_MAXIMUM_LENGTH)
+  @Transform(({ value }: TransformFnParams) =>
+    isString(value) ? value.trim() : value
+  )
   symbol: string;
 
   @ArrayUnique()

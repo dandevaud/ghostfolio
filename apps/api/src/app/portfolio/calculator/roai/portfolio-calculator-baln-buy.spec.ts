@@ -1,21 +1,19 @@
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import {
-  activityDummyData,
-  assetProfileDummyData,
+  loadActivitiesFromExportFile,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
-import { Activity } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
 import { Big } from 'big.js';
@@ -39,7 +37,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
@@ -74,7 +72,7 @@ describe('PortfolioCalculator', () => {
 
     configurationService = new ConfigurationService();
 
-    currentRateService = new CurrentRateService(null, null, null, null);
+    currentRateService = new CurrentRateService(null, null, null);
 
     exchangeRateDataService = new ExchangeRateDataService(
       null,
@@ -116,29 +114,13 @@ describe('PortfolioCalculator', () => {
     it.only('with BALN.SW buy', async () => {
       jest.useFakeTimers().setSystemTime(parseDate('2021-12-18').getTime());
 
-      const activities: Activity[] = [
-        {
-          ...activityDummyData,
-          assetProfile: {
-            ...assetProfileDummyData,
-            currency: 'CHF',
-            dataSource: 'YAHOO',
-            name: 'Bâloise Holding AG',
-            symbol: 'BALN.SW'
-          },
-          date: new Date('2021-11-30'),
-          feeInAssetProfileCurrency: 1.55,
-          feeInBaseCurrency: 1.55,
-          quantity: 2,
-          type: 'BUY',
-          unitPriceInAssetProfileCurrency: 136.6
-        }
-      ];
+      const { activities, userCurrency } =
+        loadActivitiesFromExportFile('baln-buy.json');
 
       const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.ROAI,
-        currency: 'CHF',
+        currency: userCurrency,
         userId: userDummyData.id
       });
 
@@ -169,6 +151,8 @@ describe('PortfolioCalculator', () => {
         positions: [
           {
             activitiesCount: 1,
+            averageInvestment: new Big('273.2'),
+            averageInvestmentWithCurrencyEffect: new Big('273.2'),
             averagePrice: new Big('136.6'),
             currency: 'CHF',
             dataSource: 'YAHOO',
@@ -204,8 +188,6 @@ describe('PortfolioCalculator', () => {
             quantity: new Big('2'),
             symbol: 'BALN.SW',
             tags: [],
-            timeWeightedInvestment: new Big('273.2'),
-            timeWeightedInvestmentWithCurrencyEffect: new Big('273.2'),
             valueInBaseCurrency: new Big('297.8')
           }
         ],
@@ -248,29 +230,14 @@ describe('PortfolioCalculator', () => {
     it.only('with BALN.SW buy (with unit price lower than closing price)', async () => {
       jest.useFakeTimers().setSystemTime(parseDate('2021-12-18').getTime());
 
-      const activities: Activity[] = [
-        {
-          ...activityDummyData,
-          assetProfile: {
-            ...assetProfileDummyData,
-            currency: 'CHF',
-            dataSource: 'YAHOO',
-            name: 'Bâloise Holding AG',
-            symbol: 'BALN.SW'
-          },
-          date: new Date('2021-11-30'),
-          feeInAssetProfileCurrency: 1.55,
-          feeInBaseCurrency: 1.55,
-          quantity: 2,
-          type: 'BUY',
-          unitPriceInAssetProfileCurrency: 135.0
-        }
-      ];
+      const { activities, userCurrency } = loadActivitiesFromExportFile(
+        'baln-buy-with-unit-price-lower-than-closing-price.json'
+      );
 
       const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.ROAI,
-        currency: 'CHF',
+        currency: userCurrency,
         userId: userDummyData.id
       });
 
@@ -288,29 +255,14 @@ describe('PortfolioCalculator', () => {
     it.only('with BALN.SW buy (with unit price lower than closing price), calculated on buy date', async () => {
       jest.useFakeTimers().setSystemTime(parseDate('2021-11-30').getTime());
 
-      const activities: Activity[] = [
-        {
-          ...activityDummyData,
-          assetProfile: {
-            ...assetProfileDummyData,
-            currency: 'CHF',
-            dataSource: 'YAHOO',
-            name: 'Bâloise Holding AG',
-            symbol: 'BALN.SW'
-          },
-          date: new Date('2021-11-30'),
-          feeInAssetProfileCurrency: 1.55,
-          feeInBaseCurrency: 1.55,
-          quantity: 2,
-          type: 'BUY',
-          unitPriceInAssetProfileCurrency: 135.0
-        }
-      ];
+      const { activities, userCurrency } = loadActivitiesFromExportFile(
+        'baln-buy-with-unit-price-lower-than-closing-price.json'
+      );
 
       const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.ROAI,
-        currency: 'CHF',
+        currency: userCurrency,
         userId: userDummyData.id
       });
 
@@ -323,6 +275,33 @@ describe('PortfolioCalculator', () => {
 
       // Closing price on 2021-11-30: 136.6
       expect(snapshotOnBuyDate?.netPerformanceWithCurrencyEffect).toEqual(1.65); // 2 * (136.6 - 135.0) - 1.55 = 1.65
+    });
+
+    it.only('with BALN.SW buy (on a date without historical market data)', async () => {
+      jest.useFakeTimers().setSystemTime(parseDate('2021-12-18').getTime());
+
+      const { activities, userCurrency } =
+        loadActivitiesFromExportFile('baln-buy.json');
+
+      const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
+        activities,
+        calculationType: PerformanceCalculationType.ROAI,
+        currency: userCurrency,
+        userId: userDummyData.id
+      });
+
+      const portfolioSnapshot = await portfolioCalculator.computeSnapshot();
+      const snapshotOnDateWithoutMarketData =
+        portfolioSnapshot.historicalData.find(({ date }) => {
+          return date === '2021-12-05';
+        });
+
+      // No historical market data on 2021-12-05: carry forward the closing
+      // price of 2021-11-30, which is the date of the activity
+      expect(snapshotOnDateWithoutMarketData?.value).toEqual(273.2); // 2 * 136.6
+      expect(
+        snapshotOnDateWithoutMarketData?.netPerformanceWithCurrencyEffect
+      ).toEqual(-1.55); // 2 * (136.6 - 136.6) - 1.55
     });
   });
 });

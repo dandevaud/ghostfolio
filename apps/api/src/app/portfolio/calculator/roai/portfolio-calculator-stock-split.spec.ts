@@ -7,14 +7,14 @@ import {
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { adjustActivityBySplits } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.helper';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
 import { Activity } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
@@ -41,7 +41,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
@@ -75,7 +75,8 @@ describe('RoaiPortfolioCalculator stock splits', () => {
     RedisCacheServiceMock.reset();
 
     configurationService = new ConfigurationService();
-    currentRateService = new CurrentRateService(null, null, null, null);
+    currentRateService = new CurrentRateService(null, null, null);
+
     exchangeRateDataService = new ExchangeRateDataService(
       null,
       null,
@@ -115,9 +116,11 @@ describe('RoaiPortfolioCalculator stock splits', () => {
       [createSplit({ denominator: 1, numerator: 2 })]
     );
 
-    const position = getLastPosition(portfolioCalculatorFactory, [activity]);
+    const holdingBalance = getLatestHoldingBalance(portfolioCalculatorFactory, [
+      activity
+    ]);
 
-    expect(position).toMatchObject({
+    expect(holdingBalance).toMatchObject({
       averagePrice: new Big(50),
       investment: new Big(1000),
       quantity: new Big(20)
@@ -130,9 +133,11 @@ describe('RoaiPortfolioCalculator stock splits', () => {
       [createSplit({ denominator: 10, numerator: 1 })]
     );
 
-    const position = getLastPosition(portfolioCalculatorFactory, [activity]);
+    const holdingBalance = getLatestHoldingBalance(portfolioCalculatorFactory, [
+      activity
+    ]);
 
-    expect(position).toMatchObject({
+    expect(holdingBalance).toMatchObject({
       averagePrice: new Big(1000),
       investment: new Big(1000),
       quantity: new Big(1)
@@ -151,9 +156,12 @@ describe('RoaiPortfolioCalculator stock splits', () => {
       unitPrice: 60
     });
 
-    const position = getLastPosition(portfolioCalculatorFactory, [buy, sell]);
+    const holdingBalance = getLatestHoldingBalance(portfolioCalculatorFactory, [
+      buy,
+      sell
+    ]);
 
-    expect(position).toMatchObject({
+    expect(holdingBalance).toMatchObject({
       averagePrice: new Big(50),
       investment: new Big(750),
       quantity: new Big(15)
@@ -169,11 +177,15 @@ describe('RoaiPortfolioCalculator stock splits', () => {
       ]
     );
 
-    const position = getLastPosition(portfolioCalculatorFactory, [activity]);
+    const holdingBalance = getLatestHoldingBalance(portfolioCalculatorFactory, [
+      activity
+    ]);
 
-    expect(position.averagePrice).toEqual(new Big(150));
-    expect(position.quantity.toFixed(15)).toBe(new Big(20).div(3).toFixed(15));
-    expect(position.investment.toNumber()).toBeCloseTo(1000, 12);
+    expect(holdingBalance.averagePrice).toEqual(new Big(150));
+    expect(holdingBalance.quantity.toFixed(15)).toBe(
+      new Big(20).div(3).toFixed(15)
+    );
+    expect(holdingBalance.investment.toNumber()).toBeCloseTo(1000, 12);
   });
 
   it('resets quantity and investment when the adjusted position is closed', () => {
@@ -188,18 +200,21 @@ describe('RoaiPortfolioCalculator stock splits', () => {
       unitPrice: 60
     });
 
-    const position = getLastPosition(portfolioCalculatorFactory, [buy, sell]);
+    const holdingBalance = getLatestHoldingBalance(portfolioCalculatorFactory, [
+      buy,
+      sell
+    ]);
 
-    expect(position.quantity).toEqual(new Big(0));
-    expect(position.investment).toEqual(new Big(0));
+    expect(holdingBalance.quantity).toEqual(new Big(0));
+    expect(holdingBalance.investment).toEqual(new Big(0));
   });
 
   it('preserves existing behavior when no splits exist', () => {
-    const position = getLastPosition(portfolioCalculatorFactory, [
+    const holdingBalance = getLatestHoldingBalance(portfolioCalculatorFactory, [
       createActivity({ unitPrice: 100 })
     ]);
 
-    expect(position).toMatchObject({
+    expect(holdingBalance).toMatchObject({
       averagePrice: new Big(100),
       investment: new Big(1000),
       quantity: new Big(10)
@@ -238,7 +253,7 @@ describe('RoaiPortfolioCalculator stock splits', () => {
   });
 });
 
-function getLastPosition(
+function getLatestHoldingBalance(
   portfolioCalculatorFactory: PortfolioCalculatorFactory,
   activities: Activity[]
 ) {
@@ -249,7 +264,7 @@ function getLastPosition(
     userId: userDummyData.id
   });
 
-  return calculator.getTransactionPoints().at(-1).items[0];
+  return calculator.getHoldingBalancesByDate().at(-1).holdings[0];
 }
 
 function createActivity({

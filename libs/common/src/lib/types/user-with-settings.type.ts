@@ -1,12 +1,11 @@
 import { SubscriptionType } from '@ghostfolio/common/enums';
 import { SubscriptionOffer, UserSettings } from '@ghostfolio/common/interfaces';
-
-import { Account, Settings, User } from '@prisma/client';
+import type { Account, Settings, User } from '@ghostfolio/prisma/browser';
 
 // TODO: Compare with User interface
 export type UserWithSettings = User & {
   accounts: Account[];
-  activityCount: number;
+  activitiesCount: number;
   dataProviderGhostfolioDailyRequests: number;
   permissions?: string[];
   settings: Settings & { settings: UserSettings };

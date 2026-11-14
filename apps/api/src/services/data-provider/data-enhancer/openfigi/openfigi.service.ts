@@ -24,10 +24,13 @@ export class OpenFigiDataEnhancerService implements DataEnhancerInterface {
     response: Partial<SymbolProfile>;
     symbol: string;
   }): Promise<Partial<SymbolProfile>> {
-    if (!(
-      response.assetClass === 'EQUITY' &&
-      (response.assetSubClass === 'ETF' || response.assetSubClass === 'STOCK')
-    )) {
+    if (
+      !(
+        response.assetClass === 'EQUITY' &&
+        (response.assetSubClass === 'ETF' || response.assetSubClass === 'STOCK')
+      ) ||
+      !response.dataSource
+    ) {
       return response;
     }
 

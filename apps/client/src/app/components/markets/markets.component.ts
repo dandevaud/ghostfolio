@@ -1,9 +1,10 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import { DEFAULT_LOCALE } from '@ghostfolio/common/config';
 import { resetHours } from '@ghostfolio/common/helper';
 import {
   Benchmark,
-  HistoricalDataItem,
   InfoItem,
+  LineChartItem,
   MarketDataOfMarketsResponse,
   User
 } from '@ghostfolio/common/interfaces';
@@ -27,6 +28,7 @@ import {
   signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { isNumber } from 'lodash-es';
 import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
@@ -43,16 +45,19 @@ import { DeviceDetectorService } from 'ngx-device-detector';
   templateUrl: './markets.html'
 })
 export class GfMarketsComponent implements OnInit {
+  protected readonly DEFAULT_LOCALE = DEFAULT_LOCALE;
+
   protected readonly benchmarks = signal<Benchmark[] | undefined>(undefined);
 
   protected readonly deviceType = computed(
     () => this.deviceDetectorService.deviceInfo().deviceType
   );
 
-  protected readonly fearAndGreedIndexModeOptions: ToggleOption[] = [
-    { label: $localize`Stocks`, value: 'STOCKS' },
-    { label: $localize`Cryptocurrencies`, value: 'CRYPTOCURRENCIES' }
-  ];
+  protected readonly fearAndGreedIndexModeOptions: ToggleOption<FearAndGreedIndexMode>[] =
+    [
+      { label: $localize`Stocks`, value: 'STOCKS' },
+      { label: $localize`Cryptocurrencies`, value: 'CRYPTOCURRENCIES' }
+    ];
 
   protected readonly fearLabel = $localize`Fear`;
   protected readonly greedLabel = $localize`Greed`;
@@ -61,8 +66,9 @@ export class GfMarketsComponent implements OnInit {
   protected fearAndGreedIndex: number | undefined;
   protected fearAndGreedIndexMode: FearAndGreedIndexMode = 'STOCKS';
   protected hasPermissionToAccessFearAndGreedIndex: boolean;
+  protected hasPermissionToOpenBenchmarkDetails = false;
   protected hasPermissionToReadMarketDataOfMarkets: boolean;
-  protected historicalDataItems: HistoricalDataItem[];
+  protected historicalDataItems: LineChartItem[];
   protected isLoadingFearAndGreedIndex = true;
   protected user: User;
 
@@ -93,6 +99,8 @@ export class GfMarketsComponent implements OnInit {
       .subscribe((state) => {
         if (state?.user) {
           this.user = state.user;
+
+          this.hasPermissionToOpenBenchmarkDetails = true;
 
           this.hasPermissionToReadMarketDataOfMarkets = hasPermission(
             this.user.permissions,
@@ -154,13 +162,20 @@ export class GfMarketsComponent implements OnInit {
     this.fearAndGreedIndex =
       this.fearAndGreedIndexData[this.fearAndGreedIndexMode]?.marketPrice;
 
-    this.historicalDataItems = [
-      ...(this.fearAndGreedIndexData[this.fearAndGreedIndexMode]
-        ?.historicalData ?? []),
-      {
+    const historicalDataItems = (
+      this.fearAndGreedIndexData[this.fearAndGreedIndexMode]?.historicalData ??
+      []
+    ).filter((item): item is LineChartItem => {
+      return isNumber(item.value);
+    });
+
+    if (isNumber(this.fearAndGreedIndex)) {
+      historicalDataItems.push({
         date: resetHours(new Date()).toISOString(),
         value: this.fearAndGreedIndex
-      }
-    ];
+      });
+    }
+
+    this.historicalDataItems = historicalDataItems;
   }
 }

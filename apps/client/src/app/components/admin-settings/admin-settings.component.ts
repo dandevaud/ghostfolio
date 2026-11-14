@@ -3,6 +3,7 @@ import { GfAdminTagComponent } from '@ghostfolio/client/components/admin-tag/adm
 import { GfDataProviderStatusComponent } from '@ghostfolio/client/components/data-provider-status/data-provider-status.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
+  DEFAULT_LOCALE,
   E_MAIL_LINE_BREAK,
   PROPERTY_API_KEY_GHOSTFOLIO
 } from '@ghostfolio/common/config';
@@ -41,7 +42,7 @@ import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { ellipsisHorizontal, trashOutline } from 'ionicons/icons';
-import { get } from 'lodash';
+import { get } from 'lodash-es';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { catchError, filter, of } from 'rxjs';
 
@@ -76,6 +77,7 @@ export class GfAdminSettingsComponent implements OnInit {
   public dataSource = new MatTableDataSource<DataProviderInfo>();
   public defaultDateFormat: string;
   public displayedColumns = [
+    'icon',
     'name',
     'status',
     'assetProfileCount',
@@ -96,6 +98,8 @@ export class GfAdminSettingsComponent implements OnInit {
   ].join(E_MAIL_LINE_BREAK)}`;
   public pricingUrl: string;
   public user: User;
+
+  protected readonly DEFAULT_LOCALE = DEFAULT_LOCALE;
 
   public constructor(
     private adminService: AdminService,

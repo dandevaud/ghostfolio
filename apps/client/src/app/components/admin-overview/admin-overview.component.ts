@@ -32,7 +32,8 @@ import {
   Component,
   DestroyRef,
   inject,
-  OnInit
+  OnInit,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -48,12 +49,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import {
-  addMilliseconds,
-  differenceInSeconds,
-  formatDistanceToNowStrict,
-  parseISO
-} from 'date-fns';
+import { addMilliseconds, formatDistanceToNowStrict } from 'date-fns';
 import { addIcons } from 'ionicons';
 import {
   closeCircleOutline,
@@ -64,7 +60,7 @@ import {
 } from 'ionicons/icons';
 import ms, { StringValue } from 'ms';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -107,6 +103,7 @@ export class GfAdminOverviewComponent implements OnInit {
   protected isDataGatheringEnabled: boolean;
   protected isLoading = false;
   protected isReadOnlyMode: boolean;
+  protected readonly isSavingCoupons = signal(false);
   protected isUserSignupEnabled: boolean;
   protected readonly permissions = permissions;
   protected systemMessage: SystemMessage;
@@ -175,7 +172,8 @@ export class GfAdminOverviewComponent implements OnInit {
       this.activitiesCount / this.userCount
     ).toLocaleString(this.user?.settings?.locale, {
       maximumFractionDigits: 2,
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
+      useGrouping: true
     });
 
     return `(${formattedActivitiesCountPerUser} ${$localize`per User`})`;
@@ -185,21 +183,6 @@ export class GfAdminOverviewComponent implements OnInit {
     this.isLoading = true;
 
     this.fetchAdminData();
-  }
-
-  protected formatDistanceToNow(aDateString: string) {
-    if (aDateString) {
-      const distanceString = formatDistanceToNowStrict(parseISO(aDateString), {
-        addSuffix: true
-      });
-
-      return Math.abs(differenceInSeconds(parseISO(aDateString), new Date())) <
-        60
-        ? 'just now'
-        : distanceString;
-    }
-
-    return '';
   }
 
   protected formatStringValue(aStringValue: StringValue) {
@@ -410,11 +393,18 @@ export class GfAdminOverviewComponent implements OnInit {
     coupons: Coupon[];
     snackBarMessage?: string;
   }) {
+    this.isSavingCoupons.set(true);
+
     this.dataService
       .putAdminSetting(PROPERTY_COUPONS, {
         value: JSON.stringify(coupons)
       })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => {
+          this.isSavingCoupons.set(false);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => {
         this.couponsDataSource.data = coupons;
 

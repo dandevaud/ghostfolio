@@ -37,6 +37,7 @@ import type {
   RequestWithUser
 } from '@ghostfolio/common/types';
 
+import { utc } from '@date-fns/utc';
 import {
   Body,
   Controller,
@@ -165,6 +166,11 @@ export class AdminController {
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<void> {
+    await this.dataGatheringService.removeAssetProfileJobFromQueue({
+      dataSource,
+      symbol
+    });
+
     await this.dataGatheringService.addJobToQueue({
       data: {
         dataSource,
@@ -187,7 +193,7 @@ export class AdminController {
     @Param('symbol') symbol: string,
     @Query('range') dateRange: DateRange
   ): Promise<void> {
-    let date: Date;
+    let date: Date | undefined;
 
     if (dateRange) {
       const { startDate } = getIntervalFromDateRange({ dateRange });
@@ -226,7 +232,7 @@ export class AdminController {
     @Param('dateString') dateString: string,
     @Param('symbol') symbol: string
   ): Promise<MarketData> {
-    const date = parseISO(dateString);
+    const date = parseISO(dateString, { in: utc });
 
     if (!isDate(date)) {
       throw new HttpException(
@@ -235,11 +241,20 @@ export class AdminController {
       );
     }
 
-    return this.dataGatheringService.gatherSymbolForDate({
+    const marketData = await this.dataGatheringService.gatherSymbolForDate({
       dataSource,
       date,
       symbol
     });
+
+    if (!marketData) {
+      throw new HttpException(
+        getReasonPhrase(StatusCodes.NOT_FOUND),
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    return marketData;
   }
 
   @HasPermission(permissions.accessAdminControl)
@@ -371,6 +386,7 @@ export class AdminController {
     return this.adminService.putSetting(key, data.value);
   }
 
+  /** @deprecated */
   @Get('user')
   @HasPermission(permissions.accessAdminControl)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
@@ -384,6 +400,7 @@ export class AdminController {
     });
   }
 
+  /** @deprecated */
   @Get('user/:id')
   @HasPermission(permissions.accessAdminControl)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)

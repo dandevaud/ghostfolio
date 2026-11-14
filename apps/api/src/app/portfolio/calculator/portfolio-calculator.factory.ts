@@ -1,9 +1,10 @@
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { SubscriptionType } from '@ghostfolio/common/enums';
 import {
   Activity,
   Filter,
@@ -19,6 +20,7 @@ import { PortfolioCalculator } from './portfolio-calculator';
 import { RoaiPortfolioCalculator } from './roai/portfolio-calculator';
 // import { RoaiPortfolioCalculator } from './roai/portfolio-calculator';
 import { RoiPortfolioCalculator } from './roi/portfolio-calculator';
+import { RoiTwrPortfolioCalculator } from './roitwr/portfolio-calculator';
 import { TwrPortfolioCalculator } from './twr/portfolio-calculator';
 
 @Injectable()
@@ -39,6 +41,8 @@ export class PortfolioCalculatorFactory {
     calculationType,
     currency,
     filters = [],
+    usePortfolioSnapshotCache = true,
+    subscriptionType,
     userId
   }: {
     accountBalanceItems?: HistoricalDataItem[];
@@ -46,6 +50,8 @@ export class PortfolioCalculatorFactory {
     calculationType: PerformanceCalculationType;
     currency: string;
     filters?: Filter[];
+    usePortfolioSnapshotCache?: boolean;
+    subscriptionType?: SubscriptionType;
     userId: string;
   }): PortfolioCalculator {
     switch (calculationType) {
@@ -55,6 +61,8 @@ export class PortfolioCalculatorFactory {
           activities,
           currency,
           filters,
+          usePortfolioSnapshotCache,
+          subscriptionType,
           userId,
           configurationService: this.configurationService,
           currentRateService: this.currentRateService,
@@ -70,6 +78,8 @@ export class PortfolioCalculatorFactory {
           activities,
           currency,
           filters,
+          usePortfolioSnapshotCache,
+          subscriptionType,
           userId,
           configurationService: this.configurationService,
           currentRateService: this.currentRateService,
@@ -85,6 +95,8 @@ export class PortfolioCalculatorFactory {
           activities,
           currency,
           filters,
+          usePortfolioSnapshotCache,
+          subscriptionType,
           userId,
           configurationService: this.configurationService,
           currentRateService: this.currentRateService,
@@ -94,12 +106,31 @@ export class PortfolioCalculatorFactory {
           activitiesService: this.activitiesService
         });
 
+      case PerformanceCalculationType.ROITWR:
+        return new RoiTwrPortfolioCalculator({
+          accountBalanceItems,
+          activities,
+          currency,
+          currentRateService: this.currentRateService,
+          usePortfolioSnapshotCache,
+          subscriptionType,
+          userId,
+          configurationService: this.configurationService,
+          exchangeRateDataService: this.exchangeRateDataService,
+          portfolioSnapshotService: this.portfolioSnapshotService,
+          redisCacheService: this.redisCacheService,
+          activitiesService: this.activitiesService,
+          filters
+        });
+
       case PerformanceCalculationType.TWR:
         return new TwrPortfolioCalculator({
           accountBalanceItems,
           activities,
           currency,
           currentRateService: this.currentRateService,
+          usePortfolioSnapshotCache,
+          subscriptionType,
           userId,
           configurationService: this.configurationService,
           exchangeRateDataService: this.exchangeRateDataService,

@@ -15,7 +15,7 @@ import { BatchPrismaClient } from '@ghostfolio/common/chunkhelper';
 import {
   DATE_FORMAT,
   extractNumberFromString,
-  getYesterday
+  getStartOfUtcDateOfYesterday
 } from '@ghostfolio/common/helper';
 import {
   DataProviderHistoricalResponse,
@@ -25,6 +25,7 @@ import {
   ScraperConfiguration
 } from '@ghostfolio/common/interfaces';
 
+import { utc } from '@date-fns/utc';
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, SymbolProfile } from '@prisma/client';
 import * as cheerio from 'cheerio';
@@ -97,11 +98,11 @@ export class ManualService implements DataProviderInterface {
         let date = from;
 
         while (isBefore(date, to)) {
-          historical[format(date, DATE_FORMAT)] = {
+          historical[format(date, DATE_FORMAT, { in: utc })] = {
             marketPrice: defaultMarketPrice
           };
 
-          date = addDays(date, 1);
+          date = addDays(date, 1, { in: utc });
         }
 
         return historical;
@@ -115,7 +116,7 @@ export class ManualService implements DataProviderInterface {
       });
 
       return {
-        [format(getYesterday(), DATE_FORMAT)]: {
+        [format(getStartOfUtcDateOfYesterday(), DATE_FORMAT, { in: utc })]: {
           marketPrice: value
         }
       };
@@ -155,7 +156,7 @@ export class ManualService implements DataProviderInterface {
       const marketData = await batch
         .over(symbols)
         .with((prisma, _symbols) =>
-          prisma.marketData.findMany({
+          prisma.marketData.findFirst({
             distinct: ['symbol'],
             orderBy: {
               date: 'desc'
@@ -164,7 +165,8 @@ export class ManualService implements DataProviderInterface {
             where: {
               symbol: {
                 in: _symbols
-              }
+              },
+              dataSource: this.getName()
             }
           })
         )
@@ -209,7 +211,7 @@ export class ManualService implements DataProviderInterface {
         marketPrice =
           marketPrice ??
           marketData.find((marketDataItem) => {
-            return marketDataItem.symbol === symbol;
+            return marketDataItem?.symbol === symbol;
           })?.marketPrice ??
           0;
 

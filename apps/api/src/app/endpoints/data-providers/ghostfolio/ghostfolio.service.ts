@@ -1,4 +1,3 @@
-import { SymbolService } from '@ghostfolio/api/app/symbol/symbol.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { GhostfolioService as GhostfolioDataProviderService } from '@ghostfolio/api/services/data-provider/ghostfolio/ghostfolio.service';
@@ -12,6 +11,7 @@ import {
 import { FetchService } from '@ghostfolio/api/services/fetch/fetch.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
+import { SymbolService } from '@ghostfolio/api/services/symbol/symbol.service';
 import {
   DATA_SOURCES_GHOSTFOLIO_DATA_PROVIDER_SETUP_PERIOD,
   DATA_SOURCES_GHOSTFOLIO_DATA_PROVIDER_SETUP_PERIOD_MAX_REQUESTS_FACTOR,
@@ -40,7 +40,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, SymbolProfile } from '@prisma/client';
 import { Big } from 'big.js';
 import { addMilliseconds, isBefore } from 'date-fns';
-import { isEmpty } from 'lodash';
+import { isEmpty } from 'lodash-es';
 
 @Injectable()
 export class GhostfolioService {

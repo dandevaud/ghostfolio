@@ -1,11 +1,13 @@
 import {
   canOpenHoldingDetail,
+  getCountryCodeFromCurrency,
+  getHoldingName,
   getLocale,
-  getLowercase
+  getLowercase,
+  isCashPosition
 } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
-  PortfolioPosition,
   PortfolioPerformance
 } from '@ghostfolio/common/interfaces';
 
@@ -23,12 +25,13 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatSort, MatSortModule, SortDirection } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
 import { GfValueComponent } from '../value/value.component';
+import { HoldingsTableItem } from './interfaces/interfaces';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,8 +56,15 @@ export class GfHoldingsTableComponent {
   public readonly hasPermissionToShowValues = input(true);
   public readonly showPerformance = input(true);
   public readonly isInDialog = input(true);
-  public readonly holdings = input.required<PortfolioPosition[]>();
-  public readonly locale = input(getLocale());
+  public readonly holdings = input.required<HoldingsTableItem[] | undefined>();
+
+  public readonly locale = input(getLocale(), {
+    transform: (value?: string) => {
+      return value ?? getLocale();
+    }
+  });
+
+  public readonly mode = input<'default' | 'simple'>('default');
   public readonly pageSize = model(Number.MAX_SAFE_INTEGER);
 
   public readonly holdingClicked = output<AssetProfileIdentifier>();
@@ -68,9 +78,13 @@ export class GfHoldingsTableComponent {
   protected totalChangePercentage = 0;
   protected performanceProtected: PortfolioPerformance;
 
-  protected readonly dataSource = new MatTableDataSource<PortfolioPosition>([]);
+  protected readonly dataSource = new MatTableDataSource<HoldingsTableItem>([]);
 
   protected readonly displayedColumns = computed(() => {
+    if (this.mode() === 'simple') {
+      return ['icon', 'nameWithSymbol', 'performanceInPercentage'];
+    }
+
     const columns = ['icon', 'nameWithSymbol'];
 
     if (!this.isInDialog()) {
@@ -96,14 +110,35 @@ export class GfHoldingsTableComponent {
     return columns;
   });
 
-  protected readonly isLoading = computed(() => !this.holdings());
+  protected readonly getHoldingName = getHoldingName;
+  protected readonly isCashPosition = isCashPosition;
+
+  protected readonly isLoading = computed(() => {
+    return !this.holdings();
+  });
+
+  protected readonly sortActive = computed(() => {
+    return this.mode() === 'default'
+      ? 'allocationInPercentage'
+      : 'assetProfile.name';
+  });
+
+  protected readonly sortDirection = computed<SortDirection>(() => {
+    return this.mode() === 'default' ? 'desc' : 'asc';
+  });
 
   public constructor() {
-    this.dataSource.sortingDataAccessor = getLowercase;
+    this.dataSource.sortingDataAccessor = (holding, path) => {
+      if (path === 'assetProfile.name') {
+        return getHoldingName(holding.assetProfile).toLocaleLowerCase();
+      }
+
+      return getLowercase(holding, path) as number | string;
+    };
 
     // Reactive data update
     effect(() => {
-      this.dataSource.data = this.holdings();
+      this.dataSource.data = this.holdings() ?? [];
       this.performanceProtected =
         this.performance() ?? ({} as PortfolioPerformance);
     });
@@ -115,8 +150,16 @@ export class GfHoldingsTableComponent {
     });
   }
 
-  protected canShowDetails(holding: PortfolioPosition): boolean {
+  protected canShowDetails(holding: HoldingsTableItem): boolean {
     return this.hasPermissionToOpenDetails() && canOpenHoldingDetail(holding);
+  }
+
+  protected getCountryCodeForCashPosition({
+    assetProfile
+  }: HoldingsTableItem): string {
+    return isCashPosition(assetProfile)
+      ? getCountryCodeFromCurrency(assetProfile.currency)
+      : '';
   }
 
   protected onOpenHoldingDialog({

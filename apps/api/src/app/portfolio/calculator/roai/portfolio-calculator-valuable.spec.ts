@@ -7,13 +7,13 @@ import {
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
 import { Activity } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
@@ -39,7 +39,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
@@ -74,7 +74,7 @@ describe('PortfolioCalculator', () => {
 
     configurationService = new ConfigurationService();
 
-    currentRateService = new CurrentRateService(null, null, null, null);
+    currentRateService = new CurrentRateService(null, null, null);
     activitiesService = new ActivitiesService(
       null,
       null,
@@ -138,10 +138,11 @@ describe('PortfolioCalculator', () => {
         activities,
         calculationType: PerformanceCalculationType.ROAI,
         currency: 'USD',
+        usePortfolioSnapshotCache: false,
         userId: userDummyData.id
       });
 
-      const portfolioSnapshot = await portfolioCalculator.computeSnapshot();
+      const portfolioSnapshot = await portfolioCalculator.getSnapshot();
 
       expect(portfolioSnapshot).toMatchObject({
         currentValueInBaseCurrency: new Big('500000'),
@@ -150,6 +151,8 @@ describe('PortfolioCalculator', () => {
         positions: [
           {
             activitiesCount: 1,
+            averageInvestment: new Big('500000'),
+            averageInvestmentWithCurrencyEffect: new Big('500000'),
             averagePrice: new Big('500000'),
             currency: 'USD',
             dataSource: 'MANUAL',
@@ -177,8 +180,6 @@ describe('PortfolioCalculator', () => {
             quantity: new Big('1'),
             symbol: 'dac95060-d4f2-4653-a253-2c45e6fb5cde',
             tags: [],
-            timeWeightedInvestment: new Big('500000'),
-            timeWeightedInvestmentWithCurrencyEffect: new Big('500000'),
             valueInBaseCurrency: new Big('500000')
           }
         ],
@@ -199,6 +200,9 @@ describe('PortfolioCalculator', () => {
           totalInvestmentValueWithCurrencyEffect: 500000
         })
       );
+
+      expect(PortfolioSnapshotServiceMock.jobsStore.size).toBe(0);
+      expect(RedisCacheServiceMock.cache.size).toBe(0);
     });
   });
 });

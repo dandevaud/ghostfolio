@@ -1,4 +1,6 @@
+import { KEY_SUBSCRIPTION_INTERSTITIAL_SHOWN } from '@ghostfolio/client/services/settings-storage.service';
 import { WebAuthnService } from '@ghostfolio/client/services/web-authn.service';
+import { BULL_BOARD_COOKIE_NAME } from '@ghostfolio/common/config';
 import { Filter, User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 
@@ -108,7 +110,7 @@ export class UserService extends ObservableStore<UserStoreState> {
     window.localStorage.clear();
     window.sessionStorage.clear();
 
-    void this.clearAllCookies();
+    this.clearBullBoardCookie();
 
     this.reset();
 
@@ -117,27 +119,8 @@ export class UserService extends ObservableStore<UserStoreState> {
     }
   }
 
-  private async clearAllCookies() {
-    if (!('cookieStore' in window)) {
-      console.warn('Cookie Store API not available in this browser');
-      return;
-    }
-
-    const cookies = await cookieStore.getAll();
-
-    const cookieNames = cookies
-      .map(({ name }) => {
-        return name;
-      })
-      .filter((name): name is string => {
-        return !!name;
-      });
-
-    await Promise.all(
-      cookieNames.map((name) => {
-        return cookieStore.delete(name);
-      })
-    );
+  private clearBullBoardCookie() {
+    document.cookie = `${BULL_BOARD_COOKIE_NAME}=; Max-Age=0; path=/`;
   }
 
   private fetchUser(): Observable<User> {
@@ -151,14 +134,30 @@ export class UserService extends ObservableStore<UserStoreState> {
           user.settings.retirementDate = parseISO(user.settings.retirementDate);
         }
 
+        if (user.subscription?.expiresAt) {
+          user.subscription.expiresAt = parseISO(user.subscription.expiresAt);
+        }
+
+        if (user.subscription?.subscribedAt) {
+          user.subscription.subscribedAt = parseISO(
+            user.subscription.subscribedAt
+          );
+        }
+
         this.setState({ user }, UserStoreActions.GetUser);
 
         if (
           hasPermission(
             user.permissions,
             permissions.enableSubscriptionInterstitial
-          )
+          ) &&
+          !window.sessionStorage.getItem(KEY_SUBSCRIPTION_INTERSTITIAL_SHOWN)
         ) {
+          window.sessionStorage.setItem(
+            KEY_SUBSCRIPTION_INTERSTITIAL_SHOWN,
+            'true'
+          );
+
           const dialogRef = this.dialog.open<
             GfSubscriptionInterstitialDialogComponent,
             SubscriptionInterstitialDialogParams
@@ -168,7 +167,9 @@ export class UserService extends ObservableStore<UserStoreState> {
               user
             },
             disableClose: true,
-            height: this.deviceType() === 'mobile' ? '98vh' : '80vh',
+            height: this.deviceType() === 'mobile' ? '98dvh' : '80vh',
+            panelClass:
+              this.deviceType() === 'mobile' ? 'gf-mobile-dialog' : undefined,
             width: this.deviceType() === 'mobile' ? '100vw' : '50rem'
           });
 

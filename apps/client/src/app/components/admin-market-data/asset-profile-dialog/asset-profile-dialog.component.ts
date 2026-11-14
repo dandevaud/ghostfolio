@@ -2,6 +2,7 @@ import { AdminMarketDataService } from '@ghostfolio/client/components/admin-mark
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   ASSET_CLASS_MAPPING,
+  COMMENT_MAXIMUM_LENGTH,
   PROPERTY_IS_DATA_GATHERING_ENABLED
 } from '@ghostfolio/common/config';
 import { UpdateAssetProfileDto } from '@ghostfolio/common/dtos';
@@ -28,6 +29,18 @@ import {
 } from '@ghostfolio/common/interfaces';
 import { DateRange } from '@ghostfolio/common/types';
 import { jsonValidator, validateObjectForForm } from '@ghostfolio/common/utils';
+import type {
+  AssetProfileSplit,
+  MarketData,
+  Prisma,
+  SymbolProfile
+} from '@ghostfolio/prisma/browser';
+import {
+  AssetClass,
+  AssetSubClass,
+  DataGatheringFrequency,
+  DataSource
+} from '@ghostfolio/prisma/enums';
 import { GfCurrencySelectorComponent } from '@ghostfolio/ui/currency-selector';
 import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
 import { GfHistoricalMarketDataEditorComponent } from '@ghostfolio/ui/historical-market-data-editor';
@@ -85,17 +98,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { IonIcon } from '@ionic/angular/standalone';
-import {
-  AssetClass,
-  AssetProfileSplit,
-  AssetSubClass,
-  DataGatheringFrequency,
-  DataSource,
-  MarketData,
-  Prisma,
-  SymbolProfile,
-  Tag
-} from '@prisma/client';
 import { isUUID } from 'class-validator';
 import { format } from 'date-fns';
 import { StatusCodes } from 'http-status-codes';
@@ -110,7 +112,7 @@ import {
   serverOutline,
   trashOutline
 } from 'ionicons/icons';
-import { isBoolean } from 'lodash';
+import { isBoolean } from 'lodash-es';
 import ms from 'ms';
 import { EMPTY } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -242,6 +244,7 @@ export class GfAssetProfileDialogComponent implements OnInit {
 
   protected readonly canDeleteAssetProfile = canDeleteAssetProfile;
   protected canEditAssetProfile = true;
+  protected readonly COMMENT_MAXIMUM_LENGTH = COMMENT_MAXIMUM_LENGTH;
 
   protected countries: {
     [code: string]: { name: string; value: number };

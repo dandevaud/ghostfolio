@@ -1,3 +1,4 @@
+import { SEARCH_QUERY_MAXIMUM_LENGTH } from '@ghostfolio/common/config';
 import { LookupItem } from '@ghostfolio/common/interfaces';
 import { DataService } from '@ghostfolio/ui/services';
 
@@ -35,7 +36,7 @@ import {
 } from '@angular/material/form-field';
 import { MatInput, MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { isString } from 'lodash';
+import { isString } from 'lodash-es';
 import { tap } from 'rxjs';
 import {
   debounceTime,
@@ -82,10 +83,11 @@ export class GfSymbolAutocompleteComponent
   @Input() public defaultLookupItems: LookupItem[] = [];
   @Input() public isLoading = false;
 
-  @Input() private includeIndices = false;
+  @Input() public includeIndices = false;
 
   public readonly control = new FormControl();
   public lookupItems: (LookupItem & { assetSubClassString: string })[] = [];
+  public readonly SEARCH_QUERY_MAXIMUM_LENGTH = SEARCH_QUERY_MAXIMUM_LENGTH;
 
   protected readonly symbolAutocomplete =
     viewChild.required<MatAutocomplete>('symbolAutocomplete');
@@ -128,6 +130,7 @@ export class GfSymbolAutocompleteComponent
         map((query) => {
           return isString(query) ? query.trim() : query;
         }),
+        distinctUntilChanged(),
         filter((query) => {
           if (query?.length === 0) {
             this.showDefaultOptions();
@@ -137,13 +140,12 @@ export class GfSymbolAutocompleteComponent
 
           return isString(query);
         }),
-        debounceTime(400),
-        distinctUntilChanged(),
         tap(() => {
           this.isLoading = true;
 
           this.changeDetectorRef.markForCheck();
         }),
+        debounceTime(400),
         takeUntilDestroyed(this.destroyRef),
         switchMap((query: string) => {
           return this.dataService.fetchSymbols({

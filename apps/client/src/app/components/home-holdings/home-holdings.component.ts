@@ -1,5 +1,10 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
+  DEFAULT_CURRENCY,
+  DEFAULT_DATE_RANGE,
+  DEFAULT_LOCALE
+} from '@ghostfolio/common/config';
+import {
   AssetProfileIdentifier,
   PortfolioPosition,
   PortfolioPerformance,
@@ -22,10 +27,12 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   CUSTOM_ELEMENTS_SCHEMA,
   DestroyRef,
   inject,
-  OnInit
+  OnInit,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -51,34 +58,55 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 export class GfHomeHoldingsComponent implements OnInit {
   public static DEFAULT_HOLDINGS_VIEW_MODE: HoldingsViewMode = 'TABLE';
 
-  protected deviceType: string;
+  protected readonly baseCurrency = computed(() => {
+    return this.user()?.settings?.baseCurrency ?? DEFAULT_CURRENCY;
+  });
+
+  protected readonly colorScheme = computed(() => {
+    return this.user()?.settings?.colorScheme;
+  });
+
+  protected readonly dateRange = computed(() => {
+    return this.user()?.settings?.dateRange ?? DEFAULT_DATE_RANGE;
+  });
+
+  protected readonly deviceType = computed(() => {
+    return this.deviceDetectorService.deviceInfo().deviceType;
+  });
+
   protected hasPermissionToAccessHoldingsChart: boolean;
   protected hasPermissionToCreateActivity: boolean;
   protected holdings: PortfolioPosition[] | undefined;
   public performance: PortfolioPerformance;
   protected holdingsViewMode: HoldingsViewMode =
     GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE;
-  protected readonly holdingsViewModeOptions: ToggleOption[] = [
-    {
-      iconName: 'reorder-four-outline',
-      title: $localize`Table`,
-      value: 'TABLE'
-    },
-    {
-      iconName: 'grid-outline',
-      title: $localize`Chart`,
-      value: 'CHART'
-    }
-  ];
+  protected readonly holdingsViewModeOptions: ToggleOption<HoldingsViewMode>[] =
+    [
+      {
+        iconName: 'reorder-four-outline',
+        title: $localize`Table`,
+        value: 'TABLE'
+      },
+      {
+        iconName: 'grid-outline',
+        title: $localize`Chart`,
+        value: 'CHART'
+      }
+    ];
   protected holdingType: HoldingType = 'ACTIVE';
-  protected readonly holdingTypeOptions: ToggleOption[] = [
+  protected readonly holdingTypeOptions: ToggleOption<HoldingType>[] = [
     { label: $localize`Active`, value: 'ACTIVE' },
     { label: $localize`Closed`, value: 'CLOSED' }
   ];
   protected isHoldingsViewModeToggleDisabled = true;
+
+  protected readonly locale = computed(() => {
+    return this.user()?.settings?.locale ?? DEFAULT_LOCALE;
+  });
+
   protected readonly routerLinkPortfolioActivities =
     internalRoutes.portfolio.subRoutes.activities.routerLink;
-  protected user: User;
+  protected readonly user = signal<User | null>(null);
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly dataService = inject(DataService);
@@ -92,22 +120,22 @@ export class GfHomeHoldingsComponent implements OnInit {
   }
 
   public ngOnInit() {
-    this.deviceType = this.deviceDetectorService.getDeviceInfo().deviceType;
-
     this.userService.stateChanged
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         if (state?.user) {
-          this.user = state.user;
+          const user = state.user;
+
+          this.user.set(user);
 
           this.hasPermissionToAccessHoldingsChart = hasPermission(
-            this.user.permissions,
+            user.permissions,
             permissions.accessHoldingsChart
           );
 
           this.hasPermissionToCreateActivity =
-            hasPermission(this.user.permissions, permissions.createActivity) &&
-            hasScope(this.user.scopes, scopes.activityCreate);
+            hasPermission(user.permissions, permissions.createActivity) &&
+            hasScope(user.scopes, scopes.activityCreate);
 
           this.initialize();
         }
@@ -127,7 +155,7 @@ export class GfHomeHoldingsComponent implements OnInit {
           .get(true)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe((user) => {
-            this.user = user;
+            this.user.set(user);
 
             this.changeDetectorRef.markForCheck();
           });
@@ -142,7 +170,7 @@ export class GfHomeHoldingsComponent implements OnInit {
 
   protected onHoldingClicked({ dataSource, symbol }: AssetProfileIdentifier) {
     if (dataSource && symbol) {
-      this.router.navigate([], {
+      void this.router.navigate([], {
         queryParams: { dataSource, symbol, holdingDetailDialog: true }
       });
     }
@@ -151,13 +179,11 @@ export class GfHomeHoldingsComponent implements OnInit {
   private fetchHoldings() {
     const filters = this.userService.getFilters();
 
-    if (this.holdingType === 'CLOSED') {
-      filters.push({ id: 'CLOSED', type: 'HOLDING_TYPE' });
-    }
+    filters.push({ id: this.holdingType, type: 'HOLDING_TYPE' });
 
     return this.dataService.fetchPortfolioHoldings({
       filters,
-      range: this.user?.settings?.dateRange
+      range: this.user()?.settings?.dateRange
     });
   }
 
@@ -171,9 +197,9 @@ export class GfHomeHoldingsComponent implements OnInit {
       this.isHoldingsViewModeToggleDisabled = false;
 
       this.holdingsViewMode =
-        this.deviceType === 'mobile'
+        this.deviceType() === 'mobile'
           ? GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE
-          : (this.user?.settings?.holdingsViewMode ??
+          : (this.user()?.settings?.holdingsViewMode ??
             GfHomeHoldingsComponent.DEFAULT_HOLDINGS_VIEW_MODE);
     } else {
       this.holdingsViewMode =

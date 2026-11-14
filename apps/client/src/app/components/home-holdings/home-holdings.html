@@ -27,11 +27,11 @@
         <gf-treemap-chart
           class="mt-3"
           cursor="pointer"
-          [baseCurrency]="user?.settings?.baseCurrency"
-          [colorScheme]="user?.settings?.colorScheme"
-          [dateRange]="user?.settings?.dateRange"
+          [baseCurrency]="baseCurrency()"
+          [colorScheme]="colorScheme()"
+          [dateRange]="dateRange()"
           [holdings]="holdings"
-          [locale]="user?.settings?.locale"
+          [locale]="locale()"
           (treemapChartClicked)="onHoldingClicked($event)"
         />
       }
@@ -39,12 +39,12 @@
         <gf-holdings-table
           [holdings]="holdings"
           [isInDialog]="false"
-          [locale]="user?.settings?.locale"
+          [locale]="locale()"
           [performance]="performance"
           [showPerformance]="true"
           (holdingClicked)="onHoldingClicked($event)"
         />
-        @if (hasPermissionToCreateActivity && holdings?.length > 0) {
+        @if (hasPermissionToCreateActivity && (holdings?.length ?? 0) > 0) {
           <div class="text-center">
             <a
               class="mt-3"

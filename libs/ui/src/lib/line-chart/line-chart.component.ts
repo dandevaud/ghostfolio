@@ -6,7 +6,10 @@ import {
 } from '@ghostfolio/common/chart-helper';
 import { primaryColorRgb, secondaryColorRgb } from '@ghostfolio/common/config';
 import { getBackgroundColor, getLocale } from '@ghostfolio/common/helper';
-import { LineChartItem } from '@ghostfolio/common/interfaces';
+import {
+  LineChartItem,
+  NullableLineChartItem
+} from '@ghostfolio/common/interfaces';
 import { ColorScheme } from '@ghostfolio/common/types';
 
 import {
@@ -18,11 +21,13 @@ import {
   Input,
   OnChanges,
   OnDestroy,
+  SimpleChanges,
   ViewChild
 } from '@angular/core';
 import {
   type AnimationsSpec,
   Chart,
+  type ChartData,
   Filler,
   LinearScale,
   LineController,
@@ -37,6 +42,7 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import {
   getTimeSeriesTooltipOptions,
+  onPrefersColorSchemeChange,
   registerChartConfiguration
 } from '../chart';
 
@@ -50,11 +56,11 @@ import {
 export class GfLineChartComponent
   implements AfterViewInit, OnChanges, OnDestroy
 {
-  @Input() benchmarkDataItems: LineChartItem[] = [];
+  @Input() benchmarkDataItems: NullableLineChartItem[] = [];
   @Input() benchmarkLabel = '';
-  @Input() colorScheme: ColorScheme;
-  @Input() currency: string;
-  @Input() historicalDataItems: LineChartItem[];
+  @Input() colorScheme?: ColorScheme;
+  @Input() currency?: string;
+  @Input() historicalDataItems: LineChartItem[] | null;
   @Input() isAnimated = false;
   @Input() label: string;
   @Input() locale = getLocale();
@@ -71,7 +77,7 @@ export class GfLineChartComponent
 
   @ViewChild('chartCanvas') chartCanvas: ElementRef<HTMLCanvasElement>;
 
-  public chart: Chart<'line'>;
+  public chart?: Chart<'line'>;
   public isLoading = true;
 
   private readonly ANIMATION_DURATION = 1200;
@@ -88,6 +94,15 @@ export class GfLineChartComponent
     );
 
     registerChartConfiguration();
+
+    onPrefersColorSchemeChange(() => {
+      if (this.chart && !this.colorScheme) {
+        this.chart.destroy();
+        this.chart = undefined;
+
+        this.initialize();
+      }
+    });
   }
 
   public ngAfterViewInit() {
@@ -101,7 +116,12 @@ export class GfLineChartComponent
     }
   }
 
-  public ngOnChanges() {
+  public ngOnChanges(changes: SimpleChanges) {
+    if (changes.colorScheme && this.chart) {
+      this.chart.destroy();
+      this.chart = undefined;
+    }
+
     if (this.historicalDataItems || this.historicalDataItems === null) {
       setTimeout(() => {
         // Wait for the chartCanvas
@@ -118,12 +138,12 @@ export class GfLineChartComponent
 
   private initialize() {
     this.isLoading = true;
-    const benchmarkPrices: number[] = [];
+    const benchmarkPrices: (number | null)[] = [];
     const labels: string[] = [];
     const marketPrices: number[] = [];
 
     this.historicalDataItems?.forEach((historicalDataItem, index) => {
-      benchmarkPrices.push(this.benchmarkDataItems?.[index]?.value);
+      benchmarkPrices.push(this.benchmarkDataItems?.[index]?.value ?? null);
       labels.push(historicalDataItem.date);
       marketPrices.push(historicalDataItem.value);
     });
@@ -148,7 +168,7 @@ export class GfLineChartComponent
       gradient.addColorStop(1, getBackgroundColor(this.colorScheme));
     }
 
-    const data = {
+    const data: ChartData<'line'> = {
       labels,
       datasets: [
         {
@@ -189,7 +209,7 @@ export class GfLineChartComponent
 
         this.chart.update();
       } else {
-        this.chart = new Chart(this.chartCanvas.nativeElement, {
+        this.chart = new Chart<'line'>(this.chartCanvas.nativeElement, {
           data,
           options: {
             animations: this.isAnimated ? animations : undefined,
@@ -238,7 +258,8 @@ export class GfLineChartComponent
                       if (typeof tickValue === 'number') {
                         return tickValue.toLocaleString(this.locale, {
                           maximumFractionDigits: 2,
-                          minimumFractionDigits: 2
+                          minimumFractionDigits: 2,
+                          useGrouping: true
                         });
                       }
 

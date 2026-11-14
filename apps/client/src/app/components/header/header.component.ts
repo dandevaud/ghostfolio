@@ -105,6 +105,7 @@ export class GfHeaderComponent implements OnChanges {
   protected hasPermissionToCreateUser: boolean;
   protected impersonationId: string | null;
   protected readonly internalRoutes = internalRoutes;
+  protected isInitialNavigationPending: boolean;
   protected isMenuOpen: boolean;
   protected readonly routeAbout = publicRoutes.about.path;
   protected readonly routeFeatures = publicRoutes.features.path;
@@ -214,13 +215,16 @@ export class GfHeaderComponent implements OnChanges {
       this.info()?.globalPermissions,
       permissions.createUserAccount
     );
+
+    this.isInitialNavigationPending =
+      !this.currentRoute() && !!this.tokenStorageService.getToken();
   }
 
   protected closeAssistant() {
     this.assistentMenuTriggerElement().closeMenu();
   }
 
-  protected impersonateAccount(aId: string) {
+  protected impersonateAccount(aId: string | null) {
     if (aId) {
       this.impersonationStorageService.setId(aId);
     } else {

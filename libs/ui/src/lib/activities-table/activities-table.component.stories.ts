@@ -16,6 +16,8 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { GfActivityTypeComponent } from '../activity-type/activity-type.component';
 import { GfEntityLogoComponent } from '../entity-logo';
+import { EntityLogoImageSourceService } from '../entity-logo/entity-logo-image-source.service';
+import { EntityLogoImageSourceServiceMock } from '../mocks/entity-logo-image-source.service.mock';
 import { GfNoActivitiesInfoComponent } from '../no-activities-info/no-activities-info.component';
 import { NotificationService } from '../notifications';
 import { GfValueComponent } from '../value';
@@ -153,7 +155,7 @@ const activities: Activity[] = [
   {
     accountId: '776bd1e9-b2f6-4f7e-933d-18756c2f0625',
     accountUserId: '081aa387-487d-4438-83a4-3060eb2a016e',
-    comment: null,
+    comment: 'Bitcoin exposure via spot ETF',
     createdAt: new Date('2024-03-12T15:15:21.217Z'),
     currency: 'USD',
     date: new Date('2024-03-12T15:14:38.597Z'),
@@ -371,7 +373,13 @@ export default {
         NgxSkeletonLoaderModule,
         RouterModule.forChild([])
       ],
-      providers: [NotificationService]
+      providers: [
+        NotificationService,
+        {
+          provide: EntityLogoImageSourceService,
+          useValue: new EntityLogoImageSourceServiceMock()
+        }
+      ]
     })
   ]
 } as Meta<GfActivitiesTableComponent>;
@@ -483,6 +491,7 @@ export const Actions: Story = {
 export const Toolbar: Story = {
   args: {
     dataSource,
+    activityTypes: ['BUY', 'DIVIDEND', 'SELL'],
     baseCurrency: 'USD',
     deviceType: 'desktop',
     hasActivities: true,
