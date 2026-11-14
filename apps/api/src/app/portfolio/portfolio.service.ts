@@ -304,23 +304,23 @@ export class PortfolioService {
     ]);
 
     const userCurrency = this.getUserCurrency(user);
-  return Promise.all(
+    return Promise.all(
       accounts.map(async (account) => {
         const activitiesCount = 0;
         let dividendInBaseCurrency = 0;
         let interestInBaseCurrency = 0;
-      for (const {
-        currency,
-        date,
-        quantity,
-        SymbolProfile,
-        tags,
-        type,
-        unitPrice
-      } of account.activities) {
-        if (isDraftActivity({ tags })) {
-          continue;
-        }
+        for (const {
+          currency,
+          date,
+          quantity,
+          SymbolProfile,
+          tags,
+          type,
+          unitPrice
+        } of account.activities) {
+          if (isDraftActivity({ tags })) {
+            continue;
+          }
 
           switch (type) {
             case ActivityType.DIVIDEND:
@@ -347,33 +347,33 @@ export class PortfolioService {
         const valueInBaseCurrency =
           details.accounts[account.id]?.valueInBaseCurrency ?? 0;
 
-      const result = {
-        ...account,
-        activitiesCount,
-        dividendInBaseCurrency,
-        interestInBaseCurrency,
-        valueInBaseCurrency,
-        allocationInPercentage: 0,
-        balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
-          account.balance,
-          account.currency,
-          userCurrency
-        ),
-        quantity: filterBySymbol
-          ? (details.accounts[account.id]?.quantity ?? 0)
-          : undefined,
-        value: this.exchangeRateDataService.toCurrency(
+        const result = {
+          ...account,
+          activitiesCount,
+          dividendInBaseCurrency,
+          interestInBaseCurrency,
           valueInBaseCurrency,
-          userCurrency,
-          account.currency
-        )
-      };
+          allocationInPercentage: 0,
+          balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
+            account.balance,
+            account.currency,
+            userCurrency
+          ),
+          quantity: filterBySymbol
+            ? (details.accounts[account.id]?.quantity ?? 0)
+            : undefined,
+          value: this.exchangeRateDataService.toCurrency(
+            valueInBaseCurrency,
+            userCurrency,
+            account.currency
+          )
+        };
 
-      delete result.activities;
+        delete result.activities;
 
-      return result;
-    })
-  );
+        return result;
+      })
+    );
   }
 
   @LogPerformance
@@ -1041,27 +1041,6 @@ export class PortfolioService {
       );
     });
 
-    const dividendYieldPercent = getAnnualizedPerformancePercent({
-      daysInMarket: differenceInDays(
-        new Date(),
-        parseDate(dateOfFirstActivity)
-      ),
-      netPerformancePercentage: timeWeightedInvestment.eq(0)
-        ? new Big(0)
-        : dividendInBaseCurrency.div(timeWeightedInvestment)
-    });
-
-    const dividendYieldPercentWithCurrencyEffect =
-      getAnnualizedPerformancePercent({
-        daysInMarket: differenceInDays(
-          new Date(),
-          parseDate(dateOfFirstActivity)
-        ),
-        netPerformancePercentage: timeWeightedInvestmentWithCurrencyEffect.eq(0)
-          ? new Big(0)
-          : dividendInBaseCurrency.div(timeWeightedInvestmentWithCurrencyEffect)
-      });
-
     const stakeRewards = getSum(
       activities
         .filter(({ assetProfile, type }) => {
@@ -1072,7 +1051,7 @@ export class PortfolioService {
         })
     );
 
-     const historicalData = await this.dataProviderService.getHistorical({
+    const historicalData = await this.dataProviderService.getHistorical({
       assetProfileIdentifiers: [{ dataSource, symbol }],
       from: parseISO(dateOfFirstActivity, { in: utc }),
       to: new Date()

@@ -721,44 +721,6 @@ export abstract class PortfolioCalculator {
         return rest;
       });
 
-    const performancePercentagesByDate = this.calculatePerformancePercentages({
-      accumulatedValuesByDate
-    });
-
-    const historicalData: HistoricalDataItem[] = Object.entries(
-      accumulatedValuesByDate
-    ).map(([date, values]) => {
-      const {
-        investmentValueWithCurrencyEffect,
-        totalCashValueWithCurrencyEffect,
-        totalCurrentValue,
-        totalCurrentValueWithCurrencyEffect,
-        totalDividendValueWithCurrencyEffect,
-        totalInvestmentValue,
-        totalInvestmentValueWithCurrencyEffect,
-        totalNetPerformanceValue,
-        totalNetPerformanceValueWithCurrencyEffect,
-        totalNetWorthValueWithCurrencyEffect
-      } = values;
-      return {
-        ...performancePercentagesByDate[date],
-        date,
-        dividendInBaseCurrency: totalDividendValueWithCurrencyEffect.toNumber(),
-        investmentValueWithCurrencyEffect:
-          investmentValueWithCurrencyEffect.toNumber(),
-        netPerformance: totalNetPerformanceValue.toNumber(),
-        netPerformanceWithCurrencyEffect:
-          totalNetPerformanceValueWithCurrencyEffect.toNumber(),
-        netWorth: totalNetWorthValueWithCurrencyEffect.toNumber(),
-        totalCashInBaseCurrency: totalCashValueWithCurrencyEffect.toNumber(),
-        totalInvestment: totalInvestmentValue.toNumber(),
-        totalInvestmentValueWithCurrencyEffect:
-          totalInvestmentValueWithCurrencyEffect.toNumber(),
-        value: totalCurrentValue.toNumber(),
-        valueWithCurrencyEffect: totalCurrentValueWithCurrencyEffect.toNumber()
-      };
-    });
-
     const historicalData: HistoricalDataItem[] = this.getHistoricalDataItems(
       accumulatedValuesByDate
     );
@@ -1599,7 +1561,6 @@ export abstract class PortfolioCalculator {
     start: Date;
   } & AssetProfileIdentifier): HoldingPerformance;
 
-
   @LogPerformance
   public async getInterestInBaseCurrency() {
     await this.snapshotPromise;
@@ -2005,7 +1966,13 @@ export abstract class PortfolioCalculator {
   }
 
   @LogPerformance
-  public async getPerformance({ end, start }: { end: Date; start: Date }): Promise<{
+  public async getPerformance({
+    end,
+    start
+  }: {
+    end: Date;
+    start: Date;
+  }): Promise<{
     chart: HistoricalDataItem[];
     netPerformance: number;
     netPerformanceInPercentage: number;
@@ -2070,23 +2037,23 @@ export abstract class PortfolioCalculator {
 
     const chart = historicalDataItemsOfDateRange.map((historicalDataItem) => {
       const timeWeightedInvestmentValue =
-          totalInvestmentValuesWithCurrencyEffect.length > 0
-            ? sum(totalInvestmentValuesWithCurrencyEffect) /
-              totalInvestmentValuesWithCurrencyEffect.length
-            : 0;
+        totalInvestmentValuesWithCurrencyEffect.length > 0
+          ? sum(totalInvestmentValuesWithCurrencyEffect) /
+            totalInvestmentValuesWithCurrencyEffect.length
+          : 0;
 
-        ({
-          timeWeightedPerformanceInPercentage,
-          timeWeightedPerformanceInPercentageWithCurrencyEffect,
-          lastTimeWeightedPerformancePercentage,
-          lastTimeWeightedPerformancePercentageWithCurrencyEffect
-        } = this.calculateTimeWeightedPerformance(
-          lastTimeWeightedPerformancePercentage,
-          historicalDataItem,
-          lastTimeWeightedPerformancePercentageWithCurrencyEffect,
-          timeWeightedPerformanceInPercentage,
-          timeWeightedPerformanceInPercentageWithCurrencyEffect
-        ));
+      ({
+        timeWeightedPerformanceInPercentage,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect,
+        lastTimeWeightedPerformancePercentage,
+        lastTimeWeightedPerformancePercentageWithCurrencyEffect
+      } = this.calculateTimeWeightedPerformance(
+        lastTimeWeightedPerformancePercentage,
+        historicalDataItem,
+        lastTimeWeightedPerformancePercentageWithCurrencyEffect,
+        timeWeightedPerformanceInPercentage,
+        timeWeightedPerformanceInPercentageWithCurrencyEffect
+      ));
       return {
         ...historicalDataItem,
         ...performancePercentagesByDate[historicalDataItem.date],

@@ -4,13 +4,14 @@ import {
 } from '@ghostfolio/common/config';
 import { IsCurrencyCode } from '@ghostfolio/common/validators/is-currency-code';
 import type { Prisma } from '@ghostfolio/prisma/browser';
+import type { Tag } from '@ghostfolio/prisma/browser';
 import {
   AssetClass,
   AssetSubClass,
   DataSource,
   DataGatheringFrequency
 } from '@ghostfolio/prisma/enums';
-import type { Tag } from '@ghostfolio/prisma/browser';
+
 import { Type } from 'class-transformer';
 import {
   IsArray,

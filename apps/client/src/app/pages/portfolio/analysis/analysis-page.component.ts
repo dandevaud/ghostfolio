@@ -22,7 +22,6 @@ import type {
   ToggleOption
 } from '@ghostfolio/common/types';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
-import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import type { SymbolProfile } from '@ghostfolio/prisma/browser';
 import { translate } from '@ghostfolio/ui/i18n';
 import { GfInvestmentChartComponent } from '@ghostfolio/ui/investment-chart';
@@ -371,7 +370,7 @@ export class GfAnalysisPageComponent implements OnInit {
         for (const {
           date,
           netPerformanceInPercentageWithCurrencyEffect,
-            timeWeightedPerformanceInPercentageWithCurrencyEffect,
+          timeWeightedPerformanceInPercentageWithCurrencyEffect,
           totalInvestmentValueWithCurrencyEffect,
           valueInPercentage,
           valueWithCurrencyEffect
