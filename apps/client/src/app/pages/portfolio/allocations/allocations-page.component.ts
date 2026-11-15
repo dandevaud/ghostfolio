@@ -136,14 +136,10 @@ export class GfAllocationsPageComponent implements OnInit {
   protected readonly UNKNOWN_KEY = UNKNOWN_KEY;
   protected user: User;
 
-  private topHoldingsMap: {
-    [name: string]: { name: string; value: number };
-  };
   public tagHoldings: Holding[];
   public tagHoldingsMap: {
     [name: string]: { name: string; value: number };
   };
-  private totalValueInEtf = 0;
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly dataService = inject(DataService);

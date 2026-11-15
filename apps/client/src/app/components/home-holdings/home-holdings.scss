@@ -1,3 +1,18 @@
 :host {
   display: block;
+
+  ::ng-deep .home-holdings-table {
+    .mat-column-nameWithSymbol {
+      max-width: 12rem;
+      white-space: nowrap !important;
+      width: 12rem;
+    }
+
+    .mat-column-nameWithSymbol .text-truncate {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { UserService } from '@ghostfolio/api/app/user/user.service';
+import { UserService } from '@ghostfolio/api/services/user/user.service';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { Impersonation } from '@ghostfolio/api/decorators/impersonation.decorator';
 import { RequiresScope } from '@ghostfolio/api/decorators/requires-scope.decorator';
@@ -51,7 +51,7 @@ import {
   Version
 } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
-import { DataSource } from '@prisma/client';
+import { AssetClass, AssetSubClass, DataSource } from '@prisma/client';
 import { Big } from 'big.js';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
@@ -583,8 +583,7 @@ export class PortfolioController {
       groupBy,
       range,
       symbol,
-      tags,
-      withExcludedAccounts
+      tags
     }: GetPerformanceDto
   ): Promise<PortfolioPerformanceResponse> {
     const filters = this.apiService.buildFiltersFromQueryParams({
@@ -602,9 +601,7 @@ export class PortfolioController {
     const performanceInformation = await this.portfolioService.getPerformance({
       filters,
       user,
-      groupBy,
       userId,
-      withExcludedAccounts,
       dateRange: range
     });
 

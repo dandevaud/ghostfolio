@@ -490,4 +490,35 @@ export class RoaiPortfolioCalculator extends PortfolioCalculator {
 
     return weightedInvestments;
   }
+
+  private getHoldingPerformanceWithInvestedCapital({
+    holdingPerformance,
+    investedCapital,
+    investedCapitalValues,
+    investedCapitalValuesWithCurrencyEffect,
+    investedCapitalWithCurrencyEffect
+  }: {
+    daysInMarket: number;
+    holdingPerformance: HoldingPerformance;
+    investedCapital: Big;
+    investedCapitalByDateRange: { [key: DateRange]: Big };
+    investedCapitalValues: { [date: string]: Big };
+    investedCapitalValuesWithCurrencyEffect: { [date: string]: Big };
+    investedCapitalWithCurrencyEffect: Big;
+  }): HoldingPerformance {
+    const result = { ...holdingPerformance };
+
+    for (const [date, value] of Object.entries(investedCapitalValues)) {
+      result.averageInvestmentValues[date] = value;
+    }
+
+    for (const [date, value] of Object.entries(investedCapitalValuesWithCurrencyEffect)) {
+      result.averageInvestmentValuesWithCurrencyEffect[date] = value;
+    }
+
+    result.averageInvestment = investedCapital;
+    result.averageInvestmentWithCurrencyEffect = investedCapitalWithCurrencyEffect;
+
+    return result;
+  }
 }

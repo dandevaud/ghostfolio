@@ -33,7 +33,8 @@ import type {
   AssetProfileSplit,
   MarketData,
   Prisma,
-  SymbolProfile
+  SymbolProfile,
+  Tag
 } from '@ghostfolio/prisma/browser';
 import {
   AssetClass,
@@ -190,8 +191,8 @@ export class GfAssetProfileDialogComponent implements OnInit {
     }),
     isActive: [true],
     name: ['', Validators.required],
-    tags: new FormControl<Tag[]>([]),
-    tagsDisconnected: new FormControl<Tag[]>([]),
+    tags: new FormControl<Pick<Tag, 'id' | 'name'>[]>([]),
+    tagsDisconnected: new FormControl<Pick<Tag, 'id' | 'name'>[]>([]),
     scraperConfiguration: this.formBuilder.group<
       Omit<ScraperConfiguration, 'headers'> & {
         headers: FormControl<string | null>;
@@ -750,9 +751,9 @@ export class GfAssetProfileDialogComponent implements OnInit {
       assetSubClass:
         this.assetProfileForm.controls.assetSubClass.value ?? undefined,
       comment: getStringOrNull(this.assetProfileForm.controls.comment.value),
-      tags: this.assetProfileForm.get('tags')?.value ?? [],
+      tags: (this.assetProfileForm.get('tags')?.value ?? []) as Tag[],
       tagsDisconnected:
-        this.assetProfileForm.get('tagsDisconnected')?.value ?? [],
+        (this.assetProfileForm.get('tagsDisconnected')?.value ?? []) as Tag[],
       currency: this.assetProfileForm.controls.currency.value ?? undefined,
       dataGatheringFrequency:
         this.assetProfileForm.controls.dataGatheringFrequency.value ??
@@ -931,7 +932,7 @@ export class GfAssetProfileDialogComponent implements OnInit {
       });
   }
 
-  public onRemoveTag(aTag: Tag) {
+  public onRemoveTag(aTag: Pick<Tag, 'id' | 'name'>) {
     this.assetProfileForm.controls['tags'].setValue(
       this.assetProfileForm.controls['tags'].value?.filter(({ id }) => {
         return id !== aTag.id;
@@ -951,8 +952,7 @@ export class GfAssetProfileDialogComponent implements OnInit {
         return id === event.option.value;
       }) ?? {
         name: event.option.viewValue,
-        id: event.option.value,
-        userId: this.user.id
+        id: event.option.value
       }
     ]);
     this.tagInput.nativeElement.value = '';

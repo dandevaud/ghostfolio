@@ -1,9 +1,10 @@
 import { DateQuery } from '@ghostfolio/api/app/portfolio/interfaces/date-query.interface';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { DataGatheringItem } from '@ghostfolio/api/services/interfaces/interfaces';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { DEFAULT_PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_TIMEOUT } from '@ghostfolio/common/config';
+import { UpdateMarketDataDto } from '@ghostfolio/common/dtos';
 import { resetHours } from '@ghostfolio/common/helper';
 import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
 
@@ -245,11 +246,11 @@ export class MarketDataService {
     return this.prismaService.marketData.upsert({
       where,
       create: {
-        dataSource: where.dataSource_date_symbol.dataSource,
-        date: where.dataSource_date_symbol.date,
+        dataSource: where.dataSource_symbol_date.dataSource,
+        date: where.dataSource_symbol_date.date,
         marketPrice: data.marketPrice,
         state: data.state,
-        symbol: where.dataSource_date_symbol.symbol
+        symbol: where.dataSource_symbol_date.symbol
       },
       update: { marketPrice: data.marketPrice, state: data.state }
     });

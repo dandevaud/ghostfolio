@@ -101,12 +101,11 @@ import {
   isAfter,
   isSameMonth,
   isSameYear,
-  min,
   parseISO,
   set,
   startOfDay
 } from 'date-fns';
-import { groupBy, uniq } from 'lodash-es';
+import { groupBy, uniqBy } from 'lodash-es';
 
 import { PortfolioCalculator } from './calculator/portfolio-calculator';
 import { PortfolioCalculatorFactory } from './calculator/portfolio-calculator.factory';
@@ -772,10 +771,15 @@ export class PortfolioService {
       }
 
       const tagsInternal = tags.concat(
-        symbolProfiles.find((sp) => sp.symbol === symbol)?.tags ?? []
+        (symbolProfiles.find((sp) => sp.symbol === symbol)?.tags ?? []).map(
+          (tag) => ({
+            ...tag,
+            userId: userId
+          })
+        ) as typeof tags
       );
 
-      holdings[symbol] = {
+      holdings.push({
         activitiesCount,
         markets,
         marketsAdvanced,
@@ -826,7 +830,7 @@ export class PortfolioService {
           netPerformanceWithCurrencyEffectMap?.[dateRange]?.toNumber() ?? 0,
         quantity: quantity.toNumber(),
         valueInBaseCurrency: valueInBaseCurrency.toNumber()
-      };
+      });
     }
 
     const { accounts, platforms } = await this.getValueOfAccountsAndPlatforms({
@@ -1268,8 +1272,6 @@ export class PortfolioService {
 
     const {
       chart,
-      dividendInBaseCurrency,
-      dividendInPercentageWithCurrencyEffect,
       netPerformance,
       netPerformanceInPercentage,
       netPerformanceInPercentageWithCurrencyEffect,
@@ -1280,12 +1282,17 @@ export class PortfolioService {
       valueWithCurrencyEffect
     } = await portfolioCalculator.getPerformance(range);
 
+    const lastChartItem = chart.at(-1) ?? {
+      dividendInBaseCurrency: 0,
+      dividendInPercentageWithCurrencyEffect: 0
+    };
+
     return {
       chart,
       hasErrors: false,
       dateOfFirstActivity: parseDate(chart[0]?.date),
       performance: {
-        dividendInBaseCurrency,
+        dividendInBaseCurrency: lastChartItem.dividendInBaseCurrency,
         netPerformance,
         netPerformanceWithCurrencyEffect,
         totalInvestment,
@@ -1293,7 +1300,7 @@ export class PortfolioService {
         currentNetWorth: netWorth,
         currentValueInBaseCurrency: valueWithCurrencyEffect,
         dividendPercentageWithCurrencyEffect:
-          dividendInPercentageWithCurrencyEffect,
+          lastChartItem.dividendInPercentageWithCurrencyEffect,
         netPerformancePercentage: netPerformanceInPercentage,
         netPerformancePercentageWithCurrencyEffect:
           netPerformanceInPercentageWithCurrencyEffect
@@ -2000,53 +2007,6 @@ export class PortfolioService {
    * previous period, like 31 December for a calendar year, so the years before
    * the first activity have no chart item.
    */
-  private async getPerformanceByYear({
-    chartOfDateRange,
-    endDate,
-    portfolioCalculator,
-    startDate
-  }: {
-    chartOfDateRange: HistoricalDataItem[];
-    endDate: Date;
-    portfolioCalculator: PortfolioCalculator;
-    startDate: Date;
-  }): Promise<HistoricalDataItem[]> {
-    const chart: HistoricalDataItem[] = [];
-
-    const years = uniq(
-      chartOfDateRange.slice(1).map(({ date }) => {
-        return date.substring(0, 4);
-      })
-    );
-
-    for (const [index, year] of years.entries()) {
-      const { endDate: endDateOfYear, startDate: startDateOfYear } =
-        getIntervalFromDateRange({ dateRange: year });
-
-      const { chart: chartOfYear } = await portfolioCalculator.getPerformance({
-        end: min([endDate, endDateOfYear]),
-        start: index === 0 ? startDate : startDateOfYear
-      });
-
-      let investmentValueWithCurrencyEffect = new Big(0);
-
-      for (const historicalDataItem of chartOfYear.slice(1)) {
-        investmentValueWithCurrencyEffect =
-          investmentValueWithCurrencyEffect.plus(
-            historicalDataItem.investmentValueWithCurrencyEffect ?? 0
-          );
-      }
-
-      chart.push({
-        ...chartOfYear.at(-1),
-        date: `${year}-01-01`,
-        investmentValueWithCurrencyEffect:
-          investmentValueWithCurrencyEffect.toNumber()
-      });
-    }
-
-    return chart;
-  }
 
   private getReportStatistics(
     evaluatedRules: PortfolioReportRule[]

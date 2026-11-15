@@ -389,6 +389,8 @@ export class ImportService {
         ? await this.tagService.getTagsForUser(user.id)
         : [];
 
+    const existingTagIds = new Set(existingTagsOfUser.map(t => t.id));
+
     if (tagsDto?.length) {
       const canCreateOwnTag = hasPermission(
         user.permissions,

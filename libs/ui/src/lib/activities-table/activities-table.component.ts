@@ -1,6 +1,6 @@
-import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
+import { DEFAULT_PAGE_SIZE, TAG_ID_EXCLUDE_FROM_ANALYSIS } from '@ghostfolio/common/config';
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
-import { getLocale, isDraftActivity } from '@ghostfolio/common/helper';
+import { getLocale, isDraftActivity, isAccountExcluded } from '@ghostfolio/common/helper';
 import {
   Activity,
   AssetProfileIdentifier
@@ -245,7 +245,7 @@ export class GfActivitiesTableComponent<
 
   private readonly notificationService = inject(NotificationService);
 
-  private readonly canClickActivityCache = new WeakMap<Activity, boolean>();
+  private readonly canClickActivityCache = new WeakMap<T, boolean>();
 
   public constructor(private destroyRef: DestroyRef) {
     addIcons({
@@ -314,20 +314,6 @@ export class GfActivitiesTableComponent<
     this.canClickActivityCache.set(activity, canClick);
 
     return canClick;
-  }
-
-  public canDeleteActivities() {
-    return (
-      (this.dataSource()?.data.length ?? 0) > 0 &&
-      this.hasPermissionToDeleteActivity
-    );
-  }
-
-  public canExportActivities() {
-    return (
-      (this.dataSource()?.data.length ?? 0) > 0 &&
-      this.hasPermissionToExportActivities
-    );
   }
 
   public isExcludedFromAnalysis(activity: Activity) {

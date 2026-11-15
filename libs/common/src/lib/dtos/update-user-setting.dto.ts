@@ -106,7 +106,11 @@ export class UpdateUserSettingDto {
   @IsOptional()
   locale?: string;
 
-  @IsIn([PerformanceCalculationType.ROAI, PerformanceCalculationType.ROI])
+  @IsIn([
+    PerformanceCalculationType.ROAI,
+    PerformanceCalculationType.ROI,
+    PerformanceCalculationType.ROITWR
+  ])
   @IsOptional()
   performanceCalculationType?: PerformanceCalculationType;
 
@@ -140,8 +144,4 @@ export class UpdateUserSettingDto {
 
   @IsOptional()
   xRayRules?: XRayRulesSettings;
-
-  @IsIn(['TWR', 'ROI', 'ROAI', 'MWR'] as PerformanceCalculationType[])
-  @IsOptional()
-  performanceCalculationType?: PerformanceCalculationType;
 }

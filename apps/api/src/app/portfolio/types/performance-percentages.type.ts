@@ -7,4 +7,11 @@ export type PerformancePercentages = Required<
     | 'netPerformanceInPercentage'
     | 'netPerformanceInPercentageWithCurrencyEffect'
   >
->;
+> &
+  Partial<
+    Pick<
+      HistoricalDataItem,
+      | 'timeWeightedPerformanceInPercentage'
+      | 'timeWeightedPerformanceInPercentageWithCurrencyEffect'
+    >
+  >;

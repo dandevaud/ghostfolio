@@ -82,13 +82,19 @@ export class DataGatheringService {
   }
 
   public async gather7Days() {
+    const assetProfileIdentifiersWithRecentMarketData =
+      await this.getAssetProfileIdentifiersWithRecentMarketData();
+
     await this.gatherSymbols({
-      dataGatheringItems: await this.getCurrencies7D(),
+      dataGatheringItems: this.getCurrencies7D({
+        assetProfileIdentifiersWithRecentMarketData
+      }),
       priority: DATA_GATHERING_QUEUE_PRIORITY_HIGH
     });
 
     await this.gatherSymbols({
       dataGatheringItems: await this.getSymbols7D({
+        assetProfileIdentifiersWithRecentMarketData,
         withUserSubscription: true
       }),
       priority: DATA_GATHERING_QUEUE_PRIORITY_MEDIUM
@@ -96,6 +102,7 @@ export class DataGatheringService {
 
     await this.gatherSymbols({
       dataGatheringItems: await this.getSymbols7D({
+        assetProfileIdentifiersWithRecentMarketData,
         withUserSubscription: false
       }),
       priority: DATA_GATHERING_QUEUE_PRIORITY_LOW

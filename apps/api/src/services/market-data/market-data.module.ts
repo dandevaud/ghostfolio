@@ -1,4 +1,4 @@
-import { RedisCacheModule } from '@ghostfolio/api/app/redis-cache/redis-cache.module';
+import { RedisCacheModule } from '@ghostfolio/api/services/redis-cache/redis-cache.module';
 import { PrismaModule } from '@ghostfolio/api/services/prisma/prisma.module';
 
 import { Module } from '@nestjs/common';

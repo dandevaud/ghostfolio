@@ -151,12 +151,12 @@ export class ManualService implements DataProviderInterface {
         })
       );
 
-      const batch = new BatchPrismaClient(this.prismaService);
+      const batch = new BatchPrismaClient(this.prismaService as any);
 
       const marketData = await batch
         .over(symbols)
         .with((prisma, _symbols) =>
-          prisma.marketData.findFirst({
+          prisma.marketData.findMany({
             distinct: ['symbol'],
             orderBy: {
               date: 'desc'

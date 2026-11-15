@@ -81,7 +81,6 @@ export class GfCurrencySelectorComponent
   private readonly formField = inject(MAT_FORM_FIELD);
   private readonly input = viewChild.required(MatInput);
   private lastSelectedCurrency: string | null = null;
-  private readonly emojiFlagByCurrency = new Map<string, string>();
 
   public constructor(
     public override readonly _elementRef: ElementRef,

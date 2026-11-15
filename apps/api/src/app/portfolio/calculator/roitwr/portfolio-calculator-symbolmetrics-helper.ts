@@ -1,7 +1,6 @@
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import { DATE_RANGES } from '@ghostfolio/common/config';
 import { DATE_FORMAT } from '@ghostfolio/common/helper';
-import { SymbolMetrics } from '@ghostfolio/common/interfaces';
 
 import { DataSource } from '@prisma/client';
 import { Big } from 'big.js';
@@ -9,10 +8,11 @@ import { isBefore, addMilliseconds, format } from 'date-fns';
 import { sortBy } from 'lodash-es';
 
 import { getFactor } from '../../../../helper/portfolio.helper';
-import { PortfolioOrderItem } from '../../interfaces/portfolio-order-item.interface';
+import { HoldingPerformance } from '../../interfaces/holding-performance.interface';
+import { PortfolioCalculatorActivityItem } from '../../interfaces/portfolio-calculator-activity-item.interface';
 import { PortfolioCalculatorSymbolMetricsHelperObject } from './portfolio-calculator-helper-object';
 
-export class RoiPortfolioCalculatorSymbolMetricsHelper {
+export class RoiTWRPortfolioCalculatorSymbolMetricsHelper {
   private ENABLE_LOGGING: boolean;
   private baseCurrencySuffix = 'InBaseCurrency';
   private chartDates: string[];
@@ -97,33 +97,32 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
         symbolMetricsHelper.fees.minus(symbolMetricsHelper.feesAtStartDate)
       );
 
-    symbolMetricsHelper.symbolMetrics.timeWeightedInvestment = new Big(
+    symbolMetricsHelper.symbolMetrics.averageInvestment = new Big(
       symbolMetricsHelper.totalInvestmentFromBuyTransactions
     );
-    symbolMetricsHelper.symbolMetrics.timeWeightedInvestmentWithCurrencyEffect =
+    symbolMetricsHelper.symbolMetrics.averageInvestmentWithCurrencyEffect =
       new Big(
         symbolMetricsHelper.totalInvestmentFromBuyTransactionsWithCurrencyEffect
       );
 
-    if (symbolMetricsHelper.symbolMetrics.timeWeightedInvestment.gt(0)) {
+    if (symbolMetricsHelper.symbolMetrics.averageInvestment.gt(0)) {
       symbolMetricsHelper.symbolMetrics.netPerformancePercentage =
         symbolMetricsHelper.symbolMetrics.netPerformance.div(
-          symbolMetricsHelper.symbolMetrics.timeWeightedInvestment
+          symbolMetricsHelper.symbolMetrics.averageInvestment
         );
       symbolMetricsHelper.symbolMetrics.grossPerformancePercentage =
         symbolMetricsHelper.symbolMetrics.grossPerformance.div(
-          symbolMetricsHelper.symbolMetrics.timeWeightedInvestment
+          symbolMetricsHelper.symbolMetrics.averageInvestment
         );
       symbolMetricsHelper.symbolMetrics.grossPerformancePercentageWithCurrencyEffect =
         symbolMetricsHelper.symbolMetrics.grossPerformanceWithCurrencyEffect.div(
-          symbolMetricsHelper.symbolMetrics
-            .timeWeightedInvestmentWithCurrencyEffect
+          symbolMetricsHelper.symbolMetrics.averageInvestmentWithCurrencyEffect
         );
     }
   }
 
   public processOrderMetrics(
-    orders: PortfolioOrderItem[],
+    orders: PortfolioCalculatorActivityItem[],
     i: number,
     exchangeRates: { [dateString: string]: number },
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
@@ -242,7 +241,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     valueOfInvestment: Big,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
     valueOfInvestmentWithCurrencyEffect: Big,
-    order: PortfolioOrderItem
+    order: PortfolioCalculatorActivityItem
   ) {
     this.calculateGrossPerformance(
       valueOfInvestment,
@@ -260,7 +259,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
 
   public calculateNetPerformance(
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     valueOfInvestment: Big,
     valueOfInvestmentWithCurrencyEffect: Big
   ) {
@@ -270,9 +269,9 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       order.date
     ] = valueOfInvestmentWithCurrencyEffect;
 
-    symbolMetricsHelper.symbolMetrics.timeWeightedInvestmentValues[order.date] =
+    symbolMetricsHelper.symbolMetrics.investmentValuesAccumulated[order.date] =
       symbolMetricsHelper.totalInvestmentFromBuyTransactions;
-    symbolMetricsHelper.symbolMetrics.timeWeightedInvestmentValuesWithCurrencyEffect[
+    symbolMetricsHelper.symbolMetrics.investmentValuesAccumulatedWithCurrencyEffect[
       order.date
     ] =
       symbolMetricsHelper.totalInvestmentFromBuyTransactionsWithCurrencyEffect;
@@ -309,7 +308,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
         )
       )
       .plus(
-        symbolMetricsHelper.symbolMetrics.totalInterest.mul(
+        symbolMetricsHelper.symbolMetrics.totalInterestInBaseCurrency.mul(
           symbolMetricsHelper.currentExchangeRate
         )
       );
@@ -330,7 +329,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
 
   public accumulateFees(
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
-    order: PortfolioOrderItem
+    order: PortfolioCalculatorActivityItem
   ) {
     symbolMetricsHelper.fees = symbolMetricsHelper.fees.plus(
       order.feeInBaseCurrency ?? 0
@@ -385,7 +384,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public logTransactionValuesIfRequested(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     transactionInvestment: Big,
     transactionInvestmentWithCurrencyEffect: Big
   ) {
@@ -401,7 +400,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public handleBuyAndSellTranscation(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     switch (order.type) {
@@ -419,7 +418,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
 
   public handleSellTransaction(
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
-    order: PortfolioOrderItem
+    order: PortfolioCalculatorActivityItem
   ) {
     let transactionInvestment = this.ZERO;
     let transactionInvestmentWithCurrencyEffect = this.ZERO;
@@ -437,7 +436,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public handleBuyTransaction(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     const transactionInvestment = order.quantity
@@ -466,7 +465,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   public handleInitialInvestmentValues(
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
     i: number,
-    order: PortfolioOrderItem
+    order: PortfolioCalculatorActivityItem
   ) {
     if (
       !symbolMetricsHelper.investmentAtStartDate &&
@@ -537,11 +536,11 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public getUnitPriceAndFillCurrencyDeviations(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     const unitprice =
-      RoiPortfolioCalculatorSymbolMetricsHelper.BUY_SELL_ORDER_TYPES.has(
+      RoiTWRPortfolioCalculatorSymbolMetricsHelper.BUY_SELL_ORDER_TYPES.has(
         order.type
       )
         ? order.unitPrice
@@ -559,7 +558,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public handleOrderFee(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     if (order.fee) {
@@ -573,9 +572,9 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public handleStartOrder(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     i: number,
-    orders: PortfolioOrderItem[],
+    orders: PortfolioCalculatorActivityItem[],
     unitPriceAtStartDate: Big.Big
   ) {
     if (order.itemType === 'start') {
@@ -587,7 +586,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public handleNoneBuyAndSellOrders(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     value: Big.Big,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
@@ -598,15 +597,15 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public getSymbolMetricsKeyFromOrderType(
-    orderType: PortfolioOrderItem['type']
-  ): keyof SymbolMetrics {
+    orderType: PortfolioCalculatorActivityItem['type']
+  ): keyof HoldingPerformance {
     switch (orderType) {
       case 'DIVIDEND':
         return 'totalDividend';
       case 'INTEREST':
-        return 'totalInterest';
+        return 'totalDividendInBaseCurrency';
       case 'LIABILITY':
-        return 'totalLiabilities';
+        return 'totalLiabilitiesInBaseCurrency';
       default:
         return undefined;
     }
@@ -615,7 +614,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   public calculateMetrics(
     value: Big,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
-    key: keyof SymbolMetrics
+    key: keyof HoldingPerformance
   ) {
     const stringKey = key.toString();
     symbolMetricsHelper.symbolMetrics[stringKey] = (
@@ -633,7 +632,10 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     }
   }
 
-  public writeOrderToLogIfNecessary(i: number, order: PortfolioOrderItem) {
+  public writeOrderToLogIfNecessary(
+    i: number,
+    order: PortfolioCalculatorActivityItem
+  ) {
     if (this.ENABLE_LOGGING) {
       console.log();
       console.log();
@@ -647,7 +649,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public fillOrdersAndSortByTime(
-    orders: PortfolioOrderItem[],
+    orders: PortfolioCalculatorActivityItem[],
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
     chartDateMap: { [date: string]: boolean },
     marketSymbolMap: { [date: string]: { [symbol: string]: Big.Big } },
@@ -672,7 +674,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     return orders;
   }
 
-  public sortOrdersByTime(orders: PortfolioOrderItem[]) {
+  public sortOrdersByTime(orders: PortfolioCalculatorActivityItem[]) {
     orders = sortBy(orders, ({ date, itemType }) => {
       let sortIndex = new Date(date);
 
@@ -691,7 +693,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
     marketSymbolMap: { [date: string]: { [symbol: string]: Big.Big } },
     symbol: string,
-    orders: PortfolioOrderItem[],
+    orders: PortfolioCalculatorActivityItem[],
     dataSource: DataSource
   ) {
     let lastUnitPrice: Big;
@@ -739,7 +741,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     marketSymbolMap: { [date: string]: { [symbol: string]: Big.Big } },
     lastUnitPrice: Big.Big,
     isCash: boolean
-  ): PortfolioOrderItem {
+  ): PortfolioCalculatorActivityItem {
     return {
       date: dateString,
       fee: this.ZERO,
@@ -758,8 +760,8 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public fillOrdersByDate(
-    orders: PortfolioOrderItem[],
-    ordersByDate: { [date: string]: PortfolioOrderItem[] }
+    orders: PortfolioCalculatorActivityItem[],
+    ordersByDate: { [date: string]: PortfolioCalculatorActivityItem[] }
   ) {
     for (const order of orders) {
       ordersByDate[order.date] = ordersByDate[order.date] ?? [];
@@ -768,7 +770,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   }
 
   public addSyntheticStartAndEndOrder(
-    orders: PortfolioOrderItem[],
+    orders: PortfolioCalculatorActivityItem[],
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject,
     dataSource: DataSource,
     symbol: string,
@@ -808,7 +810,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
   public hasNoUnitPriceAtEndOrStartDate(
     unitPriceAtEndDate: Big.Big,
     unitPriceAtStartDate: Big.Big,
-    orders: PortfolioOrderItem[],
+    orders: PortfolioCalculatorActivityItem[],
     start: Date
   ) {
     return (
@@ -817,18 +819,22 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     );
   }
 
-  public createEmptySymbolMetrics(): SymbolMetrics {
+  public createEmptySymbolMetrics(): HoldingPerformance {
     return {
+      averageInvestment: this.ZERO,
+      averageInvestmentValues: {},
+      averageInvestmentValuesWithCurrencyEffect: {},
+      averageInvestmentWithCurrencyEffect: this.ZERO,
       currentValues: {},
       currentValuesWithCurrencyEffect: {},
-      feesWithCurrencyEffect: this.ZERO,
+      dividendValuesWithCurrencyEffect: {},
+      dividendYieldPercent: this.ZERO,
+      dividendYieldPercentWithCurrencyEffect: this.ZERO,
       grossPerformance: this.ZERO,
       grossPerformancePercentage: this.ZERO,
       grossPerformancePercentageWithCurrencyEffect: this.ZERO,
       grossPerformanceWithCurrencyEffect: this.ZERO,
       hasErrors: false,
-      initialValue: this.ZERO,
-      initialValueWithCurrencyEffect: this.ZERO,
       investmentValuesAccumulated: {},
       investmentValuesAccumulatedWithCurrencyEffect: {},
       investmentValuesWithCurrencyEffect: {},
@@ -838,25 +844,18 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
       netPerformanceValues: {},
       netPerformanceValuesWithCurrencyEffect: {},
       netPerformanceWithCurrencyEffectMap: {},
-      timeWeightedInvestment: this.ZERO,
-      timeWeightedInvestmentValues: {},
-      timeWeightedInvestmentValuesWithCurrencyEffect: {},
-      timeWeightedInvestmentWithCurrencyEffect: this.ZERO,
-      totalAccountBalanceInBaseCurrency: this.ZERO,
       totalDividend: this.ZERO,
       totalDividendInBaseCurrency: this.ZERO,
-      totalInterest: this.ZERO,
       totalInterestInBaseCurrency: this.ZERO,
       totalInvestment: this.ZERO,
       totalInvestmentWithCurrencyEffect: this.ZERO,
       unitPrices: {},
-      totalLiabilities: this.ZERO,
       totalLiabilitiesInBaseCurrency: this.ZERO
     };
   }
 
   private fillOrderUnitPricesIfMissing(
-    order: PortfolioOrderItem,
+    order: PortfolioCalculatorActivityItem,
     symbolMetricsHelper: PortfolioCalculatorSymbolMetricsHelperObject
   ) {
     order.unitPriceInBaseCurrency ??= this.marketSymbolMap[order.date]?.[
@@ -882,13 +881,11 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     ).plus(
       this.getValueOrZero(
         symbolMetricsHelper.symbolMetrics
-          .timeWeightedInvestmentValuesWithCurrencyEffect[rangeEndDateString]
+          .investmentValuesAccumulatedWithCurrencyEffect[rangeEndDateString]
       )?.minus(
         this.getValueOrZero(
           symbolMetricsHelper.symbolMetrics
-            .timeWeightedInvestmentValuesWithCurrencyEffect[
-            rangeStartDateString
-          ]
+            .investmentValuesAccumulatedWithCurrencyEffect[rangeStartDateString]
         )
       )
     );
@@ -896,7 +893,7 @@ export class RoiPortfolioCalculatorSymbolMetricsHelper {
     if (!investmentBasis.gt(0)) {
       investmentBasis =
         symbolMetricsHelper.symbolMetrics
-          .timeWeightedInvestmentValuesWithCurrencyEffect[rangeEndDateString];
+          .investmentValuesAccumulatedWithCurrencyEffect[rangeEndDateString];
     }
     return investmentBasis;
   }

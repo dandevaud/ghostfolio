@@ -1,8 +1,8 @@
-import { SymbolMetrics } from '@ghostfolio/common/interfaces';
+import { HoldingPerformance } from '@ghostfolio/api/app/portfolio/interfaces/holding-performance.interface';
 
 import { Big } from 'big.js';
 
-import { PortfolioOrderItem } from '../../interfaces/portfolio-order-item.interface';
+import { PortfolioCalculatorActivityItem } from '../../interfaces/portfolio-calculator-activity-item.interface';
 
 export class PortfolioCalculatorSymbolMetricsHelperObject {
   currentExchangeRate: number;
@@ -22,9 +22,9 @@ export class PortfolioCalculatorSymbolMetricsHelperObject {
   investmentAtStartDateWithCurrencyEffect: Big;
   investmentValueBeforeTransaction: Big = new Big(0);
   investmentValueBeforeTransactionWithCurrencyEffect: Big = new Big(0);
-  ordersByDate: { [date: string]: PortfolioOrderItem[] } = {};
+  ordersByDate: { [date: string]: PortfolioCalculatorActivityItem[] } = {};
   startDateString: string;
-  symbolMetrics: SymbolMetrics;
+  symbolMetrics: HoldingPerformance;
   totalUnits: Big = new Big(0);
   totalInvestmentFromBuyTransactions: Big = new Big(0);
   totalInvestmentFromBuyTransactionsWithCurrencyEffect: Big = new Big(0);

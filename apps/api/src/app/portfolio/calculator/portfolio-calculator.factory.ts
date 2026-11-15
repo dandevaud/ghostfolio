@@ -14,7 +14,7 @@ import { PerformanceCalculationType } from '@ghostfolio/common/types/performance
 
 import { Injectable } from '@nestjs/common';
 
-import { ActivitiesService } from '../../activities/activities.service';
+import { ActivitiesService } from '@ghostfolio/api/services/activities/activities.service';
 import { MwrPortfolioCalculator } from './mwr/portfolio-calculator';
 import { PortfolioCalculator } from './portfolio-calculator';
 import { RoaiPortfolioCalculator } from './roai/portfolio-calculator';

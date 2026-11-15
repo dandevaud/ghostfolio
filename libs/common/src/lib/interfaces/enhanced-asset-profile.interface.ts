@@ -2,8 +2,7 @@ import {
   AssetClass,
   AssetSubClass,
   DataGatheringFrequency,
-  DataSource,
-  Tag
+  DataSource
 } from '@ghostfolio/prisma/enums';
 
 import { Country } from './country.interface';
@@ -39,7 +38,7 @@ export interface EnhancedAssetProfile {
   symbolMapping?: { [key: string]: string };
   updatedAt: Date;
   url?: string;
-  tags?: Tag[];
+  tags?: { id: string; name: string }[];
   userId?: string;
   watchedByCount?: number;
 }

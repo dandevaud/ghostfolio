@@ -1,4 +1,4 @@
-import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
+import { ActivitiesService } from '@ghostfolio/api/services/activities/activities.service';
 import {
   activityDummyData,
   loadExportFile,
@@ -8,8 +8,8 @@ import {
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
@@ -43,7 +43,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     RedisCacheService: jest.fn().mockImplementation(() => {
@@ -87,7 +87,7 @@ describe('PortfolioCalculator', () => {
   beforeEach(() => {
     configurationService = new ConfigurationService();
 
-    currentRateService = new CurrentRateService(null, null, null, null);
+    currentRateService = new CurrentRateService(null, null, null);
 
     exchangeRateDataService = new ExchangeRateDataService(
       null,
@@ -126,7 +126,7 @@ describe('PortfolioCalculator', () => {
   });
 
   describe('get current positions', () => {
-    it.only('with NOVN.SW buy and sell partially', async () => {
+    it('with NOVN.SW buy and sell partially', async () => {
       jest.useFakeTimers().setSystemTime(parseDate('2022-04-11').getTime());
 
       const activities: Activity[] = exportResponse.activities.map(
@@ -149,7 +149,7 @@ describe('PortfolioCalculator', () => {
 
       const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
-        calculationType: PerformanceCalculationType.ROI,
+        calculationType: PerformanceCalculationType.ROITWR,
         currency: 'CHF',
         userId: userDummyData.id
       });

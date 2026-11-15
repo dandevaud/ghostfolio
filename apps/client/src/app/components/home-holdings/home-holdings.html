@@ -37,6 +37,7 @@
       }
       <div [class.d-none]="holdingsViewMode !== 'TABLE'">
         <gf-holdings-table
+          class="home-holdings-table"
           [holdings]="holdings"
           [isInDialog]="false"
           [locale]="locale()"

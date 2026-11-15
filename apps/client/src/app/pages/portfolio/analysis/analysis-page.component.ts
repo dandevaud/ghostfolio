@@ -8,6 +8,7 @@ import { SubscriptionType } from '@ghostfolio/common/enums';
 import { canOpenHoldingDetail } from '@ghostfolio/common/helper';
 import {
   InvestmentItem,
+  HistoricalDataItem,
   LineChartItem,
   PortfolioInvestmentsResponse,
   PortfolioPerformance,
@@ -397,9 +398,9 @@ export class GfAnalysisPageComponent implements OnInit {
             date,
             value:
               this.user?.settings?.performanceCalculationType ===
-              PerformanceCalculationType.ROI
-                ? timeWeightedPerformanceInPercentageWithCurrencyEffect
-                : netPerformanceInPercentageWithCurrencyEffect
+              PerformanceCalculationType.ROITWR
+                ? (timeWeightedPerformanceInPercentageWithCurrencyEffect ?? 0)
+                : (netPerformanceInPercentageWithCurrencyEffect ?? 0)
           });
         }
 

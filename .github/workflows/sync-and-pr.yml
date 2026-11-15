@@ -1,0 +1,70 @@
+name: Sync Upstream and Create Date-based PR
+
+on:
+  schedule:
+    # Runs every day at midnight UTC (adjust as needed)
+    - cron: '0 0 1,15 * *'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+jobs:
+  sync-and-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote and fetch
+        run: |
+          git remote add upstream https://github.com/ghostfolio/ghostfolio.git
+          git fetch upstream
+
+      - name: Update main branch from upstream
+        run: |
+          git checkout main
+          git merge upstream/main --no-edit
+          git push origin main
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Create date branch from dockerpush and merge main
+        run: |
+          # Ensure local/remote dockerpush is available, or fallback to main if it doesn't exist yet
+          git checkout dockerpush || git checkout -b dockerpush origin/dockerpush || git checkout -b dockerpush
+
+          # Create new branch with the current date suffix
+          BRANCH_NAME="mr/upstream-changes-${{ steps.date.outputs.date }}"
+          git checkout -b "$BRANCH_NAME"
+
+          # Merge the updated main branch into this new branch
+          git merge main --no-edit
+
+          # Push the new branch to origin
+          git push origin "$BRANCH_NAME"
+
+          # Pass branch name to subsequent steps via environment variable
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.BRANCH_NAME }}
+          base: dockerpush
+          title: 'Upstream Sync: ${{ steps.date.outputs.date }}'
+          body: 'Automated PR created  with the latest upstream changes merged from `main` on ${{ steps.date.outputs.date }} into dockerpush.'
+          commit-message: 'Merge ${{ env.BRANCH_NAME }} into dockerpush'
+          assignees: ${{ github.actor }}

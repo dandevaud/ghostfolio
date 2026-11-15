@@ -1,8 +1,7 @@
 import {
   AssetClass,
   AssetSubClass,
-  DataSource,
-  Tag
+  DataSource
 } from '@ghostfolio/prisma/enums';
 
 import { DataProviderInfo } from './data-provider-info.interface';
@@ -28,5 +27,5 @@ export interface AssetProfileItem {
   sectorsCount: number;
   symbol: string;
   watchedByCount: number;
-  tags: Tag[];
+  tags: { id: string; name: string }[];
 }

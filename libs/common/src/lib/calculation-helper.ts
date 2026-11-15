@@ -14,6 +14,7 @@ import {
 } from 'date-fns';
 import { isFinite, isNumber } from 'lodash-es';
 
+import { resetHours } from './helper';
 import { DateRange } from './types';
 
 export function getAnnualizedPerformancePercent({

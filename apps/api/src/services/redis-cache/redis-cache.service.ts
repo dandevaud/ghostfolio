@@ -8,7 +8,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import ms from 'ms';
 import { createHash, randomUUID } from 'node:crypto';
 
-import { DateQuery } from '../portfolio/interfaces/date-query.interface';
+import { DateQuery } from '@ghostfolio/api/app/portfolio/interfaces/date-query.interface';
 
 @Injectable()
 export class RedisCacheService {

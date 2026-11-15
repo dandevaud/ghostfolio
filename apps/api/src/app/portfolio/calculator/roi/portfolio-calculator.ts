@@ -301,4 +301,33 @@ export class RoiPortfolioCalculator extends PortfolioCalculator {
 
     return investedCapitalByDate;
   }
+
+  protected getSymbolMetrics(
+    _params: {
+      chartDateMap: { [date: string]: boolean };
+      end: Date;
+      exchangeRates: { [dateString: string]: number };
+      marketSymbolMap: { [date: string]: { [symbol: string]: Big } };
+      start: Date;
+    } & AssetProfileIdentifier
+  ): HoldingPerformance {
+    throw new Error('Method not implemented.');
+  }
+
+  private getHoldingPerformanceWithInvestedCapital({
+    holdingPerformance,
+    investedCapital,
+    investedCapitalWithCurrencyEffect
+  }: {
+    daysInMarket: number;
+    holdingPerformance: HoldingPerformance;
+    investedCapital: Big;
+    investedCapitalByDateRange: { [key: DateRange]: Big };
+    investedCapitalWithCurrencyEffect: Big;
+  }): HoldingPerformance {
+    const result = { ...holdingPerformance };
+    result.averageInvestment = investedCapital;
+    result.averageInvestmentWithCurrencyEffect = investedCapitalWithCurrencyEffect;
+    return result;
+  }
 }
